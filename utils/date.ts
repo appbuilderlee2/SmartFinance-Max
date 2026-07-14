@@ -37,7 +37,11 @@ export function parseLocalYMD(ymd: string): Date | null {
   const mo = Number(m[2]);
   const d = Number(m[3]);
   const dt = new Date(y, mo - 1, d);
-  return isNaN(dt.getTime()) ? null : dt;
+  if (isNaN(dt.getTime())) return null;
+  // Date automatically rolls invalid values (e.g. 2026-02-31) into March.
+  // Reject those inputs instead of silently storing the wrong day.
+  if (dt.getFullYear() !== y || dt.getMonth() !== mo - 1 || dt.getDate() !== d) return null;
+  return dt;
 }
 
 /** Parse various stored date formats into a Date. */

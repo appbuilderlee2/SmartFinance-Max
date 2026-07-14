@@ -6,6 +6,7 @@ import { useData } from '../contexts/DataContext';
 import { Icon } from '../components/Icon';
 import { TransactionType, Category } from '../types';
 import { makeId } from '../utils/id';
+import { getCategoryUsage } from '../utils/categoryIntegrity';
 
 const AVAILABLE_COLORS = [
    'bg-red-500', 'bg-orange-500', 'bg-yellow-500', 'bg-green-500',
@@ -26,7 +27,7 @@ const AVAILABLE_EMOJIS = [
 
 const CategoryManager: React.FC = () => {
    const navigate = useNavigate();
-   const { categories, deleteCategory, addCategory, updateCategory, reorderCategories } = useData();
+   const { categories, transactions, subscriptions, budgets, deleteCategory, addCategory, updateCategory, reorderCategories } = useData();
    const [activeTab, setActiveTab] = useState<TransactionType>(TransactionType.EXPENSE);
    const [showModal, setShowModal] = useState(false);
    const [editingCategory, setEditingCategory] = useState<Category | null>(null);
@@ -44,6 +45,8 @@ const CategoryManager: React.FC = () => {
    });
    const [iconTab, setIconTab] = useState<'icons' | 'emoji'>('icons');
    const [customEmoji, setCustomEmoji] = useState('');
+   const [deleteTarget, setDeleteTarget] = useState<Category | null>(null);
+   const [replacementId, setReplacementId] = useState('');
 
    const filteredCategories = categories.filter(c => c.type === activeTab);
    const displayedCategories = orderIds.length
@@ -143,10 +146,30 @@ const CategoryManager: React.FC = () => {
       lastHoverIdRef.current = hoverId;
       swapCategoryOrder(draggingId, hoverId);
    };
-   const handleDelete = (id: string, name: string) => {
-      if (window.confirm(`確定要刪除「${name}」分類嗎？`)) {
-         deleteCategory(id);
+   const handleDelete = (category: Category) => {
+      const usage = getCategoryUsage(category.id, transactions, subscriptions, budgets);
+      const isUsed = usage.transactionCount > 0 || usage.subscriptionCount > 0 || usage.hasBudget;
+      if (!isUsed) {
+         if (window.confirm(`確定要刪除「${category.name}」分類嗎？`)) deleteCategory(category.id);
+         return;
       }
+      const replacements = categories.filter((item) => item.type === category.type && item.id !== category.id);
+      if (!replacements.length) {
+         alert('呢個分類仍有資料，而且冇其他同類型分類可以接收。請先新增另一個分類。');
+         return;
+      }
+      setDeleteTarget(category);
+      setReplacementId(replacements[0].id);
+   };
+
+   const confirmReassignAndDelete = () => {
+      if (!deleteTarget || !replacementId) return;
+      if (!deleteCategory(deleteTarget.id, replacementId)) {
+         alert('未能刪除分類，請重新選擇接收分類。');
+         return;
+      }
+      setDeleteTarget(null);
+      setReplacementId('');
    };
 
    const openAddModal = () => {
@@ -285,7 +308,7 @@ const CategoryManager: React.FC = () => {
                   </div>
                   <div className="flex gap-2 text-gray-400 items-center">
                      <button onClick={() => openEditModal(cat)} className="hover:text-blue-400"><Edit2 size={20} /></button>
-                     <button onClick={() => handleDelete(cat.id, cat.name)} className="hover:text-red-400"><Trash2 size={20} /></button>
+                     <button onClick={() => handleDelete(cat)} className="hover:text-red-400" aria-label={`刪除 ${cat.name}`}><Trash2 size={20} /></button>
                   </div>
                </div>
             ))}
@@ -409,6 +432,34 @@ const CategoryManager: React.FC = () => {
                </div>
             </div>
          )}
+
+         {deleteTarget && (() => {
+            const usage = getCategoryUsage(deleteTarget.id, transactions, subscriptions, budgets);
+            const replacements = categories.filter((item) => item.type === deleteTarget.type && item.id !== deleteTarget.id);
+            return (
+               <div className="fixed inset-0 bg-black/70 z-[60] flex items-end">
+                  <div className="sf-panel w-full rounded-t-3xl p-6 pb-safe-bottom space-y-4">
+                     <div className="flex justify-between items-center">
+                        <h3 className="text-lg font-semibold">刪除「{deleteTarget.name}」</h3>
+                        <button onClick={() => setDeleteTarget(null)} className="text-gray-400" aria-label="取消刪除"><X size={24} /></button>
+                     </div>
+                     <p className="text-sm text-gray-300">
+                        呢個分類包含 {usage.transactionCount} 筆交易、{usage.subscriptionCount} 個訂閱
+                        {usage.hasBudget ? '及已設定預算' : ''}。刪除前必須將資料移去另一分類。
+                     </p>
+                     <div>
+                        <label className="text-sm text-gray-400 block mb-2">移到</label>
+                        <select value={replacementId} onChange={(event) => setReplacementId(event.target.value)} className="w-full sf-control rounded-xl p-3 text-white">
+                           {replacements.map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}
+                        </select>
+                     </div>
+                     <button onClick={confirmReassignAndDelete} className="w-full bg-red-600 py-4 rounded-xl font-bold text-white">
+                        搬移資料並刪除
+                     </button>
+                  </div>
+               </div>
+            );
+         })()}
       </div>
    );
 };

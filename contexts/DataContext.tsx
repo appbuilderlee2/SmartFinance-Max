@@ -5,8 +5,10 @@ import { CATEGORIES } from '../constants';
 import { readJson, reportStorageError, writeJson, writeText } from '../utils/storage';
 import { makeId } from '../utils/id';
 import { ensureSchemaVersion } from '../utils/storageVersion';
-import { parseDate, isSameMonth, toLocalYMD } from '../utils/date';
+import { parseDate, isSameMonth } from '../utils/date';
 import { clearAppStorage } from '../utils/backup';
+import { canUseReplacement, getCategoryUsage, reassignCategoryReferences } from '../utils/categoryIntegrity';
+import { processDueSubscriptions } from '../utils/subscriptionProcessing';
 
 export interface CreditCard {
   id: string;
@@ -63,7 +65,7 @@ interface DataContextType {
   addBudget: (budget: Omit<Budget, 'spent'>) => void;
   deleteBudget: (categoryId: string) => void;
   updateBudget: (categoryId: string, limit: number) => void;
-  deleteCategory: (id: string) => void;
+  deleteCategory: (id: string, replacementId?: string) => boolean;
   addCategory: (cat: Category) => void;
   updateCategory: (id: string, updates: Partial<Category>) => void;
   reorderCategories: (type: TransactionType, orderedIds: string[]) => void;
@@ -242,8 +244,31 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setSubscriptions(prev => prev.filter(s => s.id !== id));
   };
 
-  const deleteCategory = (id: string) => {
-    setCategories(prev => prev.filter(c => c.id !== id));
+  const deleteCategory = (id: string, replacementId?: string): boolean => {
+    const source = categories.find((category) => category.id === id);
+    if (!source) return false;
+    const usage = getCategoryUsage(id, transactions, subscriptions, budgets);
+    const isUsed = usage.transactionCount > 0 || usage.subscriptionCount > 0 || usage.hasBudget;
+
+    if (isUsed) {
+      const replacement = categories.find((category) => category.id === replacementId);
+      if (!canUseReplacement(source, replacement)) return false;
+      const reassigned = reassignCategoryReferences(
+        id,
+        replacement!.id,
+        transactions,
+        subscriptions,
+        budgets,
+      );
+      setTransactions(reassigned.transactions);
+      setSubscriptions(reassigned.subscriptions);
+      setBudgets(reassigned.budgets);
+    } else {
+      setBudgets((previous) => previous.filter((budget) => budget.categoryId !== id));
+    }
+
+    setCategories((previous) => previous.filter((category) => category.id !== id));
+    return true;
   };
 
   const addCategory = (cat: Category) => {
@@ -371,106 +396,26 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (isAutoPostingRef.current) return;
     if (!subscriptions.length) return;
 
-    const now = new Date();
-    const todayStr = toLocalYMD(now);
-
-    const addCycle = (date: Date, cycle: Subscription['billingCycle']) => {
-      const d = new Date(date);
-      if (cycle === 'Weekly') d.setDate(d.getDate() + 7);
-      else if (cycle === 'BiWeekly') d.setDate(d.getDate() + 14);
-      else if (cycle === 'Monthly') d.setMonth(d.getMonth() + 1);
-      else if (cycle === 'Yearly') d.setFullYear(d.getFullYear() + 1);
-      return toLocalYMD(d);
-    };
-
-    const pickCategoryId = (sub: Subscription) => {
-      if (sub.categoryId) return sub.categoryId;
-      const subscriptionCat = categories.find(c => c.name.includes('訂閱'));
-      if (subscriptionCat) return subscriptionCat.id;
-      const entertainment = categories.find(c => c.name.includes('娛樂'));
-      const firstExpense = categories.find(c => c.type === TransactionType.EXPENSE);
-      return (subscriptionCat || entertainment || firstExpense || categories[0])?.id || '';
-    };
-
-    let newTransactions: Transaction[] = [];
-    let changed = false;
-
-    const updatedSubs = subscriptions.map(sub => {
-      const parsed = new Date(sub.nextBillingDate);
-      if (isNaN(parsed.getTime())) return sub;
-
-      let nextDate = parsed;
-      let iterations = 0;
-      let processed = false;
-      let lastProcessed = sub.lastProcessedDate || '';
-
-      while (toLocalYMD(nextDate) <= todayStr && iterations < 24) {
-        const dueStr = toLocalYMD(nextDate);
-        if (lastProcessed && lastProcessed >= dueStr) {
-          // already processed this due date (or later)
-          nextDate = new Date(addCycle(nextDate, sub.billingCycle));
-          iterations += 1;
-          continue;
-        }
-
-        const categoryId = pickCategoryId(sub);
-        const tx: Transaction = {
-          id: makeId('tx'),
-          amount: sub.amount,
-          date: dueStr,
-          note: `訂閱：${sub.name}`,
-          categoryId,
-          type: TransactionType.EXPENSE,
-          isRecurring: true,
-          subscriptionId: sub.id,
-          tags: ['subscription']
-        };
-        const alreadyExists = transactions.some(t => {
-          if (t.subscriptionId && t.subscriptionId === sub.id) {
-            return t.date.split('T')[0] === dueStr;
-          }
-          return t.date.split('T')[0] === dueStr &&
-            t.amount === sub.amount &&
-            t.note === `訂閱：${sub.name}`;
-        });
-        if (!alreadyExists) {
-          newTransactions.push(tx);
-        }
-        processed = true;
-        lastProcessed = dueStr;
-
-        if (sub.autoRenewal === false) {
-          // Stop after one-time posting when不自動續訂
-          nextDate = parsed;
-          break;
-        }
-
-        nextDate = new Date(addCycle(nextDate, sub.billingCycle));
-        iterations += 1;
-      }
-
-      if (processed) {
-        changed = true;
-        const nextBilling = sub.autoRenewal === false ? '' : toLocalYMD(nextDate);
-        return { ...sub, nextBillingDate: nextBilling, lastProcessedDate: lastProcessed || todayStr };
-      }
-
-      return sub;
+    const result = processDueSubscriptions({
+      subscriptions,
+      transactions,
+      categories,
+      makeTransactionId: () => makeId('tx'),
     });
 
-    if (newTransactions.length || changed) {
+    if (result.transactions.length || result.changed) {
       // Mark this run as “mutating” to prevent immediate re-entry.
       isAutoPostingRef.current = true;
     }
 
-    if (newTransactions.length) {
-      setTransactions(prev => [...newTransactions, ...prev]);
+    if (result.transactions.length) {
+      setTransactions(prev => [...result.transactions, ...prev]);
     }
-    if (changed) {
-      setSubscriptions(updatedSubs);
+    if (result.changed) {
+      setSubscriptions(result.subscriptions);
     }
 
-    if (newTransactions.length || changed) {
+    if (result.transactions.length || result.changed) {
       // Release guard on next tick.
       setTimeout(() => { isAutoPostingRef.current = false; }, 0);
     }
