@@ -1,0 +1,402 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/*
+  SmartFinance Theme System (Design Tokens)
+  - All tokens are set via `.theme-xxx` on <html>.
+  - Tailwind utilities map to these tokens (see `tailwind.config.js`).
+  - Add a new theme by creating a new `.theme-xxx { ... }` block only.
+*/
+
+:root {
+    /* Core colors (rgb triplets) */
+    --sf-primary: 59 130 246;
+    --sf-danger: 239 68 68;
+    --sf-success: 34 197 94;
+
+    --sf-app-bg: 15 23 42;
+    --sf-surface-bg: 30 41 59;
+
+    --sf-text-primary: 255 255 255;
+    --sf-text-secondary: 148 163 184;
+    --sf-text-muted: 100 116 139;
+
+    /* Gray scale used by existing `text-gray-*`, `border-gray-*`, `bg-gray-*` */
+    --sf-gray-50: 248 250 252;
+    --sf-gray-100: 241 245 249;
+    --sf-gray-200: 226 232 240;
+    --sf-gray-300: 203 213 225;
+    --sf-gray-400: 148 163 184;
+    --sf-gray-500: 100 116 139;
+    --sf-gray-600: 71 85 105;
+    --sf-gray-700: 51 65 85;
+    --sf-gray-800: 30 41 59;
+    --sf-gray-900: 15 23 42;
+
+    /* Shape */
+    --sf-radius-xl: 16px;
+    --sf-radius-2xl: 20px;
+    --sf-radius-3xl: 26px;
+    --sf-radius-full: 9999px;
+
+    /* Depth */
+    --sf-shadow-sm: 0 1px 0 rgb(0 0 0 / 0.25);
+    --sf-shadow-md: 0 10px 24px rgb(0 0 0 / 0.35);
+    --sf-shadow-lg: 0 18px 50px rgb(0 0 0 / 0.45);
+    --sf-shadow-xl: 0 30px 80px rgb(0 0 0 / 0.55);
+
+    /* Glass / blur */
+    --sf-blur-sm: 6px;
+    --sf-blur-md: 12px;
+    --sf-blur-lg: 16px;
+    --sf-blur-xl: 20px;
+
+    /* Motion */
+    --sf-motion-fast: 140ms;
+    --sf-motion-normal: 220ms;
+    --sf-motion-slow: 360ms;
+    --sf-ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
+    --sf-ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
+
+  /* Semantic tokens (used via custom classes below) */
+  --sf-divider-opacity: 0.08;
+  --sf-surface-alpha: 1;
+  --sf-surface-border-opacity: 0.10;
+  --sf-hero-spot-opacity: 0.20;
+  --sf-app-bg-image: none;
+  --sf-on-primary: 255 255 255;
+
+  /* Material tokens */
+  --sf-topbar-alpha: 0.78;
+  --sf-topbar-shadow: var(--sf-shadow-sm);
+  --sf-topbar-blur: var(--sf-blur-md);
+  --sf-panel-alpha: var(--sf-surface-alpha);
+  --sf-panel-shadow: var(--sf-shadow-sm);
+  --sf-control-alpha: 0.60;
+  --sf-control-shadow: var(--sf-shadow-sm);
+}
+
+/* Default skin (keeps current look, but token-driven) */
+html.theme-blue {
+  --sf-primary: 59 130 246;
+}
+html.theme-red {
+  --sf-primary: 239 68 68;
+}
+html.theme-green {
+  --sf-primary: 34 197 94;
+}
+html.theme-purple {
+  --sf-primary: 168 85 247;
+}
+html.theme-orange {
+  --sf-primary: 249 115 22;
+}
+html.theme-pink {
+  --sf-primary: 236 72 153;
+}
+
+/*
+  theme-ios26: frosted glass, blur, softer contrast, elevated surfaces
+  "App enters another OS skin" vibe.
+*/
+html.theme-ios26 {
+    --sf-primary: 6 182 212;
+    --sf-app-bg: 9 14 24;
+    --sf-surface-bg: 30 41 59;
+    --sf-text-primary: 250 252 255;
+    --sf-text-secondary: 167 182 201;
+    --sf-text-muted: 126 145 170;
+    --sf-divider-opacity: 0.10;
+    --sf-surface-alpha: 0.62;
+    --sf-surface-border-opacity: 0.16;
+    --sf-radius-xl: 18px;
+    --sf-radius-2xl: 24px;
+    --sf-radius-3xl: 30px;
+    --sf-shadow-md: 0 12px 30px rgb(0 0 0 / 0.28);
+    --sf-shadow-lg: 0 24px 70px rgb(0 0 0 / 0.34);
+    --sf-shadow-xl: 0 40px 120px rgb(0 0 0 / 0.40);
+    --sf-blur-sm: 10px;
+    --sf-blur-md: 18px;
+    --sf-blur-lg: 22px;
+    --sf-blur-xl: 30px;
+    --sf-motion-fast: 160ms;
+    --sf-motion-normal: 260ms;
+    --sf-motion-slow: 420ms;
+  --sf-hero-spot-opacity: 0.28;
+  --sf-topbar-alpha: 0.62;
+  --sf-topbar-shadow: var(--sf-shadow-md);
+  --sf-topbar-blur: var(--sf-blur-lg);
+  --sf-panel-shadow: var(--sf-shadow-md);
+  --sf-control-alpha: 0.52;
+  --sf-control-shadow: var(--sf-shadow-md);
+  --sf-app-bg-image: radial-gradient(1200px 800px at 15% 10%, rgb(var(--sf-primary) / 0.18), transparent 60%),
+    radial-gradient(1000px 700px at 85% 20%, rgb(168 85 247 / 0.16), transparent 55%);
+
+    /* cooler gray tint */
+    --sf-gray-50: 240 249 255;
+    --sf-gray-100: 224 242 254;
+    --sf-gray-200: 186 230 253;
+    --sf-gray-300: 125 211 252;
+    --sf-gray-400: 56 189 248;
+    --sf-gray-500: 14 165 233;
+    --sf-gray-600: 2 132 199;
+    --sf-gray-700: 3 105 161;
+    --sf-gray-800: 30 41 59;
+    --sf-gray-900: 9 14 24;
+}
+
+/*
+  theme-light: clean, flat, high-contrast, no glass
+*/
+html.theme-light {
+    color-scheme: light;
+    --sf-primary: 37 99 235;
+    --sf-app-bg: 248 250 252;
+    --sf-surface-bg: 255 255 255;
+    --sf-text-primary: 15 23 42;
+    --sf-text-secondary: 51 65 85;
+    --sf-text-muted: 71 85 105;
+    --sf-divider-opacity: 0.14;
+    --sf-surface-alpha: 1;
+    --sf-surface-border-opacity: 0.14;
+    --sf-radius-xl: 14px;
+    --sf-radius-2xl: 16px;
+    --sf-radius-3xl: 18px;
+    --sf-shadow-sm: 0 1px 0 rgb(15 23 42 / 0.06);
+    --sf-shadow-md: 0 10px 20px rgb(15 23 42 / 0.10);
+    --sf-shadow-lg: 0 18px 40px rgb(15 23 42 / 0.12);
+    --sf-shadow-xl: 0 28px 70px rgb(15 23 42 / 0.14);
+    --sf-blur-sm: 0px;
+    --sf-blur-md: 0px;
+    --sf-blur-lg: 0px;
+    --sf-blur-xl: 0px;
+    --sf-motion-fast: 120ms;
+    --sf-motion-normal: 180ms;
+  --sf-motion-slow: 280ms;
+  --sf-app-bg-image: none;
+  --sf-topbar-alpha: 1;
+  --sf-topbar-shadow: none;
+  --sf-topbar-blur: 0px;
+  --sf-panel-shadow: var(--sf-shadow-sm);
+  --sf-control-alpha: 1;
+  --sf-control-shadow: none;
+
+    /*
+      Remap gray scale for existing dark-theme utility usage:
+      - Many screens use `text-gray-200/300` as secondary text in dark mode.
+      - In light mode those must become *darker*, while borders become *lighter*.
+    */
+    --sf-gray-50: 255 255 255;   /* card background */
+    --sf-gray-100: 248 250 252;  /* page background */
+    --sf-gray-200: 51 65 85;     /* secondary text */
+    --sf-gray-300: 71 85 105;    /* muted text */
+    --sf-gray-400: 100 116 139;  /* hint text */
+    --sf-gray-500: 148 163 184;  /* disabled */
+    --sf-gray-600: 203 213 225;  /* borders */
+    --sf-gray-700: 226 232 240;  /* dividers */
+    --sf-gray-800: 241 245 249;  /* surface tint */
+    --sf-gray-900: 15 23 42;     /* deep text */
+    --sf-hero-spot-opacity: 0.10;
+}
+
+/*
+  theme-blackgold: luxury, deep blacks, gold accent, heavier depth
+*/
+html.theme-blackgold {
+    --sf-primary: 212 175 55;
+    --sf-app-bg: 8 8 10;
+    --sf-surface-bg: 20 20 22;
+    --sf-text-primary: 250 245 230;
+    --sf-text-secondary: 200 189 160;
+    --sf-text-muted: 160 150 120;
+    --sf-divider-opacity: 0.10;
+    --sf-surface-alpha: 0.96;
+    --sf-surface-border-opacity: 0.14;
+    --sf-radius-xl: 16px;
+    --sf-radius-2xl: 20px;
+    --sf-radius-3xl: 26px;
+    --sf-shadow-md: 0 12px 28px rgb(0 0 0 / 0.55);
+    --sf-shadow-lg: 0 24px 70px rgb(0 0 0 / 0.70);
+    --sf-shadow-xl: 0 44px 120px rgb(0 0 0 / 0.80);
+    --sf-blur-sm: 4px;
+    --sf-blur-md: 8px;
+    --sf-blur-lg: 10px;
+  --sf-blur-xl: 12px;
+  --sf-hero-spot-opacity: 0.12;
+  --sf-topbar-alpha: 0.92;
+  --sf-topbar-shadow: var(--sf-shadow-lg);
+  --sf-topbar-blur: var(--sf-blur-sm);
+  --sf-panel-shadow: var(--sf-shadow-lg);
+  --sf-control-alpha: 0.85;
+  --sf-control-shadow: var(--sf-shadow-md);
+  --sf-app-bg-image: radial-gradient(1000px 700px at 20% 0%, rgb(var(--sf-primary) / 0.10), transparent 60%),
+    radial-gradient(900px 600px at 80% 30%, rgb(255 255 255 / 0.05), transparent 55%);
+
+    /* warmer gray tint */
+    --sf-gray-50: 255 251 235;
+    --sf-gray-100: 254 243 199;
+    --sf-gray-200: 253 230 138;
+    --sf-gray-300: 252 211 77;
+    --sf-gray-400: 251 191 36;
+    --sf-gray-500: 245 158 11;
+    --sf-gray-600: 180 83 9;
+    --sf-gray-700: 120 53 15;
+    --sf-gray-800: 20 20 22;
+    --sf-gray-900: 8 8 10;
+}
+
+/*
+  theme-tech: sharp, neon, faster motion, subtle glow, less blur
+*/
+html.theme-tech {
+    --sf-primary: 34 211 238;
+    --sf-app-bg: 3 7 18;
+    --sf-surface-bg: 8 15 32;
+    --sf-text-primary: 226 232 240;
+    --sf-text-secondary: 148 163 184;
+    --sf-text-muted: 100 116 139;
+    --sf-divider-opacity: 0.12;
+    --sf-surface-alpha: 0.92;
+    --sf-surface-border-opacity: 0.22;
+    --sf-radius-xl: 12px;
+    --sf-radius-2xl: 14px;
+    --sf-radius-3xl: 16px;
+    --sf-shadow-sm: 0 0 0 1px rgb(var(--sf-primary) / 0.18);
+    --sf-shadow-md: 0 0 0 1px rgb(var(--sf-primary) / 0.18), 0 16px 40px rgb(0 0 0 / 0.60);
+    --sf-shadow-lg: 0 0 0 1px rgb(var(--sf-primary) / 0.22), 0 26px 80px rgb(0 0 0 / 0.70);
+    --sf-shadow-xl: 0 0 0 1px rgb(var(--sf-primary) / 0.26), 0 40px 120px rgb(0 0 0 / 0.80);
+    --sf-blur-sm: 2px;
+    --sf-blur-md: 6px;
+    --sf-blur-lg: 8px;
+    --sf-blur-xl: 10px;
+    --sf-motion-fast: 110ms;
+    --sf-motion-normal: 160ms;
+  --sf-motion-slow: 240ms;
+  --sf-hero-spot-opacity: 0.22;
+  --sf-topbar-alpha: 0.70;
+  --sf-topbar-shadow: var(--sf-shadow-md);
+  --sf-topbar-blur: var(--sf-blur-md);
+  --sf-panel-shadow: var(--sf-shadow-md);
+  --sf-control-alpha: 0.72;
+  --sf-control-shadow: var(--sf-shadow-md);
+  --sf-app-bg-image: radial-gradient(900px 600px at 20% 10%, rgb(var(--sf-primary) / 0.20), transparent 55%),
+    radial-gradient(700px 500px at 85% 25%, rgb(168 85 247 / 0.16), transparent 60%),
+    linear-gradient(180deg, rgb(3 7 18 / 1), rgb(2 6 23 / 1));
+}
+
+@layer components {
+  /*
+    Unified "app surface" building blocks.
+    Prefer these for consistent theming across pages.
+  */
+  .sf-surface {
+    background-color: rgb(var(--sf-surface-bg) / var(--sf-surface-alpha));
+    border: 1px solid rgb(var(--sf-text-primary) / var(--sf-surface-border-opacity));
+    box-shadow: var(--sf-shadow-md);
+    backdrop-filter: blur(var(--sf-blur-xl));
+    -webkit-backdrop-filter: blur(var(--sf-blur-xl));
+  }
+
+  .sf-card {
+    background-color: rgb(var(--sf-surface-bg) / var(--sf-surface-alpha));
+    border: 1px solid rgb(var(--sf-text-primary) / var(--sf-surface-border-opacity));
+    box-shadow: var(--sf-shadow-md);
+    backdrop-filter: blur(var(--sf-blur-xl));
+    -webkit-backdrop-filter: blur(var(--sf-blur-xl));
+    border-radius: var(--sf-radius-2xl);
+  }
+
+  .sf-panel {
+    background-color: rgb(var(--sf-surface-bg) / var(--sf-panel-alpha));
+    border: 1px solid rgb(var(--sf-text-primary) / var(--sf-surface-border-opacity));
+    box-shadow: var(--sf-panel-shadow);
+    backdrop-filter: blur(var(--sf-blur-xl));
+    -webkit-backdrop-filter: blur(var(--sf-blur-xl));
+    border-radius: var(--sf-radius-2xl);
+  }
+
+  .sf-topbar {
+    background-color: rgb(var(--sf-app-bg) / var(--sf-topbar-alpha));
+    border-bottom: 1px solid rgb(var(--sf-text-primary) / var(--sf-divider-opacity));
+    box-shadow: var(--sf-topbar-shadow);
+    backdrop-filter: blur(var(--sf-topbar-blur));
+    -webkit-backdrop-filter: blur(var(--sf-topbar-blur));
+  }
+
+  .sf-control {
+    background-color: rgb(var(--sf-surface-bg) / var(--sf-control-alpha));
+    border: 1px solid rgb(var(--sf-text-primary) / var(--sf-divider-opacity));
+    box-shadow: var(--sf-control-shadow);
+    backdrop-filter: blur(var(--sf-blur-sm));
+    -webkit-backdrop-filter: blur(var(--sf-blur-sm));
+  }
+
+  .sf-divider {
+    border-color: rgb(var(--sf-text-primary) / var(--sf-divider-opacity));
+  }
+
+  .sf-hero-bg {
+    background: linear-gradient(
+      180deg,
+      rgb(var(--sf-app-bg) / 1) 0%,
+      rgb(var(--sf-app-bg) / 1) 60%,
+      rgb(var(--sf-app-bg) / 1) 100%
+    );
+  }
+
+  .sf-spot {
+    background-color: rgb(var(--sf-primary) / var(--sf-hero-spot-opacity));
+  }
+}
+
+/* Custom scrollbar hiding for clean UI */
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Disable pull-to-refresh on mobile to feel like native app */
+body {
+  overscroll-behavior-y: none;
+}
+
+/* Base styles */
+body {
+  @apply bg-background text-white antialiased select-none touch-pan-y;
+  background-image: var(--sf-app-bg-image);
+  background-attachment: fixed;
+  background-size: cover;
+  /* Remove gray highlight on tap in iOS */
+  -webkit-tap-highlight-color: transparent;
+}
+
+@layer base {
+  /* Light mode: keep text readable without rewriting every component today. */
+  html.theme-light .text-white {
+    color: rgb(var(--sf-text-primary) / 1) !important;
+  }
+  html.theme-light .bg-primary,
+  html.theme-light .bg-primary * {
+    color: rgb(var(--sf-on-primary) / 1) !important;
+  }
+}
+
+/* Prevent auto-zoom on iOS inputs by ensuring font-size is at least 16px */
+input,
+textarea,
+select {
+  font-size: 16px;
+}
+
+/* Allow text selection in inputs even when body is select-none */
+input,
+textarea {
+  user-select: text;
+  -webkit-user-select: text;
+}

@@ -1,0 +1,3957 @@
+{
+  "source": {
+    "fetchedAt": "2026-04-02T15:38:39Z"
+  },
+  "format": "rebate-source",
+  "scenarios": [
+    "dining",
+    "flightDirect",
+    "flightOTA",
+    "fuel",
+    "hotelDirect",
+    "hotelOTA",
+    "mobilePay",
+    "octopus",
+    "octopusManual",
+    "onlineFX",
+    "onlineHKD",
+    "physicalFX",
+    "supermarket",
+    "transport",
+    "travelCN",
+    "travelJKSTA",
+    "travelTW"
+  ],
+  "cards": [
+    {
+      "id": "ae_explorer",
+      "name": "AE Explorer",
+      "issuer": "American Express",
+      "program": "miles",
+      "desc": "基本$6/里，登記外幣優惠後$4.8/里，季度優惠$1.68/里(首$10,000)，OTA享旅遊MCC加碼",
+      "baseReturn": 0.006,
+      "bonusRates": {
+        "onlineFX": 0.016,
+        "physicalFX": 0.016,
+        "travelJKSTA": 0.016,
+        "flightDirect": 0.016,
+        "flightOTA": 0.016,
+        "hotelDirect": 0.016,
+        "hotelOTA": 0.016,
+        "octopus": 0.001,
+        "octopusManual": 0.001
+      },
+      "note": "$1.68/里需登記兩個優惠，季度外幣$10,000+旅遊$10,000（兩個獨立池）",
+      "validUntil": "2026-06-30",
+      "pools": [],
+      "effectiveCostMap": {
+        "local": 6,
+        "dining": 6,
+        "onlineHKD": 6,
+        "onlineFX": 1.68,
+        "travelJKSTA": 1.68,
+        "physicalFX": 1.68,
+        "flightDirect": 1.68,
+        "flightOTA": 1.68,
+        "hotelDirect": 1.68,
+        "hotelOTA": 1.68,
+        "octopus": 36,
+        "octopusManual": 36
+      },
+      "warningsByScenario": {
+        "onlineFX": "⚠️ $1.68/里需登記兩個優惠，季度外幣池首$10,000，其後$4.8/里",
+        "physicalFX": "⚠️ $1.68/里需登記兩個優惠，季度外幣池首$10,000，其後$4.8/里",
+        "travelJKSTA": "⚠️ $1.68/里需登記兩個優惠，季度外幣池首$10,000，其後$4.8/里",
+        "flightDirect": "⚠️ $1.68/里需登記，季度旅遊池首$10,000（與外幣池獨立）",
+        "flightOTA": "⚠️ $1.68/里需登記，季度旅遊池首$10,000（與外幣池獨立）",
+        "hotelDirect": "⚠️ $1.68/里需登記，季度旅遊池首$10,000（與外幣池獨立）",
+        "hotelOTA": "⚠️ $1.68/里需登記，季度旅遊池首$10,000（與外幣池獨立）",
+        "octopus": "⚠️ 八達通增值只有0.5倍基本積分=$36/里，極不划算",
+        "octopusManual": "⚠️ 手動增值同樣只有0.5倍基本積分=$36/里"
+      },
+      "constraints": [
+        {
+          "type": "registration_required",
+          "note": "$1.68/里需登記兩個優惠，季度外幣$10,000+旅遊$10,000（兩個獨立池）",
+          "period": "quarterly"
+        },
+        {
+          "type": "separate_pools",
+          "note": "$1.68/里需登記兩個優惠，季度外幣$10,000+旅遊$10,000（兩個獨立池）",
+          "period": "quarterly"
+        },
+        {
+          "type": "registration_required",
+          "note": "⚠️ $1.68/里需登記兩個優惠，季度外幣池首$10,000，其後$4.8/里",
+          "period": "quarterly",
+          "scenario": "onlineFX"
+        },
+        {
+          "type": "tiered_rule",
+          "thresholdHKD": 1.68,
+          "currency": "HKD",
+          "note": "⚠️ $1.68/里需登記兩個優惠，季度外幣池首$10,000，其後$4.8/里",
+          "period": "quarterly",
+          "scenario": "onlineFX"
+        },
+        {
+          "type": "registration_required",
+          "note": "⚠️ $1.68/里需登記兩個優惠，季度外幣池首$10,000，其後$4.8/里",
+          "period": "quarterly",
+          "scenario": "physicalFX"
+        },
+        {
+          "type": "tiered_rule",
+          "thresholdHKD": 1.68,
+          "currency": "HKD",
+          "note": "⚠️ $1.68/里需登記兩個優惠，季度外幣池首$10,000，其後$4.8/里",
+          "period": "quarterly",
+          "scenario": "physicalFX"
+        },
+        {
+          "type": "registration_required",
+          "note": "⚠️ $1.68/里需登記兩個優惠，季度外幣池首$10,000，其後$4.8/里",
+          "period": "quarterly",
+          "scenario": "travelJKSTA"
+        },
+        {
+          "type": "tiered_rule",
+          "thresholdHKD": 1.68,
+          "currency": "HKD",
+          "note": "⚠️ $1.68/里需登記兩個優惠，季度外幣池首$10,000，其後$4.8/里",
+          "period": "quarterly",
+          "scenario": "travelJKSTA"
+        },
+        {
+          "type": "registration_required",
+          "note": "⚠️ $1.68/里需登記，季度旅遊池首$10,000（與外幣池獨立）",
+          "period": "quarterly",
+          "scenario": "flightDirect"
+        },
+        {
+          "type": "separate_pools",
+          "note": "⚠️ $1.68/里需登記，季度旅遊池首$10,000（與外幣池獨立）",
+          "period": "quarterly",
+          "scenario": "flightDirect"
+        },
+        {
+          "type": "registration_required",
+          "note": "⚠️ $1.68/里需登記，季度旅遊池首$10,000（與外幣池獨立）",
+          "period": "quarterly",
+          "scenario": "flightOTA"
+        },
+        {
+          "type": "separate_pools",
+          "note": "⚠️ $1.68/里需登記，季度旅遊池首$10,000（與外幣池獨立）",
+          "period": "quarterly",
+          "scenario": "flightOTA"
+        },
+        {
+          "type": "registration_required",
+          "note": "⚠️ $1.68/里需登記，季度旅遊池首$10,000（與外幣池獨立）",
+          "period": "quarterly",
+          "scenario": "hotelDirect"
+        },
+        {
+          "type": "separate_pools",
+          "note": "⚠️ $1.68/里需登記，季度旅遊池首$10,000（與外幣池獨立）",
+          "period": "quarterly",
+          "scenario": "hotelDirect"
+        },
+        {
+          "type": "registration_required",
+          "note": "⚠️ $1.68/里需登記，季度旅遊池首$10,000（與外幣池獨立）",
+          "period": "quarterly",
+          "scenario": "hotelOTA"
+        },
+        {
+          "type": "separate_pools",
+          "note": "⚠️ $1.68/里需登記，季度旅遊池首$10,000（與外幣池獨立）",
+          "period": "quarterly",
+          "scenario": "hotelOTA"
+        }
+      ]
+    },
+    {
+      "id": "ae_plat_cc",
+      "name": "AE 白金信用卡",
+      "issuer": "American Express",
+      "program": "miles",
+      "desc": "信用卡版(大頭)，本地/外幣$6/里",
+      "baseReturn": 0.006,
+      "bonusRates": {
+        "octopus": 0.001,
+        "octopusManual": 0.001
+      },
+      "note": null,
+      "validUntil": null,
+      "pools": [],
+      "effectiveCostMap": {
+        "local": 6,
+        "dining": 6,
+        "onlineHKD": 6,
+        "onlineFX": 6,
+        "travelJKSTA": 6,
+        "physicalFX": 6,
+        "octopus": 36,
+        "octopusManual": 36
+      },
+      "warningsByScenario": {
+        "octopus": "⚠️ 八達通增值只有0.5倍基本積分=$36/里，極不划算",
+        "octopusManual": "⚠️ 手動增值同樣只有0.5倍基本積分=$36/里"
+      },
+      "constraints": []
+    },
+    {
+      "id": "ae_plat_charge",
+      "name": "AE 白金卡（鋼卡/細頭）",
+      "issuer": "American Express",
+      "program": "miles",
+      "desc": "Charge Card，附Priority Pass，基本$9/里，登記9X後$2/里(三個獨立池各$15,000/季)",
+      "baseReturn": 0.004,
+      "bonusRates": {
+        "onlineFX": 0.02,
+        "physicalFX": 0.02,
+        "travelJKSTA": 0.02,
+        "flightDirect": 0.02,
+        "flightOTA": 0.02,
+        "hotelDirect": 0.02,
+        "hotelOTA": 0.02,
+        "octopus": 0.001,
+        "octopusManual": 0.001
+      },
+      "note": "$2/里需登記9X計劃，外幣$15K+旅遊$15K+日常$15K（三個獨立池/季）",
+      "validUntil": "2026-06-30",
+      "pools": [],
+      "effectiveCostMap": {
+        "local": 9,
+        "dining": 9,
+        "onlineHKD": 9,
+        "onlineFX": 2,
+        "travelJKSTA": 2,
+        "physicalFX": 2,
+        "flightDirect": 2,
+        "flightOTA": 2,
+        "hotelDirect": 2,
+        "hotelOTA": 2,
+        "octopus": 36,
+        "octopusManual": 36
+      },
+      "warningsByScenario": {
+        "onlineFX": "⚠️ $2/里需登記9X，季度外幣池$15,000（與旅遊/日常池獨立），基本$9/里",
+        "physicalFX": "⚠️ $2/里需登記9X，季度外幣池$15,000（與旅遊/日常池獨立），基本$9/里",
+        "travelJKSTA": "⚠️ $2/里需登記9X，季度外幣池$15,000（與旅遊/日常池獨立），基本$9/里",
+        "flightDirect": "⚠️ $2/里需登記9X，季度旅遊池$15,000（與外幣池獨立），基本$9/里",
+        "flightOTA": "⚠️ $2/里需登記9X，季度旅遊池$15,000（與外幣池獨立），基本$9/里",
+        "hotelDirect": "⚠️ $2/里需登記9X，季度旅遊池$15,000（與外幣池獨立），基本$9/里",
+        "hotelOTA": "⚠️ $2/里需登記9X，季度旅遊池$15,000（與外幣池獨立），基本$9/里",
+        "octopus": "⚠️ 八達通增值只有0.5倍基本積分=$36/里，極不划算",
+        "octopusManual": "⚠️ 手動增值同樣只有0.5倍基本積分=$36/里"
+      },
+      "constraints": [
+        {
+          "type": "registration_required",
+          "note": "$2/里需登記9X計劃，外幣$15K+旅遊$15K+日常$15K（三個獨立池/季）",
+          "period": null
+        },
+        {
+          "type": "separate_pools",
+          "note": "$2/里需登記9X計劃，外幣$15K+旅遊$15K+日常$15K（三個獨立池/季）",
+          "period": null
+        },
+        {
+          "type": "registration_required",
+          "note": "⚠️ $2/里需登記9X，季度外幣池$15,000（與旅遊/日常池獨立），基本$9/里",
+          "period": "quarterly",
+          "scenario": "onlineFX"
+        },
+        {
+          "type": "separate_pools",
+          "note": "⚠️ $2/里需登記9X，季度外幣池$15,000（與旅遊/日常池獨立），基本$9/里",
+          "period": "quarterly",
+          "scenario": "onlineFX"
+        },
+        {
+          "type": "registration_required",
+          "note": "⚠️ $2/里需登記9X，季度外幣池$15,000（與旅遊/日常池獨立），基本$9/里",
+          "period": "quarterly",
+          "scenario": "physicalFX"
+        },
+        {
+          "type": "separate_pools",
+          "note": "⚠️ $2/里需登記9X，季度外幣池$15,000（與旅遊/日常池獨立），基本$9/里",
+          "period": "quarterly",
+          "scenario": "physicalFX"
+        },
+        {
+          "type": "registration_required",
+          "note": "⚠️ $2/里需登記9X，季度外幣池$15,000（與旅遊/日常池獨立），基本$9/里",
+          "period": "quarterly",
+          "scenario": "travelJKSTA"
+        },
+        {
+          "type": "separate_pools",
+          "note": "⚠️ $2/里需登記9X，季度外幣池$15,000（與旅遊/日常池獨立），基本$9/里",
+          "period": "quarterly",
+          "scenario": "travelJKSTA"
+        },
+        {
+          "type": "registration_required",
+          "note": "⚠️ $2/里需登記9X，季度旅遊池$15,000（與外幣池獨立），基本$9/里",
+          "period": "quarterly",
+          "scenario": "flightDirect"
+        },
+        {
+          "type": "separate_pools",
+          "note": "⚠️ $2/里需登記9X，季度旅遊池$15,000（與外幣池獨立），基本$9/里",
+          "period": "quarterly",
+          "scenario": "flightDirect"
+        },
+        {
+          "type": "registration_required",
+          "note": "⚠️ $2/里需登記9X，季度旅遊池$15,000（與外幣池獨立），基本$9/里",
+          "period": "quarterly",
+          "scenario": "flightOTA"
+        },
+        {
+          "type": "separate_pools",
+          "note": "⚠️ $2/里需登記9X，季度旅遊池$15,000（與外幣池獨立），基本$9/里",
+          "period": "quarterly",
+          "scenario": "flightOTA"
+        },
+        {
+          "type": "registration_required",
+          "note": "⚠️ $2/里需登記9X，季度旅遊池$15,000（與外幣池獨立），基本$9/里",
+          "period": "quarterly",
+          "scenario": "hotelDirect"
+        },
+        {
+          "type": "separate_pools",
+          "note": "⚠️ $2/里需登記9X，季度旅遊池$15,000（與外幣池獨立），基本$9/里",
+          "period": "quarterly",
+          "scenario": "hotelDirect"
+        },
+        {
+          "type": "registration_required",
+          "note": "⚠️ $2/里需登記9X，季度旅遊池$15,000（與外幣池獨立），基本$9/里",
+          "period": "quarterly",
+          "scenario": "hotelOTA"
+        },
+        {
+          "type": "separate_pools",
+          "note": "⚠️ $2/里需登記9X，季度旅遊池$15,000（與外幣池獨立），基本$9/里",
+          "period": "quarterly",
+          "scenario": "hotelOTA"
+        }
+      ]
+    },
+    {
+      "id": "ae_blue",
+      "name": "AE Blue Cash",
+      "issuer": "American Express",
+      "program": "cashback",
+      "desc": "1.2%所有消費，FCC 2%但CBF 0%",
+      "baseReturn": 0.012,
+      "bonusRates": {
+        "octopus": 0.006,
+        "octopusManual": 0.006
+      },
+      "note": null,
+      "validUntil": null,
+      "pools": [],
+      "effectiveCostMap": null,
+      "warningsByScenario": {
+        "octopus": "⚠️ 八達通增值只有0.5倍基本積分=0.6%回贈",
+        "octopusManual": "⚠️ 手動增值同樣只有0.5倍=0.6%回贈"
+      },
+      "constraints": []
+    },
+    {
+      "id": "sc_cathay",
+      "name": "渣打國泰（綠卡）",
+      "issuer": "Standard Chartered",
+      "program": "miles",
+      "desc": "食飯/酒店/海外$4/里，其他$6/里，AAVS $6/里",
+      "baseReturn": 0.006,
+      "bonusRates": {
+        "dining": 0.018,
+        "onlineFX": 0.02,
+        "physicalFX": 0.02,
+        "travelJKSTA": 0.02,
+        "octopus": 0.006,
+        "flightDirect": 0.018,
+        "flightOTA": 0.02,
+        "hotelDirect": 0.018,
+        "hotelOTA": 0.02
+      },
+      "note": null,
+      "validUntil": {
+        "flightDirect": "💡 機票歸類為旅遊MCC，享$4/里",
+        "hotelDirect": "💡 酒店歸類為旅遊MCC，享$4/里"
+      },
+      "pools": [],
+      "effectiveCostMap": {
+        "local": 6,
+        "dining": 4,
+        "onlineHKD": 6,
+        "onlineFX": 4,
+        "travelJKSTA": 4,
+        "physicalFX": 4,
+        "octopus": 6,
+        "flightDirect": 4,
+        "flightOTA": 4,
+        "hotelDirect": 4,
+        "hotelOTA": 4
+      },
+      "warningsByScenario": {},
+      "constraints": []
+    },
+    {
+      "id": "sc_cathay_pb",
+      "name": "渣打國泰-優先理財（藍卡）",
+      "issuer": "Standard Chartered",
+      "program": "miles",
+      "desc": "需$100萬資產，食飯/酒店$4/里，海外$3/里，其他$6/里，4次CX商務Lounge",
+      "baseReturn": 0.006,
+      "bonusRates": {
+        "dining": 0.018,
+        "onlineFX": 0.024,
+        "physicalFX": 0.024,
+        "travelJKSTA": 0.024,
+        "octopus": 0.006
+      },
+      "note": null,
+      "validUntil": null,
+      "pools": [],
+      "effectiveCostMap": {
+        "local": 6,
+        "dining": 4,
+        "onlineHKD": 6,
+        "onlineFX": 3,
+        "travelJKSTA": 3,
+        "physicalFX": 3,
+        "octopus": 6
+      },
+      "warningsByScenario": {},
+      "constraints": []
+    },
+    {
+      "id": "sc_cathay_pp",
+      "name": "渣打國泰-私人理財（黑卡）",
+      "issuer": "Standard Chartered",
+      "program": "miles",
+      "desc": "需$800萬資產，食飯/酒店$4/里，海外$2/里，其他$6/里，2次CX頭等+8次商務Lounge",
+      "baseReturn": 0.006,
+      "bonusRates": {
+        "dining": 0.018,
+        "onlineFX": 0.04,
+        "physicalFX": 0.04,
+        "travelJKSTA": 0.04,
+        "octopus": 0.006
+      },
+      "note": null,
+      "validUntil": null,
+      "pools": [],
+      "effectiveCostMap": {
+        "local": 6,
+        "dining": 4,
+        "onlineHKD": 6,
+        "onlineFX": 2,
+        "travelJKSTA": 2,
+        "physicalFX": 2,
+        "octopus": 6
+      },
+      "warningsByScenario": {},
+      "constraints": []
+    },
+    {
+      "id": "ds_ba",
+      "name": "大新英國航空白金卡",
+      "issuer": "Dah Sing",
+      "program": "miles",
+      "desc": "Avios里數直接入賬，本地$6/Avios，外幣$4/Avios",
+      "baseReturn": 0.006,
+      "bonusRates": {
+        "octopus": 0.006,
+        "onlineFX": 0.018,
+        "physicalFX": 0.018,
+        "travelJKSTA": 0.018
+      },
+      "note": null,
+      "validUntil": null,
+      "pools": [],
+      "effectiveCostMap": {
+        "local": 6,
+        "dining": 6,
+        "onlineHKD": 6,
+        "onlineFX": 4,
+        "travelJKSTA": 4,
+        "physicalFX": 4,
+        "octopus": 6
+      },
+      "warningsByScenario": {},
+      "constraints": []
+    },
+    {
+      "id": "ds_ana",
+      "name": "大新 ANA World MC",
+      "issuer": "Dah Sing",
+      "program": "miles",
+      "desc": "香港唯一ANA里數卡，$8/里(ANA Miles)，無上限，搭ANA額外+25%里數",
+      "baseReturn": 0.004,
+      "bonusRates": {
+        "octopus": 0.004
+      },
+      "note": null,
+      "validUntil": null,
+      "pools": [],
+      "effectiveCostMap": {
+        "local": 8,
+        "dining": 8,
+        "onlineHKD": 8,
+        "onlineFX": 8,
+        "travelJKSTA": 8,
+        "physicalFX": 8,
+        "octopus": 12
+      },
+      "warningsByScenario": {
+        "local": "💡 ANA里數(非Asia Miles) · 17,000里換來回日本",
+        "onlineFX": "💡 ANA里數 · 1.95%外幣手續費",
+        "physicalFX": "💡 ANA里數 · 1.95%外幣手續費",
+        "octopus": "⚠️ 八達通自動增值$12/里(非$8/里)"
+      },
+      "constraints": []
+    },
+    {
+      "id": "hsbc_everymile",
+      "name": "HSBC EveryMile",
+      "issuer": "HSBC",
+      "program": "miles",
+      "desc": "本地$5/里(1%)，指定日常$2/里(2.5%)，海外實體登記後$2/里(每季簽滿$12K後全數retroactive享$2/里，$15K爆Cap)，配Travel Guru可再疊加",
+      "baseReturn": 0.01,
+      "bonusRates": {
+        "physicalFX": 0.025,
+        "travelJKSTA": 0.025,
+        "transport": 0.025,
+        "octopus": 0.004,
+        "octopusManual": 0.004,
+        "supermarket": 0.004
+      },
+      "note": "海外每季簽滿$12K即全數享$2/里(retroactive)，上限$225RC(≈$15K爆Cap)",
+      "validUntil": null,
+      "pools": [
+        {
+          "id": "hsbc_everymile__default",
+          "scenarios": [
+            "physicalFX",
+            "travelJKSTA",
+            "travelTW",
+            "travelCN",
+            "flightDirect",
+            "flightOTA",
+            "hotelDirect",
+            "hotelOTA"
+          ],
+          "rates": {},
+          "cap": {
+            "type": "amount",
+            "amountHKD": 15000.0,
+            "currency": "HKD"
+          },
+          "note": "⚠️ 所有海外場景共用每季 $15,000 簽賬上限（$225RC）"
+        }
+      ],
+      "effectiveCostMap": {
+        "local": 5,
+        "dining": 5,
+        "onlineHKD": 5,
+        "supermarket": 12.5,
+        "octopus": 12.5,
+        "octopusManual": 12.5,
+        "onlineFX": 5,
+        "transport": 2,
+        "travelJKSTA": 2,
+        "physicalFX": 2
+      },
+      "warningsByScenario": {
+        "travelJKSTA": "⚠️ $2/里需Reward+登記，每季累積滿$12,000即全數retroactive享$2/里，$15,000爆Cap",
+        "physicalFX": "⚠️ $2/里需Reward+登記，每季累積滿$12,000即全數retroactive享$2/里，$15,000爆Cap",
+        "onlineFX": "⚠️ 網上外幣只有$5/里(1%)，$2/里僅限海外實體簽賬",
+        "transport": "💡 本地交通出行簽賬享$2/里(2.5%回贈)，包括港鐵、巴士等"
+      },
+      "constraints": [
+        {
+          "type": "pool",
+          "scenarios": [
+            "physicalFX",
+            "travelJKSTA",
+            "travelTW",
+            "travelCN",
+            "flightDirect",
+            "flightOTA",
+            "hotelDirect",
+            "hotelOTA"
+          ],
+          "rates": {},
+          "cap": {
+            "type": "amount",
+            "amountHKD": 15000.0,
+            "currency": "HKD"
+          },
+          "note": "⚠️ 所有海外場景共用每季 $15,000 簽賬上限（$225RC）"
+        },
+        {
+          "type": "points_cap_hint",
+          "note": "海外每季簽滿$12K即全數享$2/里(retroactive)，上限$225RC(≈$15K爆Cap)",
+          "period": "quarterly"
+        },
+        {
+          "type": "cap_mentioned",
+          "cap": {
+            "amountHKD": 225.0,
+            "currency": "HKD"
+          },
+          "period": "quarterly",
+          "note": "海外每季簽滿$12K即全數享$2/里(retroactive)，上限$225RC(≈$15K爆Cap)"
+        }
+      ]
+    },
+    {
+      "id": "citi_pm",
+      "name": "Citi PremierMiles",
+      "issuer": "Citibank",
+      "program": "miles",
+      "desc": "外幣$4/里(滿$2萬$3/里)，里數永不過期",
+      "baseReturn": 0.005,
+      "bonusRates": {
+        "octopus": 0.005,
+        "onlineFX": 0.02,
+        "physicalFX": 0.02,
+        "travelJKSTA": 0.02
+      },
+      "note": null,
+      "validUntil": null,
+      "pools": [],
+      "effectiveCostMap": {
+        "local": 8,
+        "dining": 8,
+        "onlineHKD": 8,
+        "onlineFX": 4,
+        "travelJKSTA": 4,
+        "physicalFX": 4,
+        "octopus": 8
+      },
+      "warningsByScenario": {},
+      "constraints": []
+    },
+    {
+      "id": "citi_prestige",
+      "name": "Citi Prestige",
+      "issuer": "Citibank",
+      "program": "miles",
+      "desc": "高端卡，外幣$4/里+酒店住四送一，AAVS $6/里",
+      "baseReturn": 0.006,
+      "bonusRates": {
+        "onlineFX": 0.02,
+        "physicalFX": 0.02,
+        "travelJKSTA": 0.02,
+        "octopus": 0.006
+      },
+      "note": null,
+      "validUntil": null,
+      "pools": [],
+      "effectiveCostMap": {
+        "local": 6,
+        "dining": 6,
+        "onlineHKD": 6,
+        "onlineFX": 4,
+        "travelJKSTA": 4,
+        "physicalFX": 4,
+        "octopus": 6
+      },
+      "warningsByScenario": {},
+      "constraints": []
+    },
+    {
+      "id": "citi_rewards_m",
+      "name": "Citi Rewards",
+      "issuer": "Citibank",
+      "program": "both",
+      "desc": "流動支付/感應式5X≈1.85%，指定購物/娛樂MCC 3%，其他1X≈0.4%/$15里",
+      "baseReturn": 0.004,
+      "bonusRates": {
+        "octopus": 0.004,
+        "mobilePay": 0.0185
+      },
+      "note": null,
+      "validUntil": null,
+      "pools": [],
+      "effectiveCostMap": {
+        "local": 15,
+        "dining": 15,
+        "onlineHKD": 15,
+        "onlineFX": 15,
+        "travelJKSTA": 15,
+        "physicalFX": 15
+      },
+      "warningsByScenario": {
+        "onlineHKD": "💡 指定購物/娛樂MCC(百貨/服裝/化妝品/戲院/App Store等)可享3%，一般網購只有0.4%",
+        "mobilePay": "💡 Apple Pay/Google Pay/感應式 5X≈1.85%(270分=$1回贈)",
+        "local": "💡 指定購物/娛樂MCC(百貨/服裝/化妝品/戲院)可享3%"
+      },
+      "constraints": []
+    },
+    {
+      "id": "dbs_black",
+      "name": "DBS Black World MC",
+      "issuer": "DBS",
+      "program": "miles",
+      "desc": "外幣$4/里，其他$6/里，AAVS $12/里，月簽$2萬海外免手續費+$2/里(需登記)",
+      "baseReturn": 0.005,
+      "bonusRates": {
+        "onlineFX": 0.018,
+        "physicalFX": 0.018,
+        "travelJKSTA": 0.018,
+        "octopus": 0.005
+      },
+      "note": null,
+      "validUntil": null,
+      "pools": [],
+      "effectiveCostMap": {
+        "local": 6,
+        "dining": 6,
+        "onlineHKD": 6,
+        "onlineFX": 4,
+        "travelJKSTA": 4,
+        "physicalFX": 4,
+        "octopus": 12
+      },
+      "warningsByScenario": {
+        "onlineFX": "💡 月簽$20K海外可免1.95%手續費+$2/里(需DBS Card+登記，回贈上限$800，推廣至3/31)",
+        "physicalFX": "💡 月簽$20K海外可免1.95%手續費+$2/里(需DBS Card+登記，回贈上限$800，推廣至3/31)",
+        "travelJKSTA": "💡 月簽$20K海外可免1.95%手續費+$2/里(需DBS Card+登記，回贈上限$800，推廣至3/31)"
+      },
+      "constraints": [
+        {
+          "type": "rebate_cap",
+          "cap": {
+            "type": "rebate",
+            "amountHKD": 800.0,
+            "currency": "HKD"
+          },
+          "period": null,
+          "note": "💡 月簽$20K海外可免1.95%手續費+$2/里(需DBS Card+登記，回贈上限$800，推廣至3/31)",
+          "scenario": "onlineFX"
+        },
+        {
+          "type": "rebate_cap",
+          "cap": {
+            "type": "rebate",
+            "amountHKD": 800.0,
+            "currency": "HKD"
+          },
+          "period": null,
+          "note": "💡 月簽$20K海外可免1.95%手續費+$2/里(需DBS Card+登記，回贈上限$800，推廣至3/31)",
+          "scenario": "physicalFX"
+        },
+        {
+          "type": "rebate_cap",
+          "cap": {
+            "type": "rebate",
+            "amountHKD": 800.0,
+            "currency": "HKD"
+          },
+          "period": null,
+          "note": "💡 月簽$20K海外可免1.95%手續費+$2/里(需DBS Card+登記，回贈上限$800，推廣至3/31)",
+          "scenario": "travelJKSTA"
+        }
+      ]
+    },
+    {
+      "id": "mox_miles",
+      "name": "MOX（Asia Miles）",
+      "issuer": "Mox Bank",
+      "program": "miles",
+      "desc": "基本$10/里(1%)，Mox Plus(出糧≥$25K或資產≥$60萬)$4/里(2.5%)，0%外幣手續費",
+      "baseReturn": 0.004,
+      "bonusRates": {
+        "octopus": 0,
+        "octopusManual": 0
+      },
+      "note": null,
+      "validUntil": null,
+      "pools": [],
+      "effectiveCostMap": {
+        "local": 10,
+        "dining": 10,
+        "onlineHKD": 10,
+        "onlineFX": 10,
+        "travelJKSTA": 10,
+        "physicalFX": 10,
+        "transport": 10
+      },
+      "warningsByScenario": {
+        "local": "💡 4月起Mox Plus: 出糧≥$25K/月 或 Mox+(資產≥$60萬)可升至$4/里",
+        "dining": "💡 Mox Plus(出糧≥$25K或Mox+資產≥$60萬)可升至$4/里",
+        "onlineFX": "💡 Mox Plus可升至$4/里+0%手續費",
+        "octopus": "⛔ Mox不支援八達通自動增值",
+        "octopusManual": "⛔ Mox不支援八達通自動增值"
+      },
+      "constraints": []
+    },
+    {
+      "id": "hsbc_red",
+      "name": "HSBC Red",
+      "issuer": "HSBC",
+      "program": "both",
+      "desc": "網購4%/$2.5里(月$10K，含外幣網購)+指定商戶8%(7間，月$1,250)，其他0.4%",
+      "baseReturn": 0.004,
+      "bonusRates": {
+        "onlineHKD": 0.04,
+        "onlineFX": 0.04,
+        "octopus": 0.004,
+        "octopusManual": 0.004
+      },
+      "note": "網購月度$10,000(含外幣網購，共用)/指定商戶$1,250上限",
+      "validUntil": "2026-06-30",
+      "pools": [
+        {
+          "id": "hsbc_red__default",
+          "scenarios": [
+            "onlineHKD",
+            "onlineFX",
+            "flightDirect",
+            "flightOTA",
+            "hotelDirect",
+            "hotelOTA"
+          ],
+          "rates": {},
+          "cap": {
+            "type": "amount",
+            "amountHKD": 10000.0,
+            "currency": "HKD"
+          },
+          "note": "⚠️ HKD網購+外幣網購共用月度 $10,000 簽賬上限"
+        }
+      ],
+      "effectiveCostMap": {
+        "local": 25,
+        "dining": 25,
+        "onlineHKD": 2.5,
+        "onlineFX": 2.5,
+        "travelJKSTA": 25,
+        "physicalFX": 25
+      },
+      "warningsByScenario": {
+        "onlineFX": "💡 外幣網購同享4%，與HKD網購共用$10,000上限"
+      },
+      "constraints": [
+        {
+          "type": "pool",
+          "scenarios": [
+            "onlineHKD",
+            "onlineFX",
+            "flightDirect",
+            "flightOTA",
+            "hotelDirect",
+            "hotelOTA"
+          ],
+          "rates": {},
+          "cap": {
+            "type": "amount",
+            "amountHKD": 10000.0,
+            "currency": "HKD"
+          },
+          "note": "⚠️ HKD網購+外幣網購共用月度 $10,000 簽賬上限"
+        },
+        {
+          "type": "shared_pool",
+          "note": "網購月度$10,000(含外幣網購，共用)/指定商戶$1,250上限",
+          "period": "monthly"
+        },
+        {
+          "type": "cap_mentioned",
+          "cap": {
+            "amountHKD": 10000.0,
+            "currency": "HKD"
+          },
+          "period": "monthly",
+          "note": "網購月度$10,000(含外幣網購，共用)/指定商戶$1,250上限"
+        },
+        {
+          "type": "shared_pool",
+          "note": "💡 外幣網購同享4%，與HKD網購共用$10,000上限",
+          "period": null,
+          "scenario": "onlineFX"
+        },
+        {
+          "type": "cap_mentioned",
+          "cap": {
+            "amountHKD": 10000.0,
+            "currency": "HKD"
+          },
+          "period": null,
+          "note": "💡 外幣網購同享4%，與HKD網購共用$10,000上限",
+          "scenario": "onlineFX"
+        }
+      ]
+    },
+    {
+      "id": "hsbc_vs",
+      "name": "HSBC Visa Signature",
+      "issuer": "HSBC",
+      "program": "both",
+      "desc": "最紅自主9X=3.6%/$2.78里，五大類別基本4X=1.6%/$6.25里，配Travel Guru海外最高9.6%",
+      "baseReturn": 0.004,
+      "bonusRates": {
+        "octopus": 0.004,
+        "octopusManual": 0.004
+      },
+      "note": "年度$100,000上限(最紅額外)",
+      "validUntil": null,
+      "pools": [],
+      "effectiveCostMap": {
+        "local": 25,
+        "dining": 25,
+        "onlineHKD": 25,
+        "onlineFX": 25,
+        "travelJKSTA": 25,
+        "physicalFX": 25
+      },
+      "warningsByScenario": {
+        "physicalFX": "⚠️ 9.6%需登記最紅自主賞世界+Travel Guru L3",
+        "travelJKSTA": "⚠️ 9.6%需登記最紅自主賞世界+Travel Guru L3"
+      },
+      "constraints": [
+        {
+          "type": "cap_mentioned",
+          "cap": {
+            "amountHKD": 100000.0,
+            "currency": "HKD"
+          },
+          "period": "annual",
+          "note": "年度$100,000上限(最紅額外)"
+        },
+        {
+          "type": "registration_required",
+          "note": "⚠️ 9.6%需登記最紅自主賞世界+Travel Guru L3",
+          "period": null,
+          "scenario": "physicalFX"
+        },
+        {
+          "type": "registration_required",
+          "note": "⚠️ 9.6%需登記最紅自主賞世界+Travel Guru L3",
+          "period": null,
+          "scenario": "travelJKSTA"
+        }
+      ]
+    },
+    {
+      "id": "hsbc_plat",
+      "name": "HSBC Visa 白金卡",
+      "issuer": "HSBC",
+      "program": "cashback",
+      "desc": "基本0.4%獎賞錢，可配最紅自主+Travel Guru",
+      "baseReturn": 0.004,
+      "bonusRates": {
+        "octopus": 0.004,
+        "octopusManual": 0.004
+      },
+      "note": null,
+      "validUntil": null,
+      "pools": [],
+      "effectiveCostMap": null,
+      "warningsByScenario": {
+        "physicalFX": "💡 登記Travel Guru可疊加海外+3%~6%",
+        "travelJKSTA": "💡 登記Travel Guru可疊加海外+3%~6%"
+      },
+      "constraints": []
+    },
+    {
+      "id": "hsbc_gold",
+      "name": "HSBC 金卡",
+      "issuer": "HSBC",
+      "program": "cashback",
+      "desc": "入門級，0.4%獎賞錢，可配最紅自主+Travel Guru",
+      "baseReturn": 0.004,
+      "bonusRates": {
+        "octopus": 0.004,
+        "octopusManual": 0.004
+      },
+      "note": null,
+      "validUntil": null,
+      "pools": [],
+      "effectiveCostMap": null,
+      "warningsByScenario": {
+        "physicalFX": "💡 登記Travel Guru可疊加海外+3%~6%",
+        "travelJKSTA": "💡 登記Travel Guru可疊加海外+3%~6%"
+      },
+      "constraints": []
+    },
+    {
+      "id": "hsbc_pulse",
+      "name": "HSBC 銀聯 Pulse",
+      "issuer": "HSBC",
+      "program": "cashback",
+      "desc": "銀聯雙幣，人民幣/澳門幣免手續費(其他外幣1%)，中國內地及澳門額外+2%(QR碼/手機支付，推廣至2026/6/30，$80K Cap)，可配最紅自主+Guru",
+      "baseReturn": 0.004,
+      "bonusRates": {
+        "octopus": 0.004,
+        "octopusManual": 0.004
+      },
+      "note": null,
+      "validUntil": null,
+      "pools": [],
+      "effectiveCostMap": null,
+      "warningsByScenario": {
+        "physicalFX": "⚠️ 人民幣/澳門幣免手續費，其他外幣收1% · 登記Travel Guru可疊加海外+3%~6%",
+        "travelJKSTA": "⚠️ 人民幣/澳門幣免手續費，其他外幣收1% · 登記Travel Guru可疊加海外+3%~6%",
+        "travelCN": "💡 中國內地/澳門額外+2%回贈(需Reward+登記)，銀聯免手續費 · 賞世界2.4%+額外2%=4.4% · 每半年$80K Cap",
+        "onlineFX": "💡 內地網購(淘寶等)同享額外+2%回贈(需Reward+登記) · 銀聯免CNY手續費 · 賞世界2.4%+額外2%=4.4%"
+      },
+      "constraints": []
+    },
+    {
+      "id": "hsbc_easy",
+      "name": "HSBC easy 卡",
+      "issuer": "HSBC",
+      "program": "cashback",
+      "desc": "最紅自主2.4%，配合易賞錢最高4.8%，海外配Guru最高8.4%",
+      "baseReturn": 0.004,
+      "bonusRates": {
+        "octopus": 0.004,
+        "octopusManual": 0.004
+      },
+      "note": null,
+      "validUntil": null,
+      "pools": [],
+      "effectiveCostMap": null,
+      "warningsByScenario": {
+        "physicalFX": "💡 登記Travel Guru可疊加海外+3%~6%",
+        "travelJKSTA": "💡 登記Travel Guru可疊加海外+3%~6%"
+      },
+      "constraints": []
+    },
+    {
+      "id": "hsbc_student",
+      "name": "HSBC 學生卡",
+      "issuer": "HSBC",
+      "program": "cashback",
+      "desc": "大學生專屬，可配最紅自主+Travel Guru",
+      "baseReturn": 0.004,
+      "bonusRates": {
+        "octopus": 0.004,
+        "octopusManual": 0.004
+      },
+      "note": null,
+      "validUntil": null,
+      "pools": [],
+      "effectiveCostMap": null,
+      "warningsByScenario": {
+        "physicalFX": "💡 登記Travel Guru可疊加海外+3%~6%",
+        "travelJKSTA": "💡 登記Travel Guru可疊加海外+3%~6%"
+      },
+      "constraints": []
+    },
+    {
+      "id": "hsbc_debit",
+      "name": "HSBC MC 扣賬卡",
+      "issuer": "HSBC",
+      "program": "cashback",
+      "desc": "0.4%回贈全部消費，0%外幣手續費(12種貨幣直扣)，Debit Card",
+      "baseReturn": 0.004,
+      "bonusRates": {
+        "onlineFX": 0.004,
+        "physicalFX": 0.004,
+        "travelJKSTA": 0.004,
+        "octopus": 0
+      },
+      "note": null,
+      "validUntil": null,
+      "pools": [],
+      "effectiveCostMap": null,
+      "warningsByScenario": {
+        "local": "💡 扣賬卡(非信用卡) · 從綜合戶口直接扣賬",
+        "onlineFX": "💡 0%外幣手續費 · 12種貨幣直接扣賬",
+        "physicalFX": "💡 0%外幣手續費 · 12種貨幣直接扣賬",
+        "travelJKSTA": "💡 0%外幣手續費 · 12種貨幣直接扣賬",
+        "octopus": "⛔ 扣賬卡不支援八達通自動增值"
+      },
+      "constraints": []
+    },
+    {
+      "id": "hs_mmpower",
+      "name": "恒生 MMPOWER",
+      "issuer": "Hang Seng",
+      "program": "cashback",
+      "desc": "指定商戶/網上娛樂8%+網購5%+外幣4%，需登記+月簽$3K門檻",
+      "baseReturn": 0.004,
+      "bonusRates": {
+        "octopus": 0.004,
+        "onlineHKD": 0.05,
+        "onlineFX": 0.05,
+        "physicalFX": 0.04,
+        "travelJKSTA": 0.04,
+        "flightDirect": 0.04,
+        "hotelDirect": 0.04
+      },
+      "note": "需登記+簽滿$3,000，月度$500額外上限（全類別共用）",
+      "validUntil": "2026-12-31",
+      "pools": [
+        {
+          "id": "hs_mmpower__default",
+          "scenarios": [
+            "onlineHKD",
+            "onlineFX",
+            "physicalFX",
+            "travelJKSTA",
+            "travelTW",
+            "travelCN",
+            "flightDirect",
+            "flightOTA",
+            "hotelDirect",
+            "hotelOTA"
+          ],
+          "rates": {
+            "onlineHKD": 0.046,
+            "onlineFX": 0.046,
+            "physicalFX": 0.036,
+            "travelJKSTA": 0.036,
+            "travelTW": 0.036,
+            "travelCN": 0.036,
+            "flightDirect": 0.036,
+            "flightOTA": 0.046,
+            "hotelDirect": 0.036,
+            "hotelOTA": 0.046
+          },
+          "cap": {
+            "type": "rebate",
+            "amountHKD": 500,
+            "currency": "HKD"
+          },
+          "note": "⚠️ 網購+外幣+指定商戶共用 $500 額外回贈上限"
+        }
+      ],
+      "effectiveCostMap": null,
+      "warningsByScenario": {
+        "onlineHKD": "⚠️ 網購5%需登記+月簽滿$3,000，$500上限與外幣/商戶共用",
+        "onlineFX": "⚠️ 網上外幣歸類為網購5%(非外幣4%)，$500上限共用",
+        "physicalFX": "⚠️ 外幣實體4%(舊制6%已改)，需登記+月簽$3,000，$500上限共用",
+        "travelJKSTA": "⚠️ 外幣實體4%，需登記+月簽$3,000，$500上限共用"
+      },
+      "constraints": [
+        {
+          "type": "pool",
+          "scenarios": [
+            "onlineHKD",
+            "onlineFX",
+            "physicalFX",
+            "travelJKSTA",
+            "travelTW",
+            "travelCN",
+            "flightDirect",
+            "flightOTA",
+            "hotelDirect",
+            "hotelOTA"
+          ],
+          "rates": {
+            "onlineHKD": 0.046,
+            "onlineFX": 0.046,
+            "physicalFX": 0.036,
+            "travelJKSTA": 0.036,
+            "travelTW": 0.036,
+            "travelCN": 0.036,
+            "flightDirect": 0.036,
+            "flightOTA": 0.046,
+            "hotelDirect": 0.036,
+            "hotelOTA": 0.046
+          },
+          "cap": {
+            "type": "rebate",
+            "amountHKD": 500,
+            "currency": "HKD"
+          },
+          "note": "⚠️ 網購+外幣+指定商戶共用 $500 額外回贈上限"
+        },
+        {
+          "type": "registration_required",
+          "note": "需登記+簽滿$3,000，月度$500額外上限（全類別共用）",
+          "period": "monthly"
+        },
+        {
+          "type": "shared_pool",
+          "note": "需登記+簽滿$3,000，月度$500額外上限（全類別共用）",
+          "period": "monthly"
+        },
+        {
+          "type": "cap_mentioned",
+          "cap": {
+            "amountHKD": 3000.0,
+            "currency": "HKD"
+          },
+          "period": "monthly",
+          "note": "需登記+簽滿$3,000，月度$500額外上限（全類別共用）"
+        },
+        {
+          "type": "registration_required",
+          "note": "⚠️ 網購5%需登記+月簽滿$3,000，$500上限與外幣/商戶共用",
+          "period": null,
+          "scenario": "onlineHKD"
+        },
+        {
+          "type": "shared_pool",
+          "note": "⚠️ 網購5%需登記+月簽滿$3,000，$500上限與外幣/商戶共用",
+          "period": null,
+          "scenario": "onlineHKD"
+        },
+        {
+          "type": "cap_mentioned",
+          "cap": {
+            "amountHKD": 3000.0,
+            "currency": "HKD"
+          },
+          "period": null,
+          "note": "⚠️ 網購5%需登記+月簽滿$3,000，$500上限與外幣/商戶共用",
+          "scenario": "onlineHKD"
+        },
+        {
+          "type": "shared_pool",
+          "note": "⚠️ 網上外幣歸類為網購5%(非外幣4%)，$500上限共用",
+          "period": null,
+          "scenario": "onlineFX"
+        },
+        {
+          "type": "cap_mentioned",
+          "cap": {
+            "amountHKD": 500.0,
+            "currency": "HKD"
+          },
+          "period": null,
+          "note": "⚠️ 網上外幣歸類為網購5%(非外幣4%)，$500上限共用",
+          "scenario": "onlineFX"
+        },
+        {
+          "type": "registration_required",
+          "note": "⚠️ 外幣實體4%(舊制6%已改)，需登記+月簽$3,000，$500上限共用",
+          "period": null,
+          "scenario": "physicalFX"
+        },
+        {
+          "type": "shared_pool",
+          "note": "⚠️ 外幣實體4%(舊制6%已改)，需登記+月簽$3,000，$500上限共用",
+          "period": null,
+          "scenario": "physicalFX"
+        },
+        {
+          "type": "cap_mentioned",
+          "cap": {
+            "amountHKD": 3000.0,
+            "currency": "HKD"
+          },
+          "period": null,
+          "note": "⚠️ 外幣實體4%(舊制6%已改)，需登記+月簽$3,000，$500上限共用",
+          "scenario": "physicalFX"
+        },
+        {
+          "type": "registration_required",
+          "note": "⚠️ 外幣實體4%，需登記+月簽$3,000，$500上限共用",
+          "period": null,
+          "scenario": "travelJKSTA"
+        },
+        {
+          "type": "shared_pool",
+          "note": "⚠️ 外幣實體4%，需登記+月簽$3,000，$500上限共用",
+          "period": null,
+          "scenario": "travelJKSTA"
+        },
+        {
+          "type": "cap_mentioned",
+          "cap": {
+            "amountHKD": 3000.0,
+            "currency": "HKD"
+          },
+          "period": null,
+          "note": "⚠️ 外幣實體4%，需登記+月簽$3,000，$500上限共用",
+          "scenario": "travelJKSTA"
+        }
+      ]
+    },
+    {
+      "id": "hs_travel",
+      "name": "恒生 Travel+",
+      "issuer": "Hang Seng",
+      "program": "cashback",
+      "desc": "日韓泰台內地澳門實體7%，其他海外實體/餐飲5%，交通/網上外幣只有0.4%",
+      "baseReturn": 0.004,
+      "bonusRates": {
+        "octopus": 0.004,
+        "travelJKSTA": 0.07,
+        "travelCN": 0.07,
+        "physicalFX": 0.05,
+        "dining": 0.05,
+        "flightDirect": 0.07,
+        "flightOTA": 0.05,
+        "hotelDirect": 0.07,
+        "hotelOTA": 0.05
+      },
+      "note": "登記一次即可，簽滿$6,000起，月度$500額外上限",
+      "validUntil": "2026-12-31",
+      "pools": [
+        {
+          "id": "hs_travel__default",
+          "scenarios": [
+            "travelJKSTA",
+            "travelTW",
+            "travelCN",
+            "physicalFX",
+            "dining",
+            "flightDirect",
+            "flightOTA",
+            "hotelDirect",
+            "hotelOTA"
+          ],
+          "rates": {
+            "travelJKSTA": 0.066,
+            "travelTW": 0.066,
+            "travelCN": 0.066,
+            "physicalFX": 0.046,
+            "dining": 0.046,
+            "flightDirect": 0.066,
+            "flightOTA": 0.046,
+            "hotelDirect": 0.066,
+            "hotelOTA": 0.046
+          },
+          "cap": {
+            "type": "rebate",
+            "amountHKD": 500,
+            "currency": "HKD"
+          },
+          "note": "⚠️ 實體外幣+食飯+交通共用 $500 額外回贈上限"
+        }
+      ],
+      "effectiveCostMap": null,
+      "warningsByScenario": {
+        "travelJKSTA": "⚠️ 需登記一次+月簽滿$6,000",
+        "travelCN": "⚠️ 中國內地/澳門與日韓泰台同享7%，需登記+月簽滿$6,000，$500月度上限共用",
+        "physicalFX": "⚠️ 需登記一次+月簽滿$6,000",
+        "onlineFX": "⚠️ 網上外幣只有0.4%（7%/5%僅限海外實體簽賬）",
+        "dining": "⚠️ 需登記一次+月簽滿$6,000",
+        "transport": "⚠️ 2026年起交通已無額外回贈，只有0.4%基本"
+      },
+      "constraints": [
+        {
+          "type": "pool",
+          "scenarios": [
+            "travelJKSTA",
+            "travelTW",
+            "travelCN",
+            "physicalFX",
+            "dining",
+            "flightDirect",
+            "flightOTA",
+            "hotelDirect",
+            "hotelOTA"
+          ],
+          "rates": {
+            "travelJKSTA": 0.066,
+            "travelTW": 0.066,
+            "travelCN": 0.066,
+            "physicalFX": 0.046,
+            "dining": 0.046,
+            "flightDirect": 0.066,
+            "flightOTA": 0.046,
+            "hotelDirect": 0.066,
+            "hotelOTA": 0.046
+          },
+          "cap": {
+            "type": "rebate",
+            "amountHKD": 500,
+            "currency": "HKD"
+          },
+          "note": "⚠️ 實體外幣+食飯+交通共用 $500 額外回贈上限"
+        },
+        {
+          "type": "cap_mentioned",
+          "cap": {
+            "amountHKD": 6000.0,
+            "currency": "HKD"
+          },
+          "period": "monthly",
+          "note": "登記一次即可，簽滿$6,000起，月度$500額外上限"
+        },
+        {
+          "type": "registration_required",
+          "note": "⚠️ 需登記一次+月簽滿$6,000",
+          "period": null,
+          "scenario": "travelJKSTA"
+        },
+        {
+          "type": "registration_required",
+          "note": "⚠️ 中國內地/澳門與日韓泰台同享7%，需登記+月簽滿$6,000，$500月度上限共用",
+          "period": "monthly",
+          "scenario": "travelCN"
+        },
+        {
+          "type": "shared_pool",
+          "note": "⚠️ 中國內地/澳門與日韓泰台同享7%，需登記+月簽滿$6,000，$500月度上限共用",
+          "period": "monthly",
+          "scenario": "travelCN"
+        },
+        {
+          "type": "cap_mentioned",
+          "cap": {
+            "amountHKD": 6000.0,
+            "currency": "HKD"
+          },
+          "period": "monthly",
+          "note": "⚠️ 中國內地/澳門與日韓泰台同享7%，需登記+月簽滿$6,000，$500月度上限共用",
+          "scenario": "travelCN"
+        },
+        {
+          "type": "registration_required",
+          "note": "⚠️ 需登記一次+月簽滿$6,000",
+          "period": null,
+          "scenario": "physicalFX"
+        },
+        {
+          "type": "registration_required",
+          "note": "⚠️ 需登記一次+月簽滿$6,000",
+          "period": null,
+          "scenario": "dining"
+        }
+      ]
+    },
+    {
+      "id": "hs_enjoy",
+      "name": "恒生 enJoy 卡",
+      "issuer": "Hang Seng",
+      "program": "cashback",
+      "desc": "百佳屈臣氏豐澤指定商戶優惠",
+      "baseReturn": 0.004,
+      "bonusRates": {
+        "octopus": 0.004
+      },
+      "note": null,
+      "validUntil": null,
+      "pools": [],
+      "effectiveCostMap": null,
+      "warningsByScenario": {},
+      "constraints": []
+    },
+    {
+      "id": "hs_muji",
+      "name": "恒生 Muji 卡",
+      "issuer": "Hang Seng",
+      "program": "cashback",
+      "desc": "MUJI商店消費額外積分獎賞，一般消費0.4%",
+      "baseReturn": 0.004,
+      "bonusRates": {
+        "octopus": 0.004
+      },
+      "note": null,
+      "validUntil": null,
+      "pools": [],
+      "effectiveCostMap": null,
+      "warningsByScenario": {},
+      "constraints": []
+    },
+    {
+      "id": "hs_uni",
+      "name": "恒生大學/大專卡",
+      "issuer": "Hang Seng",
+      "program": "cashback",
+      "desc": "學生專屬，永久免年費",
+      "baseReturn": 0.004,
+      "bonusRates": {
+        "octopus": 0.004
+      },
+      "note": null,
+      "validUntil": null,
+      "pools": [],
+      "effectiveCostMap": null,
+      "warningsByScenario": {},
+      "constraints": []
+    },
+    {
+      "id": "boc_uni",
+      "name": "中銀大學信用卡",
+      "issuer": "Bank of China",
+      "program": "cashback",
+      "desc": "學生專屬，各大學聯營，永久免年費",
+      "baseReturn": 0.004,
+      "bonusRates": {
+        "octopus": 0.004,
+        "flightOTA": 0.02,
+        "hotelOTA": 0.02
+      },
+      "note": null,
+      "validUntil": null,
+      "pools": [],
+      "effectiveCostMap": null,
+      "warningsByScenario": {
+        "local": "💡 基本0.4%為積分回贈(非現金)，需於BoC Pay+兌換"
+      },
+      "constraints": []
+    },
+    {
+      "id": "bocom_gogoal",
+      "name": "交通銀行 Go-Goal",
+      "issuer": "BoCom",
+      "program": "cashback",
+      "desc": "學生卡，首12月首$2K/月享6%，之後0.4%，Apple Pay 5%(月簽$3K)，學費可賺積分",
+      "baseReturn": 0.004,
+      "bonusRates": {
+        "octopus": 0.004,
+        "mobilePay": 0.05
+      },
+      "note": "Apple Pay 5%月度$4,000上限(回贈$200)，需月簽$3,000",
+      "validUntil": null,
+      "pools": [],
+      "effectiveCostMap": null,
+      "warningsByScenario": {
+        "local": "💡 首12個月合資格簽賬首$2,000/月享5.6%額外回贈(共6%)，之後0.4%",
+        "mobilePay": "⚠️ Apple Pay 5%需月簽$3,000，月度$4,000上限(回贈$200)"
+      },
+      "constraints": [
+        {
+          "type": "rebate_cap",
+          "cap": {
+            "type": "rebate",
+            "amountHKD": 4000.0,
+            "currency": "HKD"
+          },
+          "period": "monthly",
+          "note": "Apple Pay 5%月度$4,000上限(回贈$200)，需月簽$3,000"
+        },
+        {
+          "type": "tiered_rule",
+          "thresholdHKD": 2000.0,
+          "currency": "HKD",
+          "note": "💡 首12個月合資格簽賬首$2,000/月享5.6%額外回贈(共6%)，之後0.4%",
+          "period": null,
+          "scenario": "local"
+        },
+        {
+          "type": "rebate_cap",
+          "cap": {
+            "type": "rebate",
+            "amountHKD": 4000.0,
+            "currency": "HKD"
+          },
+          "period": "monthly",
+          "note": "⚠️ Apple Pay 5%需月簽$3,000，月度$4,000上限(回贈$200)",
+          "scenario": "mobilePay"
+        }
+      ]
+    },
+    {
+      "id": "sc_simply",
+      "name": "渣打 Simply Cash",
+      "issuer": "Standard Chartered",
+      "program": "cashback",
+      "desc": "本地1.5%/外幣2%，無上限，八達通AAVS 1.5%",
+      "baseReturn": 0.015,
+      "bonusRates": {
+        "onlineFX": 0.02,
+        "physicalFX": 0.02,
+        "travelJKSTA": 0.02,
+        "octopus": 0.015
+      },
+      "note": null,
+      "validUntil": null,
+      "pools": [],
+      "effectiveCostMap": null,
+      "warningsByScenario": {},
+      "constraints": []
+    },
+    {
+      "id": "sc_smart",
+      "name": "渣打 Smart 卡",
+      "issuer": "Standard Chartered",
+      "program": "cashback",
+      "desc": "月簽$4K起0.56%/$15K起1.2%，特約商戶5%（無最低消費），免外幣手續費",
+      "baseReturn": 0.0056,
+      "bonusRates": {
+        "octopus": 0.0056
+      },
+      "note": "一般消費需月簽$4,000起；特約商戶5%無門檻（月度$5,000/年度$60,000上限）",
+      "validUntil": null,
+      "pools": [],
+      "effectiveCostMap": null,
+      "warningsByScenario": {
+        "local": "⚠️ 月簽<$4K=0%回贈，$4K-$15K=0.56%，>$15K=1.2%",
+        "dining": "⚠️ 月簽<$4K=0%回贈，$4K-$15K=0.56%，>$15K=1.2%",
+        "onlineHKD": "⚠️ 月簽<$4K=0%回贈，$4K-$15K=0.56%，>$15K=1.2%",
+        "onlineFX": "⚠️ 月簽<$4K=0%，$4K起0.56%，$15K起1.2%（免外幣手續費）",
+        "physicalFX": "⚠️ 月簽<$4K=0%，$4K起0.56%，$15K起1.2%（免外幣手續費）",
+        "travelJKSTA": "⚠️ 月簽<$4K=0%，$4K起0.56%，$15K起1.2%（免外幣手續費）",
+        "supermarket": "⚠️ 月簽<$4K=0%回贈，$4K-$15K=0.56%，>$15K=1.2%"
+      },
+      "constraints": [
+        {
+          "type": "cap_mentioned",
+          "cap": {
+            "amountHKD": 60000.0,
+            "currency": "HKD"
+          },
+          "period": "monthly",
+          "note": "一般消費需月簽$4,000起；特約商戶5%無門檻（月度$5,000/年度$60,000上限）"
+        }
+      ]
+    },
+    {
+      "id": "sc_apoint",
+      "name": "渣打 A. Point Card",
+      "issuer": "Standard Chartered",
+      "program": "cashback",
+      "desc": "積分兌換禮品或現金回贈",
+      "baseReturn": 0.004,
+      "bonusRates": {
+        "octopus": 0.002
+      },
+      "note": null,
+      "validUntil": null,
+      "pools": [],
+      "effectiveCostMap": null,
+      "warningsByScenario": {},
+      "constraints": []
+    },
+    {
+      "id": "boc_sogo",
+      "name": "中銀 SOGO Visa Sig",
+      "issuer": "Bank of China",
+      "program": "cashback",
+      "desc": "流動支付5.4%(Visa payWave感應式)，SOGO消費額外積分",
+      "baseReturn": 0.004,
+      "bonusRates": {
+        "octopus": 0.004,
+        "mobilePay": 0.054
+      },
+      "note": "手機支付月度$2,000上限(額外5%)，僅限Visa payWave",
+      "validUntil": null,
+      "pools": [],
+      "effectiveCostMap": null,
+      "warningsByScenario": {
+        "local": "💡 基本0.4%為積分回贈(非現金)，需於BoC Pay+兌換",
+        "mobilePay": "⚠️ 5.4%只限Visa payWave感應式支付(Apple Pay/Google Pay)，非Visa驗證嘅網上支付不適用 · 狂賞派另加回贈(紅日+5%/平日+2%)，需App登記",
+        "dining": "💡 狂賞派另加回贈(紅日+5%/平日+2%)，需App登記"
+      },
+      "constraints": [
+        {
+          "type": "cap_mentioned",
+          "cap": {
+            "amountHKD": 2000.0,
+            "currency": "HKD"
+          },
+          "period": "monthly",
+          "note": "手機支付月度$2,000上限(額外5%)，僅限Visa payWave"
+        }
+      ]
+    },
+    {
+      "id": "boc_chill",
+      "name": "中銀 Chill Card",
+      "issuer": "Bank of China",
+      "program": "cashback",
+      "desc": "網購5%/海外5%(實體+網上均適用，無門檻)，Chill商戶10%(需月簽$1,500實體)",
+      "baseReturn": 0.004,
+      "bonusRates": {
+        "octopus": 0,
+        "onlineHKD": 0.05,
+        "onlineFX": 0.05,
+        "physicalFX": 0.05,
+        "travelJKSTA": 0.05
+      },
+      "note": "月度額外$150上限(~$3,260爆Cap)，網購+海外共用",
+      "validUntil": null,
+      "pools": [
+        {
+          "id": "boc_chill__default",
+          "scenarios": [
+            "onlineHKD",
+            "onlineFX",
+            "physicalFX",
+            "travelJKSTA",
+            "travelTW",
+            "travelCN",
+            "flightDirect",
+            "flightOTA",
+            "hotelDirect",
+            "hotelOTA"
+          ],
+          "rates": {
+            "onlineHKD": 0.046,
+            "onlineFX": 0.046,
+            "physicalFX": 0.046,
+            "travelJKSTA": 0.046,
+            "travelTW": 0.046,
+            "travelCN": 0.046,
+            "flightDirect": 0.046,
+            "flightOTA": 0.046,
+            "hotelDirect": 0.046,
+            "hotelOTA": 0.046
+          },
+          "cap": {
+            "type": "rebate",
+            "amountHKD": 150,
+            "currency": "HKD"
+          },
+          "note": "⚠️ 網購+海外共用月度 $150 額外回贈上限"
+        }
+      ],
+      "effectiveCostMap": null,
+      "warningsByScenario": {
+        "octopus": "⛔ 官方T&C將八達通增值列為不合資格簽賬",
+        "local": "💡 基本0.4%為積分回贈(非現金)，需於BoC Pay+兌換",
+        "onlineHKD": "💡 5%無需額外門檻 · 狂賞派另加回贈(需App登記，紅日+5%/平日+2%)",
+        "onlineFX": "💡 5%無需額外門檻 · 狂賞飛另加3%(需App登記，每季累積制，內地/澳門可達6%)",
+        "physicalFX": "💡 海外實體同享5% · 狂賞飛另加3%(需App登記，每季累積制，內地/澳門可達6%)",
+        "travelJKSTA": "💡 海外實體同享5% · 狂賞飛另加3%(需App登記，每季累積制，內地/澳門可達6%)",
+        "mobilePay": "💡 Apple Pay拍卡按商戶類別計回贈（海外5%/Chill商戶10%/一般0.4%），無獨立流動支付加碼"
+      },
+      "constraints": [
+        {
+          "type": "pool",
+          "scenarios": [
+            "onlineHKD",
+            "onlineFX",
+            "physicalFX",
+            "travelJKSTA",
+            "travelTW",
+            "travelCN",
+            "flightDirect",
+            "flightOTA",
+            "hotelDirect",
+            "hotelOTA"
+          ],
+          "rates": {
+            "onlineHKD": 0.046,
+            "onlineFX": 0.046,
+            "physicalFX": 0.046,
+            "travelJKSTA": 0.046,
+            "travelTW": 0.046,
+            "travelCN": 0.046,
+            "flightDirect": 0.046,
+            "flightOTA": 0.046,
+            "hotelDirect": 0.046,
+            "hotelOTA": 0.046
+          },
+          "cap": {
+            "type": "rebate",
+            "amountHKD": 150,
+            "currency": "HKD"
+          },
+          "note": "⚠️ 網購+海外共用月度 $150 額外回贈上限"
+        },
+        {
+          "type": "shared_pool",
+          "note": "月度額外$150上限(~$3,260爆Cap)，網購+海外共用",
+          "period": "monthly"
+        },
+        {
+          "type": "cap_mentioned",
+          "cap": {
+            "amountHKD": 3260.0,
+            "currency": "HKD"
+          },
+          "period": "monthly",
+          "note": "月度額外$150上限(~$3,260爆Cap)，網購+海外共用"
+        }
+      ]
+    },
+    {
+      "id": "boc_cheers",
+      "name": "中銀 Cheers VI",
+      "issuer": "Bank of China",
+      "program": "both",
+      "desc": "食飯10X=$1.5/里或4%，外幣4%，年薪$60萬",
+      "baseReturn": 0.004,
+      "bonusRates": {
+        "octopus": 0.004,
+        "dining": 0.04,
+        "onlineFX": 0.04,
+        "physicalFX": 0.04,
+        "travelJKSTA": 0.04,
+        "travelTW": 0.04,
+        "flightDirect": 0.04,
+        "hotelDirect": 0.04
+      },
+      "note": "食飯$10k/外幣$25k分部上限，全部場景合共月度30萬分上限(≈$30k)，需月簽$5,000",
+      "validUntil": null,
+      "pools": [
+        {
+          "id": "boc_cheers__default",
+          "scenarios": [
+            "dining",
+            "onlineFX",
+            "physicalFX",
+            "travelJKSTA",
+            "travelTW",
+            "travelCN",
+            "flightDirect",
+            "flightOTA",
+            "hotelDirect",
+            "hotelOTA"
+          ],
+          "rates": {},
+          "cap": {
+            "type": "amount",
+            "amountHKD": 30000.0,
+            "currency": "HKD"
+          },
+          "note": "⚠️ 食飯$10K+外幣$25K，合共月度 $30,000 簽賬上限"
+        }
+      ],
+      "effectiveCostMap": {
+        "local": 10,
+        "dining": 1.5,
+        "onlineHKD": 10,
+        "onlineFX": 1.5,
+        "travelJKSTA": 1.5,
+        "physicalFX": 1.5
+      },
+      "warningsByScenario": {
+        "local": "💡 基本0.4%為積分回贈(非現金)，需於BoC Pay+兌換",
+        "dining": "⚠️ 需月簽滿$5,000 · 💡狂賞派另加回贈(需App登記，紅日+5%/平日+2%)",
+        "onlineFX": "⚠️ 需月簽滿$5,000 · 💡狂賞飛另加3%(需App登記，每季累積制，內地/澳門可達6%)",
+        "physicalFX": "⚠️ 需月簽滿$5,000 · 💡狂賞飛另加3%(需App登記，每季累積制，內地/澳門可達6%)",
+        "travelJKSTA": "⚠️ 需月簽滿$5,000 · 💡狂賞飛另加3%(需App登記，每季累積制，內地/澳門可達6%)"
+      },
+      "constraints": [
+        {
+          "type": "pool",
+          "scenarios": [
+            "dining",
+            "onlineFX",
+            "physicalFX",
+            "travelJKSTA",
+            "travelTW",
+            "travelCN",
+            "flightDirect",
+            "flightOTA",
+            "hotelDirect",
+            "hotelOTA"
+          ],
+          "rates": {},
+          "cap": {
+            "type": "amount",
+            "amountHKD": 30000.0,
+            "currency": "HKD"
+          },
+          "note": "⚠️ 食飯$10K+外幣$25K，合共月度 $30,000 簽賬上限"
+        },
+        {
+          "type": "spend_cap",
+          "cap": {
+            "type": "amount",
+            "amountHKD": 5000.0,
+            "currency": "HKD"
+          },
+          "period": "monthly",
+          "note": "食飯$10k/外幣$25k分部上限，全部場景合共月度30萬分上限(≈$30k)，需月簽$5,000"
+        }
+      ]
+    },
+    {
+      "id": "boc_cheers_vs",
+      "name": "中銀 Cheers VS",
+      "issuer": "Bank of China",
+      "program": "both",
+      "desc": "食飯8X=$1.9/里或3.2%，外幣3.2%，年薪$15萬",
+      "baseReturn": 0.004,
+      "bonusRates": {
+        "octopus": 0.004,
+        "dining": 0.032,
+        "onlineFX": 0.032,
+        "physicalFX": 0.032,
+        "travelJKSTA": 0.032,
+        "travelTW": 0.032,
+        "flightDirect": 0.032,
+        "hotelDirect": 0.032
+      },
+      "note": "食飯$7.5k/外幣$18.75k分部上限，全部場景合共月度18萬分上限(≈$22.5k)，需月簽$5,000",
+      "validUntil": null,
+      "pools": [
+        {
+          "id": "boc_cheers_vs__default",
+          "scenarios": [
+            "dining",
+            "onlineFX",
+            "physicalFX",
+            "travelJKSTA",
+            "travelTW",
+            "travelCN",
+            "flightDirect",
+            "flightOTA",
+            "hotelDirect",
+            "hotelOTA"
+          ],
+          "rates": {},
+          "cap": {
+            "type": "amount",
+            "amountHKD": 22500,
+            "currency": "HKD"
+          },
+          "note": "⚠️ 食飯$7.5K+外幣$18.75K，合共月度 $22,500 簽賬上限"
+        }
+      ],
+      "effectiveCostMap": {
+        "local": 10,
+        "dining": 1.9,
+        "onlineHKD": 10,
+        "onlineFX": 1.9,
+        "travelJKSTA": 1.9,
+        "physicalFX": 1.9
+      },
+      "warningsByScenario": {
+        "local": "💡 基本0.4%為積分回贈(非現金)，需於BoC Pay+兌換",
+        "dining": "⚠️ 需月簽滿$5,000 · 💡狂賞派另加回贈(需App登記，紅日+5%/平日+2%)",
+        "onlineFX": "⚠️ 需月簽滿$5,000 · 💡狂賞飛另加3%(需App登記，每季累積制，內地/澳門可達6%)",
+        "physicalFX": "⚠️ 需月簽滿$5,000 · 💡狂賞飛另加3%(需App登記，每季累積制，內地/澳門可達6%)",
+        "travelJKSTA": "⚠️ 需月簽滿$5,000 · 💡狂賞飛另加3%(需App登記，每季累積制，內地/澳門可達6%)"
+      },
+      "constraints": [
+        {
+          "type": "pool",
+          "scenarios": [
+            "dining",
+            "onlineFX",
+            "physicalFX",
+            "travelJKSTA",
+            "travelTW",
+            "travelCN",
+            "flightDirect",
+            "flightOTA",
+            "hotelDirect",
+            "hotelOTA"
+          ],
+          "rates": {},
+          "cap": {
+            "type": "amount",
+            "amountHKD": 22500,
+            "currency": "HKD"
+          },
+          "note": "⚠️ 食飯$7.5K+外幣$18.75K，合共月度 $22,500 簽賬上限"
+        },
+        {
+          "type": "spend_cap",
+          "cap": {
+            "type": "amount",
+            "amountHKD": 5000.0,
+            "currency": "HKD"
+          },
+          "period": "monthly",
+          "note": "食飯$7.5k/外幣$18.75k分部上限，全部場景合共月度18萬分上限(≈$22.5k)，需月簽$5,000"
+        }
+      ]
+    },
+    {
+      "id": "boc_taobao",
+      "name": "中銀淘寶卡",
+      "issuer": "Bank of China",
+      "program": "cashback",
+      "desc": "World Mastercard，淘寶/海外簽賬0%手續費，一般網購0.4%",
+      "baseReturn": 0.004,
+      "bonusRates": {
+        "octopus": 0.004
+      },
+      "note": null,
+      "validUntil": null,
+      "pools": [],
+      "effectiveCostMap": null,
+      "warningsByScenario": {
+        "local": "💡 基本0.4%為積分回贈(非現金)，需於BoC Pay+兌換",
+        "onlineHKD": "⚠️ Mastercard，不適用狂賞派(Visa only) · 淘寶額外積分只限淘寶"
+      },
+      "constraints": []
+    },
+    {
+      "id": "boc_go",
+      "name": "中銀 Go 卡",
+      "issuer": "Bank of China",
+      "program": "cashback",
+      "desc": "內地手機支付8%/本地手機4%/Go商戶5%，銀聯免RMB手續費",
+      "baseReturn": 0.004,
+      "bonusRates": {
+        "octopus": 0.004,
+        "mobilePay": 0.04,
+        "travelCN": 0.08,
+        "physicalFX": 0.008,
+        "flightDirect": 0.008,
+        "flightOTA": 0.008,
+        "hotelDirect": 0.008,
+        "hotelOTA": 0.008
+      },
+      "note": "手機支付月度$100回贈上限(25,000積分)(內地簽$1,316/本地簽$2,778爆Cap)，Go商戶5%月$92上限",
+      "validUntil": "2026-06-30",
+      "pools": [],
+      "effectiveCostMap": null,
+      "warningsByScenario": {
+        "mobilePay": "⚠️ 4%為積分回贈(需兌換)，月$100回贈上限與內地手機共用，支援BoC Pay/雲閃付/Apple Pay",
+        "travelCN": "⚠️ 8%為積分回贈(需兌換)，月$100回贈上限與本地手機共用，免RMB手續費，至2026/6/30免$1,500門檻",
+        "physicalFX": "💡 非手機海外簽賬僅0.8%(2X)，RMB/MOP免手續費"
+      },
+      "constraints": [
+        {
+          "type": "rebate_cap",
+          "cap": {
+            "type": "rebate",
+            "amountHKD": 2778.0,
+            "currency": "HKD"
+          },
+          "period": "monthly",
+          "note": "手機支付月度$100回贈上限(25,000積分)(內地簽$1,316/本地簽$2,778爆Cap)，Go商戶5%月$92上限"
+        },
+        {
+          "type": "shared_pool",
+          "note": "⚠️ 4%為積分回贈(需兌換)，月$100回贈上限與內地手機共用，支援BoC Pay/雲閃付/Apple Pay",
+          "period": null,
+          "scenario": "mobilePay"
+        },
+        {
+          "type": "rebate_cap",
+          "cap": {
+            "type": "rebate",
+            "amountHKD": 100.0,
+            "currency": "HKD"
+          },
+          "period": null,
+          "note": "⚠️ 4%為積分回贈(需兌換)，月$100回贈上限與內地手機共用，支援BoC Pay/雲閃付/Apple Pay",
+          "scenario": "mobilePay"
+        },
+        {
+          "type": "shared_pool",
+          "note": "⚠️ 8%為積分回贈(需兌換)，月$100回贈上限與本地手機共用，免RMB手續費，至2026/6/30免$1,500門檻",
+          "period": null,
+          "scenario": "travelCN"
+        },
+        {
+          "type": "rebate_cap",
+          "cap": {
+            "type": "rebate",
+            "amountHKD": 1500.0,
+            "currency": "HKD"
+          },
+          "period": null,
+          "note": "⚠️ 8%為積分回贈(需兌換)，月$100回贈上限與本地手機共用，免RMB手續費，至2026/6/30免$1,500門檻",
+          "scenario": "travelCN"
+        }
+      ]
+    },
+    {
+      "id": "citi_cashback",
+      "name": "Citi Cash Back",
+      "issuer": "Citibank",
+      "program": "cashback",
+      "desc": "食飯/酒店/外幣2%無上限，其他1%，八達通AAVS 1%",
+      "baseReturn": 0.01,
+      "bonusRates": {
+        "dining": 0.02,
+        "onlineFX": 0.02,
+        "physicalFX": 0.02,
+        "travelJKSTA": 0.02,
+        "octopus": 0.01,
+        "flightDirect": 0.02,
+        "flightOTA": 0.02,
+        "hotelDirect": 0.02,
+        "hotelOTA": 0.02
+      },
+      "note": null,
+      "validUntil": null,
+      "pools": [],
+      "effectiveCostMap": null,
+      "warningsByScenario": {
+        "hotelDirect": "💡 酒店MCC享2%回贈",
+        "hotelOTA": "💡 外幣酒店同享2%回贈"
+      },
+      "constraints": []
+    },
+    {
+      "id": "citi_octopus",
+      "name": "Citi Octopus",
+      "issuer": "Citibank",
+      "program": "cashback",
+      "desc": "八達通AAVS 0.5%+車費15%回贈(需所有Citi卡合計月簽$4,000)+隧道費5%(需月簽$10,000)",
+      "baseReturn": 0.005,
+      "bonusRates": {
+        "octopus": 0.005,
+        "transport": 0.15
+      },
+      "note": null,
+      "validUntil": "2026-08-31",
+      "pools": [],
+      "effectiveCostMap": null,
+      "warningsByScenario": {
+        "octopus": "💡 車費15%回贈需持卡人名下所有Citi信用卡及扣賬卡合計月簽滿$4,000",
+        "transport": "⚠️ 15%交通回贈需持卡人名下所有Citi卡合計月簽$4,000+登記，上限$300/月(≈$2,000車費)，推廣至2026/8/31，包括的士、隧道、泊車、充電"
+      },
+      "constraints": [
+        {
+          "type": "rebate_cap",
+          "cap": {
+            "type": "rebate",
+            "amountHKD": 4000.0,
+            "currency": "HKD"
+          },
+          "period": null,
+          "note": "⚠️ 15%交通回贈需持卡人名下所有Citi卡合計月簽$4,000+登記，上限$300/月(≈$2,000車費)，推廣至2026/8/31，包括的士、隧道、泊車、充電",
+          "scenario": "transport"
+        }
+      ]
+    },
+    {
+      "id": "citi_hktv",
+      "name": "Citi HKTVMALL",
+      "issuer": "Citibank",
+      "program": "cashback",
+      "desc": "逢星期四HKTVmall 95折，其他0.4%",
+      "baseReturn": 0.004,
+      "bonusRates": {
+        "octopus": 0.004
+      },
+      "note": "星期四HKTVmall限定",
+      "validUntil": null,
+      "pools": [],
+      "effectiveCostMap": null,
+      "warningsByScenario": {},
+      "constraints": []
+    },
+    {
+      "id": "citi_club",
+      "name": "Citi The Club",
+      "issuer": "Citibank",
+      "program": "cashback",
+      "desc": "賺Club積分兌換禮品，基本1%",
+      "baseReturn": 0.01,
+      "bonusRates": {
+        "octopus": 0.004
+      },
+      "note": null,
+      "validUntil": null,
+      "pools": [],
+      "effectiveCostMap": null,
+      "warningsByScenario": {},
+      "constraints": []
+    },
+    {
+      "id": "dbs_live",
+      "name": "DBS Live Fresh",
+      "issuer": "DBS",
+      "program": "cashback",
+      "desc": "4大自選類別5%回贈(指定商戶)，網上外幣1%(需InstaRedeem)，揀「網上外幣」可達6%",
+      "baseReturn": 0.004,
+      "bonusRates": {
+        "octopus": 0.004,
+        "onlineFX": 0.01
+      },
+      "note": "自選5%月度$4,000上限($200回贈)，需App揀+單筆≥$300",
+      "validUntil": "2026-06-30",
+      "pools": [],
+      "effectiveCostMap": null,
+      "warningsByScenario": {
+        "onlineFX": "💡 揀「網上外幣」類別可達6%(5%+1%)，5%部分月度$4,000爆Cap，單筆≥$300",
+        "onlineHKD": "⚠️ 5%只限自選類別內指定商戶(旅遊娛樂/潮流教主等)，一般網購只有0.4%"
+      },
+      "constraints": [
+        {
+          "type": "rebate_cap",
+          "cap": {
+            "type": "rebate",
+            "amountHKD": 4000.0,
+            "currency": "HKD"
+          },
+          "period": "monthly",
+          "note": "自選5%月度$4,000上限($200回贈)，需App揀+單筆≥$300"
+        }
+      ]
+    },
+    {
+      "id": "dbs_eminent_vs",
+      "name": "DBS Eminent VS",
+      "issuer": "DBS",
+      "program": "cashback",
+      "desc": "餐飲/健身/運動/醫療5%，Visa Sig版，每年登記+單筆$300",
+      "baseReturn": 0.01,
+      "bonusRates": {
+        "octopus": 0.004,
+        "dining": 0.05
+      },
+      "note": "月度$8,000上限(5%)，其他首$20K/月享1%",
+      "validUntil": "2026-12-31",
+      "pools": [],
+      "effectiveCostMap": null,
+      "warningsByScenario": {
+        "dining": "⚠️ 需每年登記一次+每筆滿$300"
+      },
+      "constraints": [
+        {
+          "type": "spend_cap",
+          "cap": {
+            "type": "amount",
+            "amountHKD": 8000.0,
+            "currency": "HKD"
+          },
+          "period": "monthly",
+          "note": "月度$8,000上限(5%)，其他首$20K/月享1%"
+        }
+      ]
+    },
+    {
+      "id": "dbs_eminent_plat",
+      "name": "DBS Eminent 白金",
+      "issuer": "DBS",
+      "program": "cashback",
+      "desc": "餐飲/健身/運動/醫療5%，白金版，每年登記+單筆$300",
+      "baseReturn": 0.01,
+      "bonusRates": {
+        "octopus": 0.004,
+        "dining": 0.05
+      },
+      "note": "月度$4,000上限(5%)，其他首$15K/月享1%",
+      "validUntil": "2026-12-31",
+      "pools": [],
+      "effectiveCostMap": null,
+      "warningsByScenario": {
+        "dining": "⚠️ 需每年登記一次+每筆滿$300"
+      },
+      "constraints": [
+        {
+          "type": "spend_cap",
+          "cap": {
+            "type": "amount",
+            "amountHKD": 4000.0,
+            "currency": "HKD"
+          },
+          "period": "monthly",
+          "note": "月度$4,000上限(5%)，其他首$15K/月享1%"
+        }
+      ]
+    },
+    {
+      "id": "dbs_compass",
+      "name": "DBS Compass Visa",
+      "issuer": "DBS",
+      "program": "cashback",
+      "desc": "逢星期三超市8%(滿$300)，AlipayHK/WeChat Pay零售3%(需登記)，其他0.4%",
+      "baseReturn": 0.004,
+      "bonusRates": {
+        "octopus": 0.004,
+        "supermarket": 0.004
+      },
+      "note": "超市逢三8%月$2,000上限，推廣至2026年5月27日",
+      "validUntil": null,
+      "pools": [],
+      "effectiveCostMap": null,
+      "warningsByScenario": {
+        "supermarket": "⚠️ 只限逢星期三，單筆滿$300，月度$2,000上限",
+        "mobilePay": "💡 經AlipayHK/WeChat Pay零售簽賬享3%(需DBS Card+登記+單筆≥$300)，月度額外$200上限，推廣至2026/6/30"
+      },
+      "constraints": [
+        {
+          "type": "cap_mentioned",
+          "cap": {
+            "amountHKD": 2000.0,
+            "currency": "HKD"
+          },
+          "period": null,
+          "note": "超市逢三8%月$2,000上限，推廣至2026年5月27日"
+        },
+        {
+          "type": "cap_mentioned",
+          "cap": {
+            "amountHKD": 2000.0,
+            "currency": "HKD"
+          },
+          "period": "monthly",
+          "note": "⚠️ 只限逢星期三，單筆滿$300，月度$2,000上限",
+          "scenario": "supermarket"
+        },
+        {
+          "type": "spend_cap",
+          "cap": {
+            "type": "amount",
+            "amountHKD": 300.0,
+            "currency": "HKD"
+          },
+          "period": "monthly",
+          "note": "💡 經AlipayHK/WeChat Pay零售簽賬享3%(需DBS Card+登記+單筆≥$300)，月度額外$200上限，推廣至2026/6/30",
+          "scenario": "mobilePay"
+        }
+      ]
+    },
+    {
+      "id": "bea_goal",
+      "name": "BEA GOAL",
+      "issuer": "BEA",
+      "program": "cashback",
+      "desc": "手機支付/網購4.4%，娛樂5.4%，旅遊/交通6.4%，需月簽$2,000",
+      "baseReturn": 0.004,
+      "bonusRates": {
+        "octopus": 0.004,
+        "mobilePay": 0.044,
+        "onlineHKD": 0.044,
+        "onlineFX": 0.044,
+        "transport": 0.064,
+        "flightDirect": 0.064,
+        "flightOTA": 0.064,
+        "hotelDirect": 0.064,
+        "hotelOTA": 0.064
+      },
+      "note": "月度額外$200上限(≈簽$5,000)，需累積零售滿$2,000",
+      "validUntil": "2026-06-30",
+      "pools": [],
+      "effectiveCostMap": null,
+      "warningsByScenario": {
+        "mobilePay": "⚠️ 需當月累積零售簽滿$2,000 · Apple Pay/Google Pay",
+        "onlineHKD": "⚠️ 需當月累積零售簽滿$2,000",
+        "onlineFX": "⚠️ 需當月累積零售簽滿$2,000",
+        "transport": "⚠️ 需當月累積零售簽滿$2,000 · 包括港鐵/巴士/的士/Uber(MCC 4111/4121)"
+      },
+      "constraints": [
+        {
+          "type": "cap_mentioned",
+          "cap": {
+            "amountHKD": 5000.0,
+            "currency": "HKD"
+          },
+          "period": "monthly",
+          "note": "月度額外$200上限(≈簽$5,000)，需累積零售滿$2,000"
+        }
+      ]
+    },
+    {
+      "id": "bea_world",
+      "name": "BEA World MC",
+      "issuer": "BEA",
+      "program": "both",
+      "desc": "開卡二揀一：獎分Plan食飯/海外5%(需月簽$4K+$10K上限)，或飛行里數Plan指定類別$3.33/里(無門檻/無上限)",
+      "baseReturn": 0.004,
+      "bonusRates": {
+        "octopus": 0.004,
+        "dining": 0.05,
+        "onlineFX": 0.05,
+        "physicalFX": 0.05,
+        "travelJKSTA": 0.05,
+        "flightDirect": 0.05,
+        "hotelDirect": 0.05
+      },
+      "note": "獎分Plan: 5%類別月度$10,000上限，不計歐洲及英國 · 里數Plan: 無上限",
+      "validUntil": null,
+      "pools": [],
+      "effectiveCostMap": {
+        "local": 6.25,
+        "dining": 3.33,
+        "onlineHKD": 6.25,
+        "onlineFX": 3.33,
+        "travelJKSTA": 3.33,
+        "physicalFX": 3.33
+      },
+      "warningsByScenario": {
+        "dining": "⚠️ 獎分Plan需App登記+月簽$4,000/$10K上限 · 💡 里數Plan: $3.33/里，無門檻無上限",
+        "onlineFX": "⚠️ 獎分Plan需App登記+月簽$4,000，不計歐洲及英國 · 💡 里數Plan: $3.33/里，無門檻無上限",
+        "physicalFX": "⚠️ 獎分Plan需App登記+月簽$4,000，不計歐洲及英國 · 💡 里數Plan: $3.33/里，無門檻無上限",
+        "travelJKSTA": "⚠️ 獎分Plan需App登記+月簽$4,000 · 💡 里數Plan: $3.33/里，無門檻無上限",
+        "local": "💡 獎分Plan: 0.4% · 里數Plan: $6.25/里(1.6X, 10分=1里)"
+      },
+      "constraints": [
+        {
+          "type": "cap_mentioned",
+          "cap": {
+            "amountHKD": 10000.0,
+            "currency": "HKD"
+          },
+          "period": "monthly",
+          "note": "獎分Plan: 5%類別月度$10,000上限，不計歐洲及英國 · 里數Plan: 無上限"
+        },
+        {
+          "type": "cap_mentioned",
+          "cap": {
+            "amountHKD": 4000.0,
+            "currency": "HKD"
+          },
+          "period": null,
+          "note": "⚠️ 獎分Plan需App登記+月簽$4,000/$10K上限 · 💡 里數Plan: $3.33/里，無門檻無上限",
+          "scenario": "dining"
+        },
+        {
+          "type": "cap_mentioned",
+          "cap": {
+            "amountHKD": 4000.0,
+            "currency": "HKD"
+          },
+          "period": null,
+          "note": "⚠️ 獎分Plan需App登記+月簽$4,000，不計歐洲及英國 · 💡 里數Plan: $3.33/里，無門檻無上限",
+          "scenario": "onlineFX"
+        },
+        {
+          "type": "cap_mentioned",
+          "cap": {
+            "amountHKD": 4000.0,
+            "currency": "HKD"
+          },
+          "period": null,
+          "note": "⚠️ 獎分Plan需App登記+月簽$4,000，不計歐洲及英國 · 💡 里數Plan: $3.33/里，無門檻無上限",
+          "scenario": "physicalFX"
+        },
+        {
+          "type": "cap_mentioned",
+          "cap": {
+            "amountHKD": 4000.0,
+            "currency": "HKD"
+          },
+          "period": null,
+          "note": "⚠️ 獎分Plan需App登記+月簽$4,000 · 💡 里數Plan: $3.33/里，無門檻無上限",
+          "scenario": "travelJKSTA"
+        }
+      ]
+    },
+    {
+      "id": "bea_ititan",
+      "name": "BEA i-Titanium",
+      "issuer": "BEA",
+      "program": "cashback",
+      "desc": "網購/手機支付4%，月簽$2,000自動享有",
+      "baseReturn": 0.004,
+      "bonusRates": {
+        "octopus": 0.004,
+        "onlineHKD": 0.04,
+        "mobilePay": 0.04,
+        "flightOTA": 0.04,
+        "hotelOTA": 0.04
+      },
+      "note": "月度額外回贈$300上限(≈簽$8,333)，需累積零售滿$2,000",
+      "validUntil": null,
+      "pools": [],
+      "effectiveCostMap": null,
+      "warningsByScenario": {
+        "onlineHKD": "⚠️ 需當月累積零售簽滿$2,000",
+        "mobilePay": "⚠️ 需當月累積零售簽滿$2,000"
+      },
+      "constraints": [
+        {
+          "type": "rebate_cap",
+          "cap": {
+            "type": "rebate",
+            "amountHKD": 8333.0,
+            "currency": "HKD"
+          },
+          "period": "monthly",
+          "note": "月度額外回贈$300上限(≈簽$8,333)，需累積零售滿$2,000"
+        }
+      ]
+    },
+    {
+      "id": "bea_flyer",
+      "name": "BEA Flyer World MC",
+      "issuer": "BEA",
+      "program": "miles",
+      "desc": "本地/海外一律$5/里，積分有效期5年，Asia Miles直接入賬，免轉換費",
+      "baseReturn": 0.008,
+      "bonusRates": {
+        "octopus": 0.004
+      },
+      "note": null,
+      "validUntil": null,
+      "pools": [],
+      "effectiveCostMap": {
+        "local": 5,
+        "dining": 5,
+        "onlineHKD": 5,
+        "onlineFX": 5,
+        "travelJKSTA": 5,
+        "physicalFX": 5,
+        "octopus": 12
+      },
+      "warningsByScenario": {},
+      "constraints": []
+    },
+    {
+      "id": "bea_uni",
+      "name": "BEA 大學/大專卡",
+      "issuer": "BEA",
+      "program": "cashback",
+      "desc": "學生專屬，永久免年費",
+      "baseReturn": 0.004,
+      "bonusRates": {
+        "octopus": 0.004
+      },
+      "note": null,
+      "validUntil": null,
+      "pools": [],
+      "effectiveCostMap": null,
+      "warningsByScenario": {},
+      "constraints": []
+    },
+    {
+      "id": "bea_jcb",
+      "name": "BEA JCB 白金卡",
+      "issuer": "BEA",
+      "program": "cashback",
+      "desc": "拍卡15%回贈（本地+澳門），需BEA Mall App登記+月簽$500",
+      "baseReturn": 0.004,
+      "bonusRates": {
+        "octopus": 0.004,
+        "mobilePay": 0.15
+      },
+      "note": "拍卡15%需月簽$500+BEA Mall登記，Cap簽$667/月(≈$100回贈)",
+      "validUntil": "2026-09-30",
+      "pools": [],
+      "effectiveCostMap": null,
+      "warningsByScenario": {
+        "mobilePay": "⚠️ 只限非接觸式拍卡(NFC)，需BEA Mall App登記+月簽$500，Cap簽$667/月"
+      },
+      "constraints": []
+    },
+    {
+      "id": "ds_wewa_vs",
+      "name": "安信 WeWa Visa Sig",
+      "issuer": "安信",
+      "program": "cashback",
+      "desc": "Visa Sig版，手機支付/旅遊/海外/網上娛樂4%(4選1)，需滿$1,500/月",
+      "baseReturn": 0.004,
+      "bonusRates": {
+        "octopus": 0.004
+      },
+      "note": "月度額外$200上限(~$5,556爆Cap)",
+      "validUntil": null,
+      "pools": [],
+      "effectiveCostMap": null,
+      "warningsByScenario": {
+        "onlineFX": "⚠️ 4%需自選「海外簽賬」+當月簽滿$1,500",
+        "physicalFX": "⚠️ 4%需自選「海外簽賬」+當月簽滿$1,500",
+        "travelJKSTA": "⚠️ 4%需自選「海外簽賬」+當月簽滿$1,500。如揀「旅遊」則只限航空/酒店/旅行社MCC",
+        "mobilePay": "⚠️ 4%需自選「手機支付」+當月簽滿$1,500",
+        "onlineHKD": "⚠️ 「線上娛樂」4%僅限指定14個平台(Netflix/Spotify/Disney+等)，一般網購只有0.4%"
+      },
+      "constraints": [
+        {
+          "type": "cap_mentioned",
+          "cap": {
+            "amountHKD": 5556.0,
+            "currency": "HKD"
+          },
+          "period": "monthly",
+          "note": "月度額外$200上限(~$5,556爆Cap)"
+        }
+      ]
+    },
+    {
+      "id": "ds_wewa_up",
+      "name": "安信 WeWa 銀聯卡",
+      "issuer": "安信",
+      "program": "cashback",
+      "desc": "銀聯版，手機支付/旅遊/海外/網上娛樂4%(4選1)，需滿$1,500/月，外幣手續費僅1%，日韓台/內地額外+5%至4/19",
+      "baseReturn": 0.004,
+      "bonusRates": {
+        "octopus": 0.004
+      },
+      "note": "月度額外$200上限(~$5,556爆Cap)",
+      "validUntil": null,
+      "pools": [],
+      "effectiveCostMap": null,
+      "warningsByScenario": {
+        "onlineFX": "⚠️ 4%需自選「海外簽賬」+當月簽滿$1,500 · 銀聯FCC僅1%",
+        "physicalFX": "⚠️ 4%需自選「海外簽賬」+當月簽滿$1,500 · 銀聯FCC僅1%",
+        "travelJKSTA": "⚠️ 9%=4%自選海外+5%額外(日韓台，至4/19) · 需登記+月簽$1,500 · 每phase $500上限 · 銀聯FCC僅1%",
+        "travelCN": "⚠️ 9%=4%自選海外+5%額外(內地/澳門，至4/19) · 需登記+月簽$1,500 · 每phase $500上限 · 銀聯免手續費",
+        "mobilePay": "⚠️ 4%需自選「手機支付」+當月簽滿$1,500",
+        "onlineHKD": "⚠️ 「線上娛樂」4%僅限指定14個平台(Netflix/Spotify/Disney+等)，一般網購只有0.4%"
+      },
+      "constraints": [
+        {
+          "type": "cap_mentioned",
+          "cap": {
+            "amountHKD": 5556.0,
+            "currency": "HKD"
+          },
+          "period": "monthly",
+          "note": "月度額外$200上限(~$5,556爆Cap)"
+        },
+        {
+          "type": "registration_required",
+          "note": "⚠️ 9%=4%自選海外+5%額外(日韓台，至4/19) · 需登記+月簽$1,500 · 每phase $500上限 · 銀聯FCC僅1%",
+          "period": null,
+          "scenario": "travelJKSTA"
+        },
+        {
+          "type": "cap_mentioned",
+          "cap": {
+            "amountHKD": 1500.0,
+            "currency": "HKD"
+          },
+          "period": null,
+          "note": "⚠️ 9%=4%自選海外+5%額外(日韓台，至4/19) · 需登記+月簽$1,500 · 每phase $500上限 · 銀聯FCC僅1%",
+          "scenario": "travelJKSTA"
+        },
+        {
+          "type": "registration_required",
+          "note": "⚠️ 9%=4%自選海外+5%額外(內地/澳門，至4/19) · 需登記+月簽$1,500 · 每phase $500上限 · 銀聯免手續費",
+          "period": null,
+          "scenario": "travelCN"
+        },
+        {
+          "type": "cap_mentioned",
+          "cap": {
+            "amountHKD": 1500.0,
+            "currency": "HKD"
+          },
+          "period": null,
+          "note": "⚠️ 9%=4%自選海外+5%額外(內地/澳門，至4/19) · 需登記+月簽$1,500 · 每phase $500上限 · 銀聯免手續費",
+          "scenario": "travelCN"
+        }
+      ]
+    },
+    {
+      "id": "ds_earnmore",
+      "name": "安信 EarnMORE",
+      "issuer": "安信",
+      "program": "cashback",
+      "desc": "銀聯卡本地消費2%(推廣至2026/6/30)，外幣同樣2%，日韓台/內地額外+5%至4/19(銀聯FCC僅1%)",
+      "baseReturn": 0.02,
+      "bonusRates": {
+        "onlineFX": 0.02,
+        "physicalFX": 0.02,
+        "travelJKSTA": 0.02,
+        "octopus": 0.004,
+        "octopusManual": 0.02
+      },
+      "note": "每半年$80,000上限(2%推廣)",
+      "validUntil": "2026-06-30",
+      "pools": [],
+      "effectiveCostMap": null,
+      "warningsByScenario": {
+        "onlineFX": "⚠️ 外幣2%回贈 − 1%銀聯手續費 = 淨1%",
+        "physicalFX": "⚠️ 外幣2%回贈 − 1%銀聯手續費 = 淨1%",
+        "travelJKSTA": "⚠️ 7%=2%基本+5%額外(日韓台，至4/19) · 需登記+累積滿$500 · 每phase $500上限 · 銀聯FCC僅1%",
+        "travelCN": "⚠️ 7%=2%基本+5%額外(內地/澳門，至4/19) · 需登記+累積滿$500 · 每phase $500上限 · 銀聯免手續費",
+        "octopus": "⚠️ 自動增值僅0.4%，Apple Pay手動增值先有2%"
+      },
+      "constraints": [
+        {
+          "type": "cap_mentioned",
+          "cap": {
+            "amountHKD": 80000.0,
+            "currency": "HKD"
+          },
+          "period": null,
+          "note": "每半年$80,000上限(2%推廣)"
+        },
+        {
+          "type": "registration_required",
+          "note": "⚠️ 7%=2%基本+5%額外(日韓台，至4/19) · 需登記+累積滿$500 · 每phase $500上限 · 銀聯FCC僅1%",
+          "period": null,
+          "scenario": "travelJKSTA"
+        },
+        {
+          "type": "cap_mentioned",
+          "cap": {
+            "amountHKD": 500.0,
+            "currency": "HKD"
+          },
+          "period": null,
+          "note": "⚠️ 7%=2%基本+5%額外(日韓台，至4/19) · 需登記+累積滿$500 · 每phase $500上限 · 銀聯FCC僅1%",
+          "scenario": "travelJKSTA"
+        },
+        {
+          "type": "registration_required",
+          "note": "⚠️ 7%=2%基本+5%額外(內地/澳門，至4/19) · 需登記+累積滿$500 · 每phase $500上限 · 銀聯免手續費",
+          "period": null,
+          "scenario": "travelCN"
+        },
+        {
+          "type": "cap_mentioned",
+          "cap": {
+            "amountHKD": 500.0,
+            "currency": "HKD"
+          },
+          "period": null,
+          "note": "⚠️ 7%=2%基本+5%額外(內地/澳門，至4/19) · 需登記+累積滿$500 · 每phase $500上限 · 銀聯免手續費",
+          "scenario": "travelCN"
+        }
+      ]
+    },
+    {
+      "id": "cncbi_motion",
+      "name": "信銀國際 Motion",
+      "issuer": "CNCBI",
+      "program": "cashback",
+      "desc": "食飯/網購6%（實際~5.7%因門檻>Cap），毋須登記",
+      "baseReturn": 0.004,
+      "bonusRates": {
+        "octopus": 0.004,
+        "dining": 0.06,
+        "onlineHKD": 0.06,
+        "flightDirect": 0.004,
+        "hotelDirect": 0.004,
+        "flightOTA": 0.06,
+        "hotelOTA": 0.06
+      },
+      "note": "額外$200/月(簽$3,571爆Cap)，需當月零售簽滿$3,800",
+      "validUntil": "2026-06-30",
+      "pools": [],
+      "effectiveCostMap": null,
+      "warningsByScenario": {
+        "dining": "⚠️ 需月簽滿$3,800，實際回贈約5.7%",
+        "onlineHKD": "⚠️ 需月簽滿$3,800，實際回贈約5.7%"
+      },
+      "constraints": []
+    },
+    {
+      "id": "cncbi_gba",
+      "name": "信銀國際大灣區卡",
+      "issuer": "CNCBI",
+      "program": "cashback",
+      "desc": "大灣區/外幣消費額外回贈，海外簽賬免手續費",
+      "baseReturn": 0.0055,
+      "bonusRates": {
+        "octopus": 0.0055,
+        "onlineFX": 0.015,
+        "flightOTA": 0.004,
+        "hotelOTA": 0.004
+      },
+      "note": null,
+      "validUntil": null,
+      "pools": [],
+      "effectiveCostMap": null,
+      "warningsByScenario": {},
+      "constraints": []
+    },
+    {
+      "id": "ds_oneplus",
+      "name": "大新 ONE+",
+      "issuer": "Dah Sing",
+      "program": "cashback",
+      "desc": "1%無上限現金回贈",
+      "baseReturn": 0.01,
+      "bonusRates": {
+        "octopus": 0.004
+      },
+      "note": null,
+      "validUntil": null,
+      "pools": [],
+      "effectiveCostMap": null,
+      "warningsByScenario": {},
+      "constraints": []
+    },
+    {
+      "id": "ds_myauto",
+      "name": "大新 MyAuto 車主卡",
+      "issuer": "Dah Sing",
+      "program": "cashback",
+      "desc": "易通行10%(25X)+油站/汽車3.2%(8X)，其他0.4%",
+      "baseReturn": 0.004,
+      "bonusRates": {
+        "octopus": 0.004,
+        "fuel": 0.032,
+        "transport": 0.1
+      },
+      "note": "易通行月$1,087上限(25,000額外積分)需月簽$4,000；油站月$7,143上限(50,000額外積分)需月簽$4,000",
+      "validUntil": "2026-12-31",
+      "pools": [],
+      "effectiveCostMap": null,
+      "warningsByScenario": {
+        "fuel": "⚠️ 需月簽$4,000，月上限50,000額外積分(≈$7,143簽賬)；包括油站、洗車、汽車維修、充電等",
+        "transport": "⚠️ 易通行25X(10%)需月簽$4,000，月上限25,000額外積分(≈$1,087隧道費)，推廣至2026/12/31"
+      },
+      "constraints": [
+        {
+          "type": "cap_mentioned",
+          "cap": {
+            "amountHKD": 7143.0,
+            "currency": "HKD"
+          },
+          "period": null,
+          "note": "易通行月$1,087上限(25,000額外積分)需月簽$4,000；油站月$7,143上限(50,000額外積分)需月簽$4,000"
+        },
+        {
+          "type": "spend_cap",
+          "cap": {
+            "type": "amount",
+            "amountHKD": 7143.0,
+            "currency": "HKD"
+          },
+          "period": null,
+          "note": "⚠️ 需月簽$4,000，月上限50,000額外積分(≈$7,143簽賬)；包括油站、洗車、汽車維修、充電等",
+          "scenario": "fuel"
+        },
+        {
+          "type": "cap_mentioned",
+          "cap": {
+            "amountHKD": 4000.0,
+            "currency": "HKD"
+          },
+          "period": null,
+          "note": "⚠️ 易通行25X(10%)需月簽$4,000，月上限25,000額外積分(≈$1,087隧道費)，推廣至2026/12/31",
+          "scenario": "transport"
+        }
+      ]
+    },
+    {
+      "id": "ds_kitty",
+      "name": "大新 Hello Kitty 白金卡",
+      "issuer": "Dah Sing",
+      "program": "cashback",
+      "desc": "限定版收藏卡",
+      "baseReturn": 0.004,
+      "bonusRates": {
+        "octopus": 0.004
+      },
+      "note": null,
+      "validUntil": null,
+      "pools": [],
+      "effectiveCostMap": null,
+      "warningsByScenario": {},
+      "constraints": []
+    },
+    {
+      "id": "sim_card",
+      "name": "sim Credit Card（黃卡）",
+      "issuer": "sim",
+      "program": "cashback",
+      "desc": "網購(含外幣)高達8%+指定交通8%，需當月非網上簽滿$1,000+單筆≥$500，免入息證明",
+      "baseReturn": 0.004,
+      "bonusRates": {
+        "onlineHKD": 0.08,
+        "onlineFX": 0.08,
+        "flightDirect": 0.015,
+        "flightOTA": 0.015,
+        "hotelDirect": 0.015,
+        "hotelOTA": 0.015
+      },
+      "note": "月度回贈$200上限(≈簽$2,500)，需非網上簽滿$1,000+單筆≥$500",
+      "validUntil": null,
+      "pools": [],
+      "effectiveCostMap": null,
+      "warningsByScenario": {
+        "onlineHKD": "⚠️ 需當月非網上簽賬滿$1,000+每筆網購≥$500先有8%",
+        "onlineFX": "⚠️ 需當月非網上簽賬滿$1,000+每筆網購≥$500先有8% · 外幣網購同享8%"
+      },
+      "constraints": [
+        {
+          "type": "rebate_cap",
+          "cap": {
+            "type": "rebate",
+            "amountHKD": 2500.0,
+            "currency": "HKD"
+          },
+          "period": "monthly",
+          "note": "月度回贈$200上限(≈簽$2,500)，需非網上簽滿$1,000+單筆≥$500"
+        }
+      ]
+    },
+    {
+      "id": "sim_world",
+      "name": "sim World MC（紫卡）",
+      "issuer": "sim",
+      "program": "cashback",
+      "desc": "網購+海外實體高達8%，需當月非網上簽滿$1,000+單筆≥$500，年薪$15萬",
+      "baseReturn": 0.004,
+      "bonusRates": {
+        "onlineHKD": 0.08,
+        "onlineFX": 0.08,
+        "physicalFX": 0.08,
+        "travelJKSTA": 0.08,
+        "flightDirect": 0.02,
+        "flightOTA": 0.02,
+        "hotelDirect": 0.02,
+        "hotelOTA": 0.02
+      },
+      "note": "月度回贈$200上限(≈簽$2,500)，需非網上簽滿$1,000+單筆≥$500",
+      "validUntil": null,
+      "pools": [],
+      "effectiveCostMap": null,
+      "warningsByScenario": {
+        "onlineHKD": "⚠️ 需當月非網上簽賬滿$1,000+每筆網購≥$500先有8%",
+        "onlineFX": "⚠️ 需當月非網上簽賬滿$1,000+每筆網購≥$500先有8%",
+        "physicalFX": "⚠️ 海外實體簽賬8% · 需當月非網上簽滿$1,000 · 1.95%外幣手續費",
+        "travelJKSTA": "⚠️ 海外實體簽賬8% · 需當月非網上簽滿$1,000 · 1.95%外幣手續費"
+      },
+      "constraints": [
+        {
+          "type": "rebate_cap",
+          "cap": {
+            "type": "rebate",
+            "amountHKD": 2500.0,
+            "currency": "HKD"
+          },
+          "period": "monthly",
+          "note": "月度回贈$200上限(≈簽$2,500)，需非網上簽滿$1,000+單筆≥$500"
+        }
+      ]
+    },
+    {
+      "id": "mox_cb",
+      "name": "MOX（CashBack）",
+      "issuer": "Mox Bank",
+      "program": "cashback",
+      "desc": "基本1%，Mox Plus(出糧≥$25K或資產≥$60萬)2%，超市3%，外幣1.95%手續費",
+      "baseReturn": 0.01,
+      "bonusRates": {
+        "supermarket": 0.03,
+        "onlineFX": 0.01,
+        "physicalFX": 0.01,
+        "octopus": 0,
+        "octopusManual": 0
+      },
+      "note": null,
+      "validUntil": null,
+      "pools": [],
+      "effectiveCostMap": null,
+      "warningsByScenario": {
+        "local": "💡 Mox Plus: 出糧≥$25K/月 或 Mox+(資產≥$60萬)可升至2%",
+        "supermarket": "💡 超市3%無條件；Mox Plus超市加碼待官方確認",
+        "dining": "💡 Mox Plus(出糧≥$25K或Mox+資產≥$60萬)可升至2%",
+        "octopus": "⛔ Mox不支援八達通自動增值",
+        "octopusManual": "⛔ Mox不支援八達通自動增值"
+      },
+      "constraints": []
+    },
+    {
+      "id": "ccb_eye",
+      "name": "建行 eye Visa Sig",
+      "issuer": "CCB Asia",
+      "program": "cashback",
+      "desc": "網購/拍卡2%，食飯/外賣/交通高達11%(拍卡2%+加碼9%)，非拍卡食飯9.4%",
+      "baseReturn": 0.004,
+      "bonusRates": {
+        "octopus": 0.004,
+        "onlineHKD": 0.02,
+        "mobilePay": 0.02,
+        "dining": 0.11,
+        "transport": 0.04,
+        "flightDirect": 0.04,
+        "flightOTA": 0.04,
+        "hotelDirect": 0.04,
+        "hotelOTA": 0.04
+      },
+      "note": "食飯/外賣需每月1號App搶名額(~2,500個)+月簽滿$5,000+單筆≥$500，每階段回贈上限$400(≈簽$4,444)",
+      "validUntil": "2026-06-30",
+      "pools": [],
+      "effectiveCostMap": null,
+      "warningsByScenario": {
+        "dining": "⚠️ Q2(4-6月)11%需拍卡+月簽$5,000+單筆≥$500+每月搶~2,500名額。外賣平台同享。非拍卡9.4%",
+        "transport": "⚠️ 交通費拍卡2%+加碼賞額外2%=4%，需登記（無需月簽門檻），每階段上限$400"
+      },
+      "constraints": [
+        {
+          "type": "rebate_cap",
+          "cap": {
+            "type": "rebate",
+            "amountHKD": 5000.0,
+            "currency": "HKD"
+          },
+          "period": "monthly",
+          "note": "食飯/外賣需每月1號App搶名額(~2,500個)+月簽滿$5,000+單筆≥$500，每階段回贈上限$400(≈簽$4,444)"
+        },
+        {
+          "type": "registration_required",
+          "note": "⚠️ 交通費拍卡2%+加碼賞額外2%=4%，需登記（無需月簽門檻），每階段上限$400",
+          "period": null,
+          "scenario": "transport"
+        },
+        {
+          "type": "rebate_cap",
+          "cap": {
+            "type": "rebate",
+            "amountHKD": 400.0,
+            "currency": "HKD"
+          },
+          "period": null,
+          "note": "⚠️ 交通費拍卡2%+加碼賞額外2%=4%，需登記（無需月簽門檻），每階段上限$400",
+          "scenario": "transport"
+        }
+      ]
+    },
+    {
+      "id": "ccb_travo",
+      "name": "建行 TRAVO MC",
+      "issuer": "CCB Asia",
+      "program": "both",
+      "desc": "海外4%/$1.5里，餐飲2%/$3里，需登記TRAVO Rewards，無門檻，永久免年費",
+      "baseReturn": 0.004,
+      "bonusRates": {
+        "onlineFX": 0.04,
+        "physicalFX": 0.04,
+        "travelJKSTA": 0.04,
+        "dining": 0.02,
+        "octopus": 0.004,
+        "flightDirect": 0.04,
+        "hotelDirect": 0.04
+      },
+      "note": "海外半年$25,000上限，餐飲半年$12,500上限，推廣至2026/6/30",
+      "validUntil": "2026-06-30",
+      "pools": [],
+      "effectiveCostMap": {
+        "local": 15,
+        "dining": 3,
+        "onlineHKD": 15,
+        "onlineFX": 1.5,
+        "travelJKSTA": 1.5,
+        "physicalFX": 1.5
+      },
+      "warningsByScenario": {
+        "onlineFX": "⚠️ 需登記TRAVO Rewards · 半年$25,000上限",
+        "physicalFX": "⚠️ 需登記TRAVO Rewards · 半年$25,000上限",
+        "travelJKSTA": "⚠️ 需登記TRAVO Rewards · 半年$25,000上限",
+        "dining": "⚠️ 需登記TRAVO Rewards · 半年$12,500上限"
+      },
+      "constraints": [
+        {
+          "type": "cap_mentioned",
+          "cap": {
+            "amountHKD": 25000.0,
+            "currency": "HKD"
+          },
+          "period": null,
+          "note": "海外半年$25,000上限，餐飲半年$12,500上限，推廣至2026/6/30"
+        },
+        {
+          "type": "registration_required",
+          "note": "⚠️ 需登記TRAVO Rewards · 半年$25,000上限",
+          "period": null,
+          "scenario": "onlineFX"
+        },
+        {
+          "type": "cap_mentioned",
+          "cap": {
+            "amountHKD": 25000.0,
+            "currency": "HKD"
+          },
+          "period": null,
+          "note": "⚠️ 需登記TRAVO Rewards · 半年$25,000上限",
+          "scenario": "onlineFX"
+        },
+        {
+          "type": "registration_required",
+          "note": "⚠️ 需登記TRAVO Rewards · 半年$25,000上限",
+          "period": null,
+          "scenario": "physicalFX"
+        },
+        {
+          "type": "cap_mentioned",
+          "cap": {
+            "amountHKD": 25000.0,
+            "currency": "HKD"
+          },
+          "period": null,
+          "note": "⚠️ 需登記TRAVO Rewards · 半年$25,000上限",
+          "scenario": "physicalFX"
+        },
+        {
+          "type": "registration_required",
+          "note": "⚠️ 需登記TRAVO Rewards · 半年$25,000上限",
+          "period": null,
+          "scenario": "travelJKSTA"
+        },
+        {
+          "type": "cap_mentioned",
+          "cap": {
+            "amountHKD": 25000.0,
+            "currency": "HKD"
+          },
+          "period": null,
+          "note": "⚠️ 需登記TRAVO Rewards · 半年$25,000上限",
+          "scenario": "travelJKSTA"
+        },
+        {
+          "type": "registration_required",
+          "note": "⚠️ 需登記TRAVO Rewards · 半年$12,500上限",
+          "period": null,
+          "scenario": "dining"
+        },
+        {
+          "type": "cap_mentioned",
+          "cap": {
+            "amountHKD": 12500.0,
+            "currency": "HKD"
+          },
+          "period": null,
+          "note": "⚠️ 需登記TRAVO Rewards · 半年$12,500上限",
+          "scenario": "dining"
+        }
+      ]
+    },
+    {
+      "id": "aeon_basic",
+      "name": "AEON 信用卡",
+      "issuer": "AEON",
+      "program": "cashback",
+      "desc": "AEON商店95折優惠",
+      "baseReturn": 0.004,
+      "bonusRates": {
+        "octopus": 0.004
+      },
+      "note": null,
+      "validUntil": null,
+      "pools": [],
+      "effectiveCostMap": null,
+      "warningsByScenario": {},
+      "constraints": []
+    },
+    {
+      "id": "aeon_waku",
+      "name": "AEON WAKUWAKU",
+      "issuer": "AEON",
+      "program": "cashback",
+      "desc": "網購6%(含外幣網購)/日本3%/本地餐飲1%，永久免年費，FX僅1%",
+      "baseReturn": 0.004,
+      "bonusRates": {
+        "octopus": 0.004,
+        "onlineHKD": 0.06,
+        "onlineFX": 0.06,
+        "travelJKSTA": 0.03,
+        "dining": 0.01,
+        "flightDirect": 0.006,
+        "hotelDirect": 0.004
+      },
+      "note": "額外$200/月結單周期上限(網購/日本/餐飲共用，網購簽$3,571爆Cap)，海外3%只限日本(韓泰等0.4%)",
+      "validUntil": "2026-08-31",
+      "pools": [
+        {
+          "id": "aeon_waku__default",
+          "scenarios": [
+            "onlineHKD",
+            "onlineFX",
+            "travelJKSTA",
+            "dining"
+          ],
+          "rates": {
+            "onlineHKD": 0.056,
+            "onlineFX": 0.056,
+            "travelJKSTA": 0.026,
+            "dining": 0.006
+          },
+          "cap": {
+            "type": "rebate",
+            "amountHKD": 200,
+            "currency": "HKD"
+          },
+          "note": "⚠️ 網購/日本/餐飲共用月度 $200 額外回贈上限"
+        }
+      ],
+      "effectiveCostMap": null,
+      "warningsByScenario": {
+        "onlineHKD": "⚠️ 以月結單日計算（非曆月）",
+        "onlineFX": "⚠️ 外幣網購同享6%，與HKD網購共用$200上限 · 以月結單日計算",
+        "travelJKSTA": "⛔ 3%只限日本！韓國/泰國等地區只有0.4%基本回贈",
+        "dining": "⚠️ 以月結單日計算（非曆月）"
+      },
+      "constraints": [
+        {
+          "type": "pool",
+          "scenarios": [
+            "onlineHKD",
+            "onlineFX",
+            "travelJKSTA",
+            "dining"
+          ],
+          "rates": {
+            "onlineHKD": 0.056,
+            "onlineFX": 0.056,
+            "travelJKSTA": 0.026,
+            "dining": 0.006
+          },
+          "cap": {
+            "type": "rebate",
+            "amountHKD": 200,
+            "currency": "HKD"
+          },
+          "note": "⚠️ 網購/日本/餐飲共用月度 $200 額外回贈上限"
+        },
+        {
+          "type": "shared_pool",
+          "note": "額外$200/月結單周期上限(網購/日本/餐飲共用，網購簽$3,571爆Cap)，海外3%只限日本(韓泰等0.4%)",
+          "period": null
+        },
+        {
+          "type": "cap_mentioned",
+          "cap": {
+            "amountHKD": 3571.0,
+            "currency": "HKD"
+          },
+          "period": null,
+          "note": "額外$200/月結單周期上限(網購/日本/餐飲共用，網購簽$3,571爆Cap)，海外3%只限日本(韓泰等0.4%)"
+        },
+        {
+          "type": "shared_pool",
+          "note": "⚠️ 外幣網購同享6%，與HKD網購共用$200上限 · 以月結單日計算",
+          "period": null,
+          "scenario": "onlineFX"
+        },
+        {
+          "type": "cap_mentioned",
+          "cap": {
+            "amountHKD": 200.0,
+            "currency": "HKD"
+          },
+          "period": null,
+          "note": "⚠️ 外幣網購同享6%，與HKD網購共用$200上限 · 以月結單日計算",
+          "scenario": "onlineFX"
+        }
+      ]
+    },
+    {
+      "id": "aeon_purple_up",
+      "name": "AEON Purple（銀聯）",
+      "issuer": "AEON",
+      "program": "cashback",
+      "desc": "食肆/交通手機支付6%+海外/外幣6%（賞遊世界），銀聯卡，需App登記",
+      "baseReturn": 0.004,
+      "bonusRates": {
+        "octopus": 0.004,
+        "dining": 0.06,
+        "transport": 0.06,
+        "onlineFX": 0.06,
+        "physicalFX": 0.06,
+        "travelJKSTA": 0.06,
+        "travelCN": 0.06,
+        "flightDirect": 0.004,
+        "flightOTA": 0.004,
+        "hotelDirect": 0.004,
+        "hotelOTA": 0.004
+      },
+      "note": "食肆/交通6%月度$1,923上限+海外6%每池月度~$1,667上限，需App登記",
+      "validUntil": "2026-08-31",
+      "pools": [],
+      "effectiveCostMap": null,
+      "warningsByScenario": {
+        "dining": "⚠️ 6%需綁定Apple Pay等手機支付+App登記，月度~$1,923上限，推廣至2026/8/31",
+        "mobilePay": "⚠️ 一般零售手機支付只有0.4%，6%只限食肆/交通類別MCC",
+        "transport": "⚠️ 6%交通費需手機支付(Apple Pay等)+App登記，月度~$1,923上限，推廣至2026/8/31",
+        "onlineFX": "⚠️ 賞遊世界6%需App登記，月度~$1,667上限，推廣至2026/4/30 · 銀聯免手續費",
+        "physicalFX": "⚠️ 賞遊世界6%需App登記，月度~$1,667上限，推廣至2026/4/30 · 銀聯免手續費",
+        "travelJKSTA": "⚠️ 賞遊世界6%需App登記，月度~$1,667上限，推廣至2026/4/30 · 銀聯免手續費",
+        "travelCN": "⚠️ 賞遊世界6%（內地/澳門/台灣池）需App登記，月度~$1,667上限，推廣至2026/4/30 · 銀聯免手續費"
+      },
+      "constraints": [
+        {
+          "type": "cap_mentioned",
+          "cap": {
+            "amountHKD": 1923.0,
+            "currency": "HKD"
+          },
+          "period": "monthly",
+          "note": "食肆/交通6%月度$1,923上限+海外6%每池月度~$1,667上限，需App登記"
+        },
+        {
+          "type": "cap_mentioned",
+          "cap": {
+            "amountHKD": 1923.0,
+            "currency": "HKD"
+          },
+          "period": "monthly",
+          "note": "⚠️ 6%需綁定Apple Pay等手機支付+App登記，月度~$1,923上限，推廣至2026/8/31",
+          "scenario": "dining"
+        },
+        {
+          "type": "cap_mentioned",
+          "cap": {
+            "amountHKD": 1923.0,
+            "currency": "HKD"
+          },
+          "period": "monthly",
+          "note": "⚠️ 6%交通費需手機支付(Apple Pay等)+App登記，月度~$1,923上限，推廣至2026/8/31",
+          "scenario": "transport"
+        },
+        {
+          "type": "cap_mentioned",
+          "cap": {
+            "amountHKD": 1667.0,
+            "currency": "HKD"
+          },
+          "period": "monthly",
+          "note": "⚠️ 賞遊世界6%需App登記，月度~$1,667上限，推廣至2026/4/30 · 銀聯免手續費",
+          "scenario": "onlineFX"
+        },
+        {
+          "type": "cap_mentioned",
+          "cap": {
+            "amountHKD": 1667.0,
+            "currency": "HKD"
+          },
+          "period": "monthly",
+          "note": "⚠️ 賞遊世界6%需App登記，月度~$1,667上限，推廣至2026/4/30 · 銀聯免手續費",
+          "scenario": "physicalFX"
+        },
+        {
+          "type": "cap_mentioned",
+          "cap": {
+            "amountHKD": 1667.0,
+            "currency": "HKD"
+          },
+          "period": "monthly",
+          "note": "⚠️ 賞遊世界6%需App登記，月度~$1,667上限，推廣至2026/4/30 · 銀聯免手續費",
+          "scenario": "travelJKSTA"
+        },
+        {
+          "type": "cap_mentioned",
+          "cap": {
+            "amountHKD": 1667.0,
+            "currency": "HKD"
+          },
+          "period": "monthly",
+          "note": "⚠️ 賞遊世界6%（內地/澳門/台灣池）需App登記，月度~$1,667上限，推廣至2026/4/30 · 銀聯免手續費",
+          "scenario": "travelCN"
+        }
+      ]
+    },
+    {
+      "id": "aeon_purple_jcb",
+      "name": "AEON Purple（JCB）",
+      "issuer": "AEON",
+      "program": "cashback",
+      "desc": "食肆/交通實體卡2%，JCB唔支援手機支付，日本消費首選",
+      "baseReturn": 0.004,
+      "bonusRates": {
+        "octopus": 0.004,
+        "dining": 0.02,
+        "transport": 0.02
+      },
+      "note": "食肆/交通2%(實體卡5X)月度$1,923上限，JCB唔支援Apple Pay/Google Pay",
+      "validUntil": "2026-08-31",
+      "pools": [],
+      "effectiveCostMap": null,
+      "warningsByScenario": {
+        "dining": "⚠️ JCB唔支援手機支付，只有實體卡5X=2%回贈（銀聯/Visa版手機支付有6%）",
+        "mobilePay": "⚠️ JCB唔支援Apple Pay/Google Pay，無法享手機支付回贈",
+        "transport": "⚠️ JCB唔支援手機支付，交通費只有實體卡5X=2%回贈",
+        "travelJKSTA": "💡 JCB日本接受度最高，FCC~1.5%"
+      },
+      "constraints": [
+        {
+          "type": "cap_mentioned",
+          "cap": {
+            "amountHKD": 1923.0,
+            "currency": "HKD"
+          },
+          "period": "monthly",
+          "note": "食肆/交通2%(實體卡5X)月度$1,923上限，JCB唔支援Apple Pay/Google Pay"
+        }
+      ]
+    },
+    {
+      "id": "aeon_purple_vs",
+      "name": "AEON Purple（Visa）",
+      "issuer": "AEON",
+      "program": "cashback",
+      "desc": "食肆/交通手機支付6%，Visa卡，需App登記，環球通用",
+      "baseReturn": 0.004,
+      "bonusRates": {
+        "octopus": 0.004,
+        "dining": 0.06,
+        "transport": 0.06
+      },
+      "note": "食肆/交通6%月度$5,000上限（$300回贈），需手機支付(Apple Pay等)+App登記",
+      "validUntil": "2026-08-31",
+      "pools": [],
+      "effectiveCostMap": null,
+      "warningsByScenario": {
+        "dining": "⚠️ 6%需綁定Apple Pay等手機支付+App登記，月度$5,000上限（$300回贈），推廣至2026/8/31",
+        "mobilePay": "⚠️ 一般零售手機支付只有0.4%，6%只限食肆/交通類別MCC",
+        "transport": "⚠️ 6%交通費需手機支付(Apple Pay等)+App登記，月度$5,000上限（$300回贈），推廣至2026/8/31"
+      },
+      "constraints": [
+        {
+          "type": "rebate_cap",
+          "cap": {
+            "type": "rebate",
+            "amountHKD": 5000.0,
+            "currency": "HKD"
+          },
+          "period": "monthly",
+          "note": "食肆/交通6%月度$5,000上限（$300回贈），需手機支付(Apple Pay等)+App登記"
+        },
+        {
+          "type": "rebate_cap",
+          "cap": {
+            "type": "rebate",
+            "amountHKD": 5000.0,
+            "currency": "HKD"
+          },
+          "period": "monthly",
+          "note": "⚠️ 6%需綁定Apple Pay等手機支付+App登記，月度$5,000上限（$300回贈），推廣至2026/8/31",
+          "scenario": "dining"
+        },
+        {
+          "type": "rebate_cap",
+          "cap": {
+            "type": "rebate",
+            "amountHKD": 5000.0,
+            "currency": "HKD"
+          },
+          "period": "monthly",
+          "note": "⚠️ 6%交通費需手機支付(Apple Pay等)+App登記，月度$5,000上限（$300回贈），推廣至2026/8/31",
+          "scenario": "transport"
+        }
+      ]
+    },
+    {
+      "id": "aeon_premium",
+      "name": "AEON Premium（黑卡）",
+      "issuer": "AEON",
+      "program": "cashback",
+      "desc": "食肆/交通手機支付6%+海外/外幣6%（賞遊世界），銀聯卡，需App登記",
+      "baseReturn": 0.004,
+      "bonusRates": {
+        "octopus": 0.004,
+        "dining": 0.06,
+        "transport": 0.06,
+        "onlineFX": 0.06,
+        "physicalFX": 0.06,
+        "travelJKSTA": 0.06,
+        "travelCN": 0.06,
+        "flightDirect": 0.008,
+        "flightOTA": 0.008,
+        "hotelDirect": 0.008,
+        "hotelOTA": 0.008
+      },
+      "note": "食肆/交通6%有上限+海外6%每池月度~$1,667上限，需App登記",
+      "validUntil": "2026-08-31",
+      "pools": [],
+      "effectiveCostMap": null,
+      "warningsByScenario": {
+        "dining": "⚠️ 6%需綁定Apple Pay等手機支付+App登記，推廣至2026/8/31",
+        "mobilePay": "⚠️ 一般零售手機支付只有0.4%，6%只限食肆/交通類別MCC",
+        "transport": "⚠️ 6%交通費需手機支付(Apple Pay等)+App登記，推廣至2026/8/31",
+        "onlineFX": "⚠️ 賞遊世界6%需App登記，月度~$1,667上限，推廣至2026/4/30 · 銀聯免手續費",
+        "physicalFX": "⚠️ 賞遊世界6%需App登記，月度~$1,667上限，推廣至2026/4/30 · 銀聯免手續費",
+        "travelJKSTA": "⚠️ 賞遊世界6%需App登記，月度~$1,667上限，推廣至2026/4/30 · 銀聯免手續費",
+        "travelCN": "⚠️ 賞遊世界6%（內地/澳門/台灣池）需App登記，月度~$1,667上限，推廣至2026/4/30 · 銀聯免手續費"
+      },
+      "constraints": [
+        {
+          "type": "cap_mentioned",
+          "cap": {
+            "amountHKD": 1667.0,
+            "currency": "HKD"
+          },
+          "period": "monthly",
+          "note": "食肆/交通6%有上限+海外6%每池月度~$1,667上限，需App登記"
+        },
+        {
+          "type": "cap_mentioned",
+          "cap": {
+            "amountHKD": 1667.0,
+            "currency": "HKD"
+          },
+          "period": "monthly",
+          "note": "⚠️ 賞遊世界6%需App登記，月度~$1,667上限，推廣至2026/4/30 · 銀聯免手續費",
+          "scenario": "onlineFX"
+        },
+        {
+          "type": "cap_mentioned",
+          "cap": {
+            "amountHKD": 1667.0,
+            "currency": "HKD"
+          },
+          "period": "monthly",
+          "note": "⚠️ 賞遊世界6%需App登記，月度~$1,667上限，推廣至2026/4/30 · 銀聯免手續費",
+          "scenario": "physicalFX"
+        },
+        {
+          "type": "cap_mentioned",
+          "cap": {
+            "amountHKD": 1667.0,
+            "currency": "HKD"
+          },
+          "period": "monthly",
+          "note": "⚠️ 賞遊世界6%需App登記，月度~$1,667上限，推廣至2026/4/30 · 銀聯免手續費",
+          "scenario": "travelJKSTA"
+        },
+        {
+          "type": "cap_mentioned",
+          "cap": {
+            "amountHKD": 1667.0,
+            "currency": "HKD"
+          },
+          "period": "monthly",
+          "note": "⚠️ 賞遊世界6%（內地/澳門/台灣池）需App登記，月度~$1,667上限，推廣至2026/4/30 · 銀聯免手續費",
+          "scenario": "travelCN"
+        }
+      ]
+    },
+    {
+      "id": "fubon_in",
+      "name": "富邦 iN Visa 白金卡",
+      "issuer": "Fubon",
+      "program": "cashback",
+      "desc": "網購8%(港幣+外幣)，20X積分，月簽$1,000起，月度$250回贈上限(≈簽$3,125)",
+      "baseReturn": 0.004,
+      "bonusRates": {
+        "octopus": 0.004,
+        "onlineHKD": 0.08,
+        "onlineFX": 0.08,
+        "flightDirect": 0.004,
+        "flightOTA": 0.004,
+        "hotelDirect": 0.004,
+        "hotelOTA": 0.004
+      },
+      "note": "月度額外$250上限(≈簽$3,125)，需月簽$1,000",
+      "validUntil": null,
+      "pools": [],
+      "effectiveCostMap": null,
+      "warningsByScenario": {
+        "onlineHKD": "⚠️ 需當月累積零售簽滿$1,000 · 月度$250回贈上限",
+        "onlineFX": "⚠️ 外幣網購同享8% · 需月簽$1,000 · 月度$250回贈上限"
+      },
+      "constraints": [
+        {
+          "type": "cap_mentioned",
+          "cap": {
+            "amountHKD": 3125.0,
+            "currency": "HKD"
+          },
+          "period": "monthly",
+          "note": "月度額外$250上限(≈簽$3,125)，需月簽$1,000"
+        },
+        {
+          "type": "rebate_cap",
+          "cap": {
+            "type": "rebate",
+            "amountHKD": 1000.0,
+            "currency": "HKD"
+          },
+          "period": "monthly",
+          "note": "⚠️ 需當月累積零售簽滿$1,000 · 月度$250回贈上限",
+          "scenario": "onlineHKD"
+        },
+        {
+          "type": "rebate_cap",
+          "cap": {
+            "type": "rebate",
+            "amountHKD": 1000.0,
+            "currency": "HKD"
+          },
+          "period": "monthly",
+          "note": "⚠️ 外幣網購同享8% · 需月簽$1,000 · 月度$250回贈上限",
+          "scenario": "onlineFX"
+        }
+      ]
+    },
+    {
+      "id": "fubon_plat",
+      "name": "富邦 Visa 白金卡",
+      "issuer": "Fubon",
+      "program": "cashback",
+      "desc": "日韓實體4%/台灣實體8%/其他外幣2%，推廣至2026年6月（積分可換里數但需手續費）",
+      "baseReturn": 0.004,
+      "bonusRates": {
+        "octopus": 0.004,
+        "travelJKSTA": 0.04,
+        "travelTW": 0.08,
+        "physicalFX": 0.02
+      },
+      "note": "台灣月簽$5,333爆Cap/日韓月簽$16,000爆Cap",
+      "validUntil": "2026-06-30",
+      "pools": [],
+      "effectiveCostMap": null,
+      "warningsByScenario": {
+        "travelTW": "⚠️ 台灣8%需單筆≥NT$3,000+致電/網上登記，每月限額，推廣至2026/6/30",
+        "travelJKSTA": "⚠️ 推廣至2026/6/30 · 以月結單日計算",
+        "physicalFX": "⚠️ 推廣至2026/6/30 · 以月結單日計算"
+      },
+      "constraints": []
+    },
+    {
+      "id": "fubon_infinite",
+      "name": "富邦 Visa Infinite",
+      "issuer": "Fubon",
+      "program": "cashback",
+      "desc": "台灣10%/日韓5%/其他外幣2.5%/本地網購5%，年薪$60萬，4次機場Lounge",
+      "baseReturn": 0.004,
+      "bonusRates": {
+        "octopus": 0.004,
+        "travelTW": 0.1,
+        "travelJKSTA": 0.05,
+        "physicalFX": 0.025,
+        "onlineFX": 0.025,
+        "onlineHKD": 0.05
+      },
+      "note": "台灣月$8,000上限/日韓月$24,000上限/網購需登記",
+      "validUntil": null,
+      "pools": [],
+      "effectiveCostMap": null,
+      "warningsByScenario": {
+        "travelTW": "⚠️ 10%需登記+單筆≥NT$3,000，月度$8,000上限(≈HK$2,000回贈)",
+        "travelJKSTA": "⚠️ 5%推廣期優惠，月度$24,000上限",
+        "onlineHKD": "⚠️ 5%需網上登記",
+        "physicalFX": "⚠️ 其他外幣2.5%，1.95%手續費，淨0.55%"
+      },
+      "constraints": [
+        {
+          "type": "registration_required",
+          "note": "台灣月$8,000上限/日韓月$24,000上限/網購需登記",
+          "period": null
+        },
+        {
+          "type": "cap_mentioned",
+          "cap": {
+            "amountHKD": 24000.0,
+            "currency": "HKD"
+          },
+          "period": null,
+          "note": "台灣月$8,000上限/日韓月$24,000上限/網購需登記"
+        },
+        {
+          "type": "registration_required",
+          "note": "⚠️ 10%需登記+單筆≥NT$3,000，月度$8,000上限(≈HK$2,000回贈)",
+          "period": "monthly",
+          "scenario": "travelTW"
+        },
+        {
+          "type": "rebate_cap",
+          "cap": {
+            "type": "rebate",
+            "amountHKD": 8000.0,
+            "currency": "HKD"
+          },
+          "period": "monthly",
+          "note": "⚠️ 10%需登記+單筆≥NT$3,000，月度$8,000上限(≈HK$2,000回贈)",
+          "scenario": "travelTW"
+        },
+        {
+          "type": "cap_mentioned",
+          "cap": {
+            "amountHKD": 24000.0,
+            "currency": "HKD"
+          },
+          "period": "monthly",
+          "note": "⚠️ 5%推廣期優惠，月度$24,000上限",
+          "scenario": "travelJKSTA"
+        }
+      ]
+    },
+    {
+      "id": "icbc_star",
+      "name": "工銀亞洲星座卡",
+      "issuer": "ICBC Asia",
+      "program": "cashback",
+      "desc": "全線1.5%現金回贈，無上限，每月自動月結單扣除",
+      "baseReturn": 0.015,
+      "bonusRates": {
+        "octopus": 0.015
+      },
+      "note": null,
+      "validUntil": null,
+      "pools": [],
+      "effectiveCostMap": null,
+      "warningsByScenario": {},
+      "constraints": []
+    },
+    {
+      "id": "hsbc_premier",
+      "name": "HSBC Premier MC",
+      "issuer": "HSBC",
+      "program": "both",
+      "desc": "基本$25/里(0.4%)，最紅自主類別$4.17/里(2.4%)，配Travel Guru海外最高8.4%",
+      "baseReturn": 0.004,
+      "bonusRates": {
+        "octopus": 0.004,
+        "octopusManual": 0.004
+      },
+      "note": "最紅自主年度$100,000上限（同其他HSBC卡共用）",
+      "validUntil": null,
+      "pools": [],
+      "effectiveCostMap": {
+        "local": 25,
+        "dining": 25,
+        "onlineHKD": 25,
+        "onlineFX": 25,
+        "travelJKSTA": 25,
+        "physicalFX": 25
+      },
+      "warningsByScenario": {
+        "physicalFX": "⚠️ 8.4%需登記最紅自主賞世界+Travel Guru L3",
+        "travelJKSTA": "⚠️ 8.4%需登記最紅自主賞世界+Travel Guru L3"
+      },
+      "constraints": [
+        {
+          "type": "shared_pool",
+          "note": "最紅自主年度$100,000上限（同其他HSBC卡共用）",
+          "period": "annual"
+        },
+        {
+          "type": "cap_mentioned",
+          "cap": {
+            "amountHKD": 100000.0,
+            "currency": "HKD"
+          },
+          "period": "annual",
+          "note": "最紅自主年度$100,000上限（同其他HSBC卡共用）"
+        },
+        {
+          "type": "registration_required",
+          "note": "⚠️ 8.4%需登記最紅自主賞世界+Travel Guru L3",
+          "period": null,
+          "scenario": "physicalFX"
+        },
+        {
+          "type": "registration_required",
+          "note": "⚠️ 8.4%需登記最紅自主賞世界+Travel Guru L3",
+          "period": null,
+          "scenario": "travelJKSTA"
+        }
+      ]
+    },
+    {
+      "id": "hs_prestige",
+      "name": "恒生 Prestige World MC",
+      "issuer": "Hang Seng",
+      "program": "both",
+      "desc": "Prestige客戶，海外簽賬/網購額外回贈",
+      "baseReturn": 0.004,
+      "bonusRates": {
+        "octopus": 0.004,
+        "onlineFX": 0.05,
+        "physicalFX": 0.05,
+        "travelJKSTA": 0.05,
+        "onlineHKD": 0.05,
+        "flightDirect": 0.004,
+        "flightOTA": 0.004,
+        "hotelDirect": 0.004,
+        "hotelOTA": 0.004
+      },
+      "note": "海外每雙月$600上限(2個月一期，合共$3,600/年)，網購月$200獨立上限，需月簽$5,000",
+      "validUntil": null,
+      "pools": [
+        {
+          "id": "hs_prestige__default",
+          "scenarios": [
+            "onlineFX",
+            "physicalFX",
+            "travelJKSTA",
+            "travelTW",
+            "travelCN"
+          ],
+          "rates": {
+            "onlineFX": 0.046,
+            "physicalFX": 0.046,
+            "travelJKSTA": 0.046,
+            "travelTW": 0.046,
+            "travelCN": 0.046
+          },
+          "cap": {
+            "type": "rebate",
+            "amountHKD": 600,
+            "currency": "HKD"
+          },
+          "note": "⚠️ 海外簽賬每期 $600 額外回贈上限"
+        }
+      ],
+      "effectiveCostMap": {
+        "local": 10,
+        "dining": 10,
+        "onlineHKD": 2,
+        "onlineFX": 4,
+        "travelJKSTA": 4,
+        "physicalFX": 4
+      },
+      "warningsByScenario": {
+        "onlineFX": "⚠️ 需月簽$5,000，海外每雙月$600上限(2個月一期)",
+        "physicalFX": "⚠️ 需月簽$5,000，海外每雙月$600上限(2個月一期)",
+        "travelJKSTA": "⚠️ 需月簽$5,000，海外每雙月$600上限(2個月一期)",
+        "onlineHKD": "⚠️ 需月簽$5,000，網購月$200獨立上限"
+      },
+      "constraints": [
+        {
+          "type": "pool",
+          "scenarios": [
+            "onlineFX",
+            "physicalFX",
+            "travelJKSTA",
+            "travelTW",
+            "travelCN"
+          ],
+          "rates": {
+            "onlineFX": 0.046,
+            "physicalFX": 0.046,
+            "travelJKSTA": 0.046,
+            "travelTW": 0.046,
+            "travelCN": 0.046
+          },
+          "cap": {
+            "type": "rebate",
+            "amountHKD": 600,
+            "currency": "HKD"
+          },
+          "note": "⚠️ 海外簽賬每期 $600 額外回贈上限"
+        },
+        {
+          "type": "spend_cap",
+          "cap": {
+            "type": "amount",
+            "amountHKD": 5000.0,
+            "currency": "HKD"
+          },
+          "period": null,
+          "note": "海外每雙月$600上限(2個月一期，合共$3,600/年)，網購月$200獨立上限，需月簽$5,000"
+        },
+        {
+          "type": "cap_mentioned",
+          "cap": {
+            "amountHKD": 5000.0,
+            "currency": "HKD"
+          },
+          "period": null,
+          "note": "⚠️ 需月簽$5,000，海外每雙月$600上限(2個月一期)",
+          "scenario": "onlineFX"
+        },
+        {
+          "type": "cap_mentioned",
+          "cap": {
+            "amountHKD": 5000.0,
+            "currency": "HKD"
+          },
+          "period": null,
+          "note": "⚠️ 需月簽$5,000，海外每雙月$600上限(2個月一期)",
+          "scenario": "physicalFX"
+        },
+        {
+          "type": "cap_mentioned",
+          "cap": {
+            "amountHKD": 5000.0,
+            "currency": "HKD"
+          },
+          "period": null,
+          "note": "⚠️ 需月簽$5,000，海外每雙月$600上限(2個月一期)",
+          "scenario": "travelJKSTA"
+        },
+        {
+          "type": "cap_mentioned",
+          "cap": {
+            "amountHKD": 5000.0,
+            "currency": "HKD"
+          },
+          "period": null,
+          "note": "⚠️ 需月簽$5,000，網購月$200獨立上限",
+          "scenario": "onlineHKD"
+        }
+      ]
+    },
+    {
+      "id": "boc_bliss",
+      "name": "中銀 Bliss Card",
+      "issuer": "Bank of China",
+      "program": "both",
+      "desc": "指定網購6%/$1里，其他網購4%/$1.5里(含外幣網購)，實體0.4%",
+      "baseReturn": 0.004,
+      "bonusRates": {
+        "octopus": 0.004,
+        "onlineHKD": 0.04,
+        "onlineFX": 0.04
+      },
+      "note": "月度$10,000上限(網購，含外幣)，指定商戶6%",
+      "validUntil": null,
+      "pools": [
+        {
+          "id": "boc_bliss__default",
+          "scenarios": [
+            "onlineHKD",
+            "onlineFX",
+            "flightDirect",
+            "flightOTA",
+            "hotelDirect",
+            "hotelOTA"
+          ],
+          "rates": {},
+          "cap": {
+            "type": "amount",
+            "amountHKD": 10000.0,
+            "currency": "HKD"
+          },
+          "note": "⚠️ HKD網購+外幣網購共用月度 $10,000 簽賬上限"
+        }
+      ],
+      "effectiveCostMap": {
+        "local": 25,
+        "dining": 25,
+        "onlineHKD": 1.5,
+        "onlineFX": 1.5,
+        "travelJKSTA": 25,
+        "physicalFX": 25
+      },
+      "warningsByScenario": {
+        "local": "💡 基本0.4%為積分回贈(非現金)，需於BoC Pay+兌換",
+        "onlineHKD": "💡 指定商戶(Amazon/FARFETCH等)可達6% · 狂賞派另加回贈(需App登記，紅日+5%/平日+2%)",
+        "onlineFX": "💡 外幣網購同享4% · 狂賞飛另加3%(需App登記，每季累積制，內地/澳門可達6%)"
+      },
+      "constraints": [
+        {
+          "type": "pool",
+          "scenarios": [
+            "onlineHKD",
+            "onlineFX",
+            "flightDirect",
+            "flightOTA",
+            "hotelDirect",
+            "hotelOTA"
+          ],
+          "rates": {},
+          "cap": {
+            "type": "amount",
+            "amountHKD": 10000.0,
+            "currency": "HKD"
+          },
+          "note": "⚠️ HKD網購+外幣網購共用月度 $10,000 簽賬上限"
+        },
+        {
+          "type": "cap_mentioned",
+          "cap": {
+            "amountHKD": 10000.0,
+            "currency": "HKD"
+          },
+          "period": "monthly",
+          "note": "月度$10,000上限(網購，含外幣)，指定商戶6%"
+        }
+      ]
+    },
+    {
+      "id": "bea_sup",
+      "name": "BEA Supreme",
+      "issuer": "BEA",
+      "program": "miles",
+      "desc": "東亞頂級卡，海外$5/里+機場Lounge",
+      "baseReturn": 0.005,
+      "bonusRates": {
+        "octopus": 0.004,
+        "onlineFX": 0.015,
+        "physicalFX": 0.015,
+        "travelJKSTA": 0.015
+      },
+      "note": null,
+      "validUntil": null,
+      "pools": [],
+      "effectiveCostMap": {
+        "local": 8,
+        "dining": 8,
+        "onlineHKD": 8,
+        "onlineFX": 5,
+        "travelJKSTA": 5,
+        "physicalFX": 5
+      },
+      "warningsByScenario": {},
+      "constraints": []
+    }
+  ],
+  "scenarioLabels": {
+    "dining": "餐飲",
+    "flightDirect": "機票（官網）",
+    "flightOTA": "機票（OTA）",
+    "fuel": "油站",
+    "hotelDirect": "酒店（官網）",
+    "hotelOTA": "酒店（OTA）",
+    "mobilePay": "流動支付",
+    "octopus": "八達通（自動增值）",
+    "octopusManual": "八達通（手動增值）",
+    "onlineFX": "外幣網購",
+    "onlineHKD": "本地網購（HKD）",
+    "physicalFX": "實體外幣",
+    "supermarket": "超市",
+    "transport": "交通",
+    "travelCN": "旅遊（中國）",
+    "travelJKSTA": "旅遊（日/韓/新/泰）",
+    "travelTW": "旅遊（台灣）"
+  },
+  "dataVersion": "v1.5",
+  "generatedAt": "2026-04-02T16:00:34Z"
+}

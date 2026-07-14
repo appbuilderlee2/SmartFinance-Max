@@ -1,0 +1,5 @@
+{
+  "name": "SmartFinance iOS",
+  "description": "A dark-mode financial tracking PWA with iOS aesthetics, budgeting, and charts.",
+  "requestFramePermissions": []
+}
