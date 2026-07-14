@@ -115,6 +115,7 @@ test('legacy localStorage data migrates to IndexedDB', async ({ page }) => {
   });
   await page.reload();
 
+  await page.goto('/#/records');
   await expect(page.getByText('舊資料遷移')).toBeVisible();
   const stored = await readIndexedDbJson<any[]>(page, 'smartfinance_transactions');
   expect(stored[0].id).toBe('legacy-e2e');

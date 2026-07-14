@@ -1,5 +1,11 @@
 # 更新日誌（Changelog）
 
+## v2.0.2 (2026-07-14)
+
+- 修正遷移 E2E 在 Dashboard 尋找只會於記錄頁顯示嘅交易備註。
+- 保留 UI、IndexedDB 內容及舊 localStorage 副本三重遷移驗證。
+- Service Worker 升級至 v10。
+
 ## v2.0.1 (2026-07-14)
 
 - 修正訂閱 E2E 金額 locator 同時命中摘要及項目而觸發 strict mode failure。
