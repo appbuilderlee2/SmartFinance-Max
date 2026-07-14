@@ -5,7 +5,7 @@ import { ChevronLeft, Trash2, Edit2 } from 'lucide-react';
 import { Icon } from '../components/Icon';
 import { useData } from '../contexts/DataContext';
 import { Currency, TransactionType } from '../types';
-import { getCurrencySymbol } from '../utils/currency';
+import { formatMoney } from '../utils/money';
 
 const TransactionView: React.FC = () => {
   const navigate = useNavigate();
@@ -61,7 +61,7 @@ const TransactionView: React.FC = () => {
           {/* Big Total Card */}
           <div className="text-center py-8 animate-fade-in-up">
             <span className={`text-4xl font-bold font-sans tracking-tight ${isExpense ? 'text-red-500' : 'text-green-500'}`}>
-              {isExpense ? '-' : '+'} {getCurrencySymbol(txCurrency)} {transaction.amount.toLocaleString('en-US', { minimumFractionDigits: 0 })}
+              {isExpense ? '-' : '+'} {formatMoney(transaction.amount, txCurrency)}
             </span>
             <div className="flex items-center justify-center gap-2 mt-3 text-gray-400">
               <div className={`w-6 h-6 rounded-full flex items-center justify-center ${category?.color} text-white`}>

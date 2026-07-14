@@ -1,4 +1,5 @@
-import { Budget, Category, Subscription, Transaction } from '../types';
+import { Budget, Category, Currency, Subscription, Transaction } from '../types';
+import { addMoney } from './money';
 
 export type CategoryUsage = {
   transactionCount: number;
@@ -29,6 +30,7 @@ export function reassignCategoryReferences(
   transactions: Transaction[],
   subscriptions: Subscription[],
   budgets: Budget[],
+  currency: Currency = Currency.HKD,
 ) {
   const sourceBudget = budgets.find((item) => item.categoryId === sourceId);
   const replacementBudget = budgets.find((item) => item.categoryId === replacementId);
@@ -36,7 +38,7 @@ export function reassignCategoryReferences(
     .filter((item) => item.categoryId !== sourceId && item.categoryId !== replacementId)
     .concat({
       categoryId: replacementId,
-      limit: (replacementBudget?.limit || 0) + (sourceBudget?.limit || 0),
+      limit: addMoney(replacementBudget?.limit || 0, sourceBudget?.limit || 0, currency),
       spent: replacementBudget?.spent || 0,
     });
 

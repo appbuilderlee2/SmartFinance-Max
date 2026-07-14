@@ -5,6 +5,7 @@ import { useData } from '../contexts/DataContext';
 import { Currency, TransactionType } from '../types';
 import { getCurrencySymbol } from '../utils/currency';
 import { parseDate, toLocalYMD } from '../utils/date';
+import { addMoney, formatMoney, fromMinorUnits, roundMoney, sumMoney, toMinorUnits } from '../utils/money';
 
 type CategoryChartMode = 'pie' | 'bar';
 type TrendChartMode = 'bar' | 'line';
@@ -43,8 +44,6 @@ const Reports: React.FC = () => {
   const [keyword, setKeyword] = useState<string>('');
   const [periodView, setPeriodView] = useState<'month' | 'quarter' | 'year'>('month');
   const [showAdvanced, setShowAdvanced] = useState(false);
-
-  const currencySymbol = getCurrencySymbol(selectedCurrency);
 
   const allTags = useMemo(() => {
     const set = new Set<string>();
@@ -116,19 +115,20 @@ const Reports: React.FC = () => {
       }
 
       filtered.push(tx);
+      const amtMinor = toMinorUnits(amt, selectedCurrency);
 
       const time = date.getTime();
       minTime = minTime === null ? time : Math.min(minTime, time);
       maxTime = maxTime === null ? time : Math.max(maxTime, time);
 
-      if (tx.type === TransactionType.EXPENSE) expense += amt;
-      if (tx.type === TransactionType.INCOME) income += amt;
+      if (tx.type === TransactionType.EXPENSE) expense += amtMinor;
+      if (tx.type === TransactionType.INCOME) income += amtMinor;
 
       const catName = categoryById.get(tx.categoryId)?.name || '未分類';
-      byCategory[catName] = (byCategory[catName] || 0) + amt * (tx.type === TransactionType.EXPENSE ? -1 : 1);
+      byCategory[catName] = (byCategory[catName] || 0) + amtMinor * (tx.type === TransactionType.EXPENSE ? -1 : 1);
 
       if (tx.type === TransactionType.EXPENSE) {
-        topExpenseByCategory.set(catName, (topExpenseByCategory.get(catName) || 0) + amt);
+        topExpenseByCategory.set(catName, (topExpenseByCategory.get(catName) || 0) + amtMinor);
       }
 
       // series bucket
@@ -142,22 +142,22 @@ const Reports: React.FC = () => {
         key = `${date.getFullYear()}`;
       }
       const current = seriesBucket.get(key) || { income: 0, expense: 0 };
-      if (tx.type === TransactionType.EXPENSE) current.expense += amt;
-      else current.income += amt;
+      if (tx.type === TransactionType.EXPENSE) current.expense += amtMinor;
+      else current.income += amtMinor;
       seriesBucket.set(key, current);
 
       // month/year KPIs
       const y = date.getFullYear();
       const m = date.getMonth();
       if (y == nowY && m == nowM) {
-        if (tx.type === TransactionType.EXPENSE) thisMonthExpense += amt;
-        else thisMonthIncome += amt;
+        if (tx.type === TransactionType.EXPENSE) thisMonthExpense += amtMinor;
+        else thisMonthIncome += amtMinor;
       }
       if (y == prevY && m == prevM && tx.type === TransactionType.EXPENSE) {
-        lastMonthExpense += amt;
+        lastMonthExpense += amtMinor;
       }
-      if (y == currentYear && tx.type === TransactionType.EXPENSE) thisYearExpense += amt;
-      if (y == currentYear - 1 && tx.type === TransactionType.EXPENSE) lastYearExpense += amt;
+      if (y == currentYear && tx.type === TransactionType.EXPENSE) thisYearExpense += amtMinor;
+      if (y == currentYear - 1 && tx.type === TransactionType.EXPENSE) lastYearExpense += amtMinor;
     }
 
     const monthsCount = (() => {
@@ -169,23 +169,39 @@ const Reports: React.FC = () => {
     })();
 
     const sortedKeys = Array.from(seriesBucket.keys()).sort((a, b) => (a > b ? 1 : -1));
-    const seriesByPeriod = sortedKeys.map(k => ({ key: k, ...seriesBucket.get(k)! }));
+    const seriesByPeriod = sortedKeys.map(k => {
+      const value = seriesBucket.get(k)!;
+      return {
+        key: k,
+        income: fromMinorUnits(value.income, selectedCurrency),
+        expense: fromMinorUnits(value.expense, selectedCurrency),
+      };
+    });
 
     const expenseTop5 = Array.from(topExpenseByCategory.entries())
       .sort((a, b) => b[1] - a[1])
-      .slice(0, 5);
+      .slice(0, 5)
+      .map(([name, value]) => [name, fromMinorUnits(value, selectedCurrency)] as [string, number]);
+
+    const majorByCategory = Object.fromEntries(
+      Object.entries(byCategory).map(([name, value]) => [name, fromMinorUnits(value, selectedCurrency)])
+    );
 
     return {
       filteredTransactions: filtered,
-      totals: { income, expense, byCategory },
+      totals: {
+        income: fromMinorUnits(income, selectedCurrency),
+        expense: fromMinorUnits(expense, selectedCurrency),
+        byCategory: majorByCategory,
+      },
       seriesByPeriod,
       expenseTop5,
       monthsCount,
-      thisMonthExpense,
-      thisMonthIncome,
-      lastMonthExpense,
-      thisYearExpense,
-      lastYearExpense,
+      thisMonthExpense: fromMinorUnits(thisMonthExpense, selectedCurrency),
+      thisMonthIncome: fromMinorUnits(thisMonthIncome, selectedCurrency),
+      lastMonthExpense: fromMinorUnits(lastMonthExpense, selectedCurrency),
+      thisYearExpense: fromMinorUnits(thisYearExpense, selectedCurrency),
+      lastYearExpense: fromMinorUnits(lastYearExpense, selectedCurrency),
     };
   }, [
     transactions,
@@ -263,16 +279,17 @@ const Reports: React.FC = () => {
     applyPreset(preset);
   }, [preset]);
 
-  const net = totals.income - totals.expense;
+  const net = addMoney(totals.income, -totals.expense, selectedCurrency);
 
-  const monthlyAvg = totals.expense / monthsCount;
+  const monthlyAvg = roundMoney(totals.expense / monthsCount, selectedCurrency);
 
   const mom = lastMonthExpense ? ((thisMonthExpense - lastMonthExpense) / lastMonthExpense) * 100 : null;
 
   const yoy = lastYearExpense ? ((thisYearExpense - lastYearExpense) / lastYearExpense) * 100 : null;
 
-  const budgetTotal = useMemo(() => budgets.reduce((sum, b) => sum + (b.limit || 0), 0), [budgets]);
-  const budgetProgress = budgetTotal ? (thisMonthExpense / budgetTotal) * 100 : 0;
+  const budgetTotal = useMemo(() => sumMoney(budgets.map(b => b.limit || 0), currency), [budgets, currency]);
+  const canCompareBudget = selectedCurrency === currency;
+  const budgetProgress = canCompareBudget && budgetTotal ? (thisMonthExpense / budgetTotal) * 100 : 0;
 
   const exportCSV = () => {
     const headers = ['Date', 'Type', 'Category', 'Amount', 'Note'];
@@ -346,20 +363,20 @@ const Reports: React.FC = () => {
           <div className="grid grid-cols-2 gap-3">
             <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30">
               <p className="text-xs text-gray-300">收入</p>
-              <p className="text-xl font-bold text-emerald-400">{currencySymbol} {totals.income.toLocaleString()}</p>
+              <p className="text-xl font-bold text-emerald-400">{formatMoney(totals.income, selectedCurrency)}</p>
             </div>
             <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/30">
               <p className="text-xs text-gray-300">支出</p>
-              <p className="text-xl font-bold text-red-400">{currencySymbol} {totals.expense.toLocaleString()}</p>
+              <p className="text-xl font-bold text-red-400">{formatMoney(totals.expense, selectedCurrency)}</p>
             </div>
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div className="p-3 rounded-xl bg-primary/10 border border-primary/30">
               <p className="text-xs text-gray-300">淨額</p>
               <p className={`text-xl font-bold ${net >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-                {net >= 0 ? '+' : '-'}{currencySymbol} {Math.abs(net).toLocaleString()}
+                {net >= 0 ? '+' : '-'}{formatMoney(Math.abs(net), selectedCurrency)}
               </p>
-              <p className="text-[11px] text-gray-400 mt-1">月平均支出：{currencySymbol} {monthlyAvg.toLocaleString(undefined, { maximumFractionDigits: 0 })}</p>
+              <p className="text-[11px] text-gray-400 mt-1">月平均支出：{formatMoney(monthlyAvg, selectedCurrency)}</p>
             </div>
             <div className="p-3 rounded-xl bg-purple-500/10 border border-purple-500/30">
               <p className="text-xs text-gray-300">同比 / 環比</p>
@@ -375,10 +392,12 @@ const Reports: React.FC = () => {
             <p className="text-xs text-gray-300">月預算完成度</p>
             <div className="flex items-center justify-between">
               <span className="text-sm text-gray-200">
-                {currencySymbol} {thisMonthExpense.toLocaleString()} / {currencySymbol} {budgetTotal.toLocaleString()}
+                {canCompareBudget
+                  ? `${formatMoney(thisMonthExpense, selectedCurrency)} / ${formatMoney(budgetTotal, currency)}`
+                  : `預算只適用主貨幣 ${currency}`}
               </span>
               <span className={`text-sm font-semibold ${budgetProgress >= 100 ? 'text-red-400' : 'text-emerald-400'}`}>
-                {budgetProgress.toFixed(0)}%
+                {canCompareBudget ? `${budgetProgress.toFixed(0)}%` : 'N/A'}
               </span>
             </div>
             <div className="w-full h-2 bg-gray-800 rounded-full overflow-hidden mt-2">
@@ -387,7 +406,7 @@ const Reports: React.FC = () => {
                 style={{ width: `${Math.min(150, budgetProgress)}%` }}
               />
             </div>
-            {budgetProgress >= 100 && <p className="text-xs text-red-400 mt-1">已超過預算，請留意開支</p>}
+            {canCompareBudget && budgetProgress >= 100 && <p className="text-xs text-red-400 mt-1">已超過預算，請留意開支</p>}
           </div>
           <button
             onClick={() => setShowAdvanced(v => !v)}
@@ -401,30 +420,32 @@ const Reports: React.FC = () => {
         <div className="grid grid-cols-2 gap-3">
           <div className="p-4 rounded-2xl sf-panel">
             <p className="text-xs text-gray-400">本月收入</p>
-            <p className="text-xl font-bold text-emerald-400 mt-1">{currencySymbol} {thisMonthIncome.toLocaleString()}</p>
+            <p className="text-xl font-bold text-emerald-400 mt-1">{formatMoney(thisMonthIncome, selectedCurrency)}</p>
           </div>
           <div className="p-4 rounded-2xl sf-panel">
             <p className="text-xs text-gray-400">本月支出</p>
-            <p className="text-xl font-bold text-red-400 mt-1">{currencySymbol} {thisMonthExpense.toLocaleString()}</p>
+            <p className="text-xl font-bold text-red-400 mt-1">{formatMoney(thisMonthExpense, selectedCurrency)}</p>
           </div>
           <div className="p-4 rounded-2xl sf-panel col-span-2">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-xs text-gray-400">本月淨額</p>
-                <p className={`text-xl font-bold ${thisMonthIncome - thisMonthExpense >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-                  {(thisMonthIncome - thisMonthExpense >= 0 ? '+' : '-')}{currencySymbol} {Math.abs(thisMonthIncome - thisMonthExpense).toLocaleString()}
+                <p className={`text-xl font-bold ${addMoney(thisMonthIncome, -thisMonthExpense, selectedCurrency) >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                  {addMoney(thisMonthIncome, -thisMonthExpense, selectedCurrency) >= 0 ? '+' : '-'}{formatMoney(Math.abs(addMoney(thisMonthIncome, -thisMonthExpense, selectedCurrency)), selectedCurrency)}
                 </p>
               </div>
               <div className="text-right">
                 <p className="text-xs text-gray-400">月預算進度</p>
-                <p className={`text-sm font-semibold ${budgetProgress >= 100 ? 'text-red-400' : 'text-emerald-400'}`}>{budgetProgress.toFixed(0)}%</p>
+                <p className={`text-sm font-semibold ${budgetProgress >= 100 ? 'text-red-400' : 'text-emerald-400'}`}>{canCompareBudget ? `${budgetProgress.toFixed(0)}%` : 'N/A'}</p>
               </div>
             </div>
             <div className="w-full h-2 bg-gray-800 rounded-full overflow-hidden mt-2">
               <div className={`h-full ${budgetProgress >= 100 ? 'bg-red-500' : 'bg-emerald-400'}`} style={{ width: `${Math.min(150, budgetProgress)}%` }} />
             </div>
             <p className="text-[11px] text-gray-400 mt-1">
-              {currencySymbol} {thisMonthExpense.toLocaleString()} / {currencySymbol} {budgetTotal.toLocaleString()}
+              {canCompareBudget
+                ? `${formatMoney(thisMonthExpense, selectedCurrency)} / ${formatMoney(budgetTotal, currency)}`
+                : `預算只適用主貨幣 ${currency}`}
             </p>
           </div>
         </div>
@@ -460,7 +481,7 @@ const Reports: React.FC = () => {
                   <div className="flex items-center justify-between">
                     <span className="text-sm">{catName}</span>
                     <span className={`text-sm font-semibold ${value >= 0 ? 'text-emerald-300' : 'text-red-300'}`}>
-                      {currencySymbol} {totalAbs.toLocaleString()}
+                      {formatMoney(totalAbs, selectedCurrency)}
                     </span>
                   </div>
                   <div className="w-full h-2 rounded-full bg-gray-800 overflow-hidden">
@@ -622,7 +643,7 @@ const Reports: React.FC = () => {
                     <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-full bg-blue-400 inline-block"></span>淨額</span>
                   </div>
                   {seriesByPeriod.map(item => {
-                    const netVal = item.income - item.expense;
+                    const netVal = addMoney(item.income, -item.expense, selectedCurrency);
                     const maxVal = Math.max(...seriesByPeriod.map(i => Math.max(i.income, i.expense, Math.abs(i.income - i.expense))), 1);
                     const incW = Math.min(100, (item.income / maxVal) * 100);
                     const expW = Math.min(100, (item.expense / maxVal) * 100);
@@ -631,7 +652,7 @@ const Reports: React.FC = () => {
                       <div key={item.key} className="space-y-1">
                         <div className="flex items-center justify-between text-xs text-gray-300">
                           <span>{item.key}</span>
-                          <span>淨額 {currencySymbol} {(netVal).toLocaleString()}</span>
+                          <span>淨額 {formatMoney(netVal, selectedCurrency)}</span>
                         </div>
                         <div className="w-full bg-gray-800 h-2 rounded-full overflow-hidden flex">
                           <div className="h-full bg-emerald-500" style={{ width: `${incW}%` }} title="收入"></div>
@@ -672,7 +693,7 @@ const Reports: React.FC = () => {
                         <span className="text-xs text-gray-500">#{idx + 1}</span>
                         <span>{name}</span>
                       </div>
-                      <span className="font-semibold text-red-300">{currencySymbol} {value.toLocaleString()}</span>
+                      <span className="font-semibold text-red-300">{formatMoney(value, selectedCurrency)}</span>
                     </div>
                     <div className="w-full h-2 rounded-full bg-gray-800 overflow-hidden">
                       <div className="h-full bg-red-500" style={{ width: `${scale}%` }} />

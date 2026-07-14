@@ -4,8 +4,8 @@ import { useNavigate } from 'react-router-dom';
 import { ChevronLeft, ChevronRight, X } from 'lucide-react';
 import { useData } from '../contexts/DataContext';
 import { Currency, TransactionType } from '../types';
-import { getCurrencySymbol } from '../utils/currency';
 import { Icon } from '../components/Icon';
+import { formatMoney, formatMoneyNumber, fromMinorUnits, toMinorUnits } from '../utils/money';
 
 const Calendar: React.FC = () => {
     const navigate = useNavigate();
@@ -39,34 +39,43 @@ const Calendar: React.FC = () => {
                     totals[day] = { income: 0, expense: 0 };
                 }
                 if (tx.type === TransactionType.EXPENSE) {
-                    totals[day].expense += tx.amount;
+                    totals[day].expense += toMinorUnits(tx.amount, currency);
                 } else {
-                    totals[day].income += tx.amount;
+                    totals[day].income += toMinorUnits(tx.amount, currency);
                 }
             }
         });
 
-        return totals;
+        return Object.fromEntries(
+            Object.entries(totals).map(([day, value]) => [day, {
+                income: fromMinorUnits(value.income, currency),
+                expense: fromMinorUnits(value.expense, currency),
+            }])
+        );
     }, [transactions, year, month, currency]);
 
     // Monthly totals
     const monthlyTotals = useMemo(() => {
-        return transactions.reduce(
+        const totals = transactions.reduce(
             (acc, tx) => {
                 const txDate = new Date(tx.date);
                 const txCurrency = (tx.currency as Currency) || currency;
                 if (txCurrency !== currency) return acc;
                 if (txDate.getFullYear() === year && txDate.getMonth() === month) {
                     if (tx.type === TransactionType.EXPENSE) {
-                        acc.expense += tx.amount;
+                        acc.expense += toMinorUnits(tx.amount, currency);
                     } else {
-                        acc.income += tx.amount;
+                        acc.income += toMinorUnits(tx.amount, currency);
                     }
                 }
                 return acc;
             },
             { income: 0, expense: 0 }
         );
+        return {
+            income: fromMinorUnits(totals.income, currency),
+            expense: fromMinorUnits(totals.expense, currency),
+        };
     }, [transactions, year, month, currency]);
 
     // Monthly transactions (all transactions for the month)
@@ -153,12 +162,12 @@ const Calendar: React.FC = () => {
                         <div className="flex flex-col items-center mt-0.5 space-y-0.5 leading-tight max-w-[64px] text-center">
                             {hasExpense && (
                                 <span className="text-[10px] text-red-400 truncate w-full">
-                                    -{dayData?.expense.toLocaleString()}
+                                    -{formatMoneyNumber(dayData?.expense || 0, currency)}
                                 </span>
                             )}
                             {hasIncome && (
                                 <span className="text-[10px] text-emerald-400 truncate w-full">
-                                    +{dayData?.income.toLocaleString()}
+                                    +{formatMoneyNumber(dayData?.income || 0, currency)}
                                 </span>
                             )}
                         </div>
@@ -235,13 +244,13 @@ const Calendar: React.FC = () => {
                         <div>
                             <p className="text-xs text-gray-500">收入</p>
                             <p className="text-lg font-semibold text-green-500">
-                                +{getCurrencySymbol(currency)} {monthlyTotals.income.toLocaleString()}
+                                +{formatMoney(monthlyTotals.income, currency)}
                             </p>
                         </div>
                         <div>
                             <p className="text-xs text-gray-500">支出</p>
                             <p className="text-lg font-semibold text-red-500">
-                                -{getCurrencySymbol(currency)} {monthlyTotals.expense.toLocaleString()}
+                                -{formatMoney(monthlyTotals.expense, currency)}
                             </p>
                         </div>
                     </div>
@@ -291,7 +300,7 @@ const Calendar: React.FC = () => {
                                             <span className="text-white text-sm">{category?.name || '未分類'}</span>
                                         </div>
                                         <span className={`font-semibold ${tx.type === TransactionType.EXPENSE ? 'text-red-500' : 'text-green-500'}`}>
-                                            {tx.type === TransactionType.EXPENSE ? '-' : '+'}{getCurrencySymbol(currency)} {tx.amount.toLocaleString()}
+                                            {tx.type === TransactionType.EXPENSE ? '-' : '+'}{formatMoney(tx.amount, currency)}
                                         </span>
                                     </div>
                                 );

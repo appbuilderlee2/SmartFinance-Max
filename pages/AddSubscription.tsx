@@ -6,6 +6,7 @@ import { useData } from '../contexts/DataContext';
 import { TransactionType } from '../types';
 import { getCurrencySymbol } from '../utils/currency';
 import { toLocalYMD } from '../utils/date';
+import { parseMoneyInput } from '../utils/money';
 
 const SERVICE_ICON_PRESETS = [
   { label: 'Netflix', value: 'emoji:🎬' },
@@ -85,6 +86,11 @@ const AddSubscription: React.FC = () => {
       alert("請輸入名稱與金額");
       return;
     }
+    const amountValue = parseMoneyInput(amount, currency);
+    if (amountValue === null || amountValue <= 0) {
+      alert(`請輸入有效金額（${currency === 'JPY' ? '不可輸入小數' : '最多兩位小數'}）`);
+      return;
+    }
 
     const expenseCategories = categories.filter(c => c.type === TransactionType.EXPENSE);
     const fallbackCategoryId = expenseCategories[0]?.id || '';
@@ -100,7 +106,7 @@ const AddSubscription: React.FC = () => {
     if (isEdit && id) {
       updateSubscription(id, {
         name,
-        amount: parseFloat(amount),
+        amount: amountValue,
         billingCycle: cycle,
         nextBillingDate: date,
         autoRenewal,
@@ -111,7 +117,7 @@ const AddSubscription: React.FC = () => {
     } else {
       addSubscription({
         name,
-        amount: parseFloat(amount),
+        amount: amountValue,
         billingCycle: cycle,
         nextBillingDate: date,
         autoRenewal,

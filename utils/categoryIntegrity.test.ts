@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { TransactionType } from '../types';
+import { Currency, TransactionType } from '../types';
 import { canUseReplacement, getCategoryUsage, reassignCategoryReferences } from './categoryIntegrity';
 
 const source = { id: 'food', name: '餐飲', icon: 'Tag', color: 'bg-red-500', type: TransactionType.EXPENSE };
@@ -23,6 +23,7 @@ describe('category integrity', () => {
       [{ id: 'tx1', amount: 10, date: '2026-07-01', note: '', categoryId: 'food', type: TransactionType.EXPENSE }],
       [{ id: 'sub1', name: 'Lunch', amount: 10, billingCycle: 'Monthly', nextBillingDate: '2026-08-01', categoryId: 'food' }],
       [{ categoryId: 'food', limit: 100, spent: 10 }, { categoryId: 'living', limit: 200, spent: 20 }],
+      Currency.HKD,
     );
     expect(result.transactions[0].categoryId).toBe('living');
     expect(result.subscriptions[0].categoryId).toBe('living');

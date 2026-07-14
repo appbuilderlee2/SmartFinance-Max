@@ -9,6 +9,7 @@ import { Currency, TransactionType } from '../types';
 import { triggerHaptic, HapticPatterns } from '../utils/haptics';
 import { clearTagHistory, deleteTagFromHistory, loadTagHistory, rememberTags } from '../utils/tagHistory';
 import { localYMDToStoredISOString, toLocalYMD } from '../utils/date';
+import { parseMoneyInput } from '../utils/money';
 
 const AddTransaction: React.FC = () => {
   const navigate = useNavigate();
@@ -36,13 +37,13 @@ const AddTransaction: React.FC = () => {
   const [editTagHistory, setEditTagHistory] = useState(false);
 
   const handleSave = () => {
-    const amountValue = Number(amount);
+    const amountValue = parseMoneyInput(amount, txCurrency);
     if (!selectedCategory) {
       alert("請選擇分類");
       return;
     }
-    if (!Number.isFinite(amountValue) || amountValue <= 0) {
-      alert("請輸入有效金額");
+    if (amountValue === null || amountValue <= 0) {
+      alert(`請輸入有效金額（${txCurrency === Currency.JPY ? '不可輸入小數' : '最多兩位小數'}）`);
       return;
     }
     if (!date) {

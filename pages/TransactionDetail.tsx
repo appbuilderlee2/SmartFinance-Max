@@ -6,8 +6,9 @@ import { useData } from '../contexts/DataContext';
 import { Icon } from '../components/Icon';
 import { getCurrencySymbol } from '../utils/currency';
 import { Currency, TransactionType } from '../types';
-import { toLocalYMD } from '../utils/date';
+import { localYMDToStoredISOString, toLocalYMD } from '../utils/date';
 import { clearTagHistory, deleteTagFromHistory, loadTagHistory, rememberTags } from '../utils/tagHistory';
+import { parseMoneyInput } from '../utils/money';
 
 const TransactionDetail: React.FC = () => {
    const { id } = useParams();
@@ -59,21 +60,21 @@ const TransactionDetail: React.FC = () => {
    const transactionType = currentCategory?.type || tx.type;
 
    const handleSave = () => {
-      const amountValue = Number(amount);
+      const amountValue = parseMoneyInput(amount, txCurrency);
       if (!selectedCategory) {
          alert('請選擇分類');
          return;
       }
-      if (!Number.isFinite(amountValue) || amountValue <= 0) {
-         alert('請輸入有效金額');
+      if (amountValue === null || amountValue <= 0) {
+         alert(`請輸入有效金額（${txCurrency === Currency.JPY ? '不可輸入小數' : '最多兩位小數'}）`);
          return;
       }
       if (!date) {
          alert('請選擇日期');
          return;
       }
-      const localDate = new Date(date + 'T00:00:00');
-      if (Number.isNaN(localDate.getTime())) {
+      const storedDate = localYMDToStoredISOString(date);
+      if (!storedDate) {
          alert('日期格式不正確');
          return;
       }
@@ -90,7 +91,7 @@ const TransactionDetail: React.FC = () => {
          tags,
          receiptUrl,
          isRecurring,
-         date: localDate.toISOString(),
+         date: storedDate,
          type: transactionType,
          currency: txCurrency
       });

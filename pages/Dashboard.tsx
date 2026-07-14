@@ -5,6 +5,7 @@ import { AlertTriangle, TrendingDown, TrendingUp } from 'lucide-react';
 import { useData } from '../contexts/DataContext';
 import { Currency, TransactionType } from '../types';
 import { getCurrencySymbol } from '../utils/currency';
+import { formatMoney, fromMinorUnits, sumMoney, toMinorUnits } from '../utils/money';
 
 type PeriodMode = 'month' | 'year';
 
@@ -50,10 +51,13 @@ const Dashboard: React.FC = () => {
       if (d.getFullYear() !== selectedYear) return;
       if (periodMode === 'month' && d.getMonth() !== selectedMonth) return;
 
-      if (t.type === TransactionType.INCOME) income += t.amount;
-      else expense += t.amount;
+      if (t.type === TransactionType.INCOME) income += toMinorUnits(t.amount, selectedCurrency);
+      else expense += toMinorUnits(t.amount, selectedCurrency);
     });
-    return { income, expense };
+    return {
+      income: fromMinorUnits(income, selectedCurrency),
+      expense: fromMinorUnits(expense, selectedCurrency),
+    };
   }, [transactions, selectedMonth, selectedYear, currency, selectedCurrency, periodMode]);
 
   const previousPeriodStats = useMemo(() => {
@@ -71,10 +75,13 @@ const Dashboard: React.FC = () => {
       const transactionCurrency = (transaction.currency as Currency) || currency;
       if (transactionCurrency !== selectedCurrency || date.getFullYear() !== targetYear) return;
       if (periodMode === 'month' && date.getMonth() !== targetMonth) return;
-      if (transaction.type === TransactionType.INCOME) income += transaction.amount;
-      else expense += transaction.amount;
+      if (transaction.type === TransactionType.INCOME) income += toMinorUnits(transaction.amount, selectedCurrency);
+      else expense += toMinorUnits(transaction.amount, selectedCurrency);
     });
-    return { income, expense };
+    return {
+      income: fromMinorUnits(income, selectedCurrency),
+      expense: fromMinorUnits(expense, selectedCurrency),
+    };
   }, [transactions, selectedMonth, selectedYear, currency, selectedCurrency, periodMode]);
 
   const comparisonLabel = (current: number, previous: number) => {
@@ -94,7 +101,7 @@ const Dashboard: React.FC = () => {
       if (periodMode === 'month' && d.getMonth() !== selectedMonth) return;
       if (t.type === TransactionType.EXPENSE) {
         const current = map.get(t.categoryId) || 0;
-        map.set(t.categoryId, current + t.amount);
+        map.set(t.categoryId, current + toMinorUnits(t.amount, selectedCurrency));
       }
     });
 
@@ -102,7 +109,7 @@ const Dashboard: React.FC = () => {
       const cat = categoryById.get(catId);
       return {
         name: cat?.name || 'Unknown',
-        value: val,
+        value: fromMinorUnits(val, selectedCurrency),
         color: cat?.color.replace('bg-', 'text-').replace('text-', '#') || '#8884d8' // Hacky color mapping for demo
       };
     }).sort((a, b) => b.value - a.value).slice(0, 5); // Top 5
@@ -152,17 +159,21 @@ const Dashboard: React.FC = () => {
         const txCurrency = (t.currency as Currency) || currency;
         if (txCurrency !== selectedCurrency) return;
         if (tDate.getMonth() === d.getMonth() && tDate.getFullYear() === d.getFullYear()) {
-          if (t.type === TransactionType.INCOME) inc += t.amount;
-          else exp += t.amount;
+          if (t.type === TransactionType.INCOME) inc += toMinorUnits(t.amount, selectedCurrency);
+          else exp += toMinorUnits(t.amount, selectedCurrency);
         }
       });
-      data.push({ month: monthLabel, income: inc, expense: exp });
+      data.push({
+        month: monthLabel,
+        income: fromMinorUnits(inc, selectedCurrency),
+        expense: fromMinorUnits(exp, selectedCurrency),
+      });
     }
     return data;
   }, [transactions, selectedMonth, selectedYear, currency, selectedCurrency, periodMode]);
 
   // Check budget status
-  const totalBudget = budgets.reduce((acc, b) => acc + b.limit, 0);
+  const totalBudget = sumMoney(budgets.map(b => b.limit), currency);
   const isOverBudget = periodMode === 'month' && selectedCurrency === currency && periodStats.expense > totalBudget && totalBudget > 0;
   const hasOtherCurrenciesInPeriod = useMemo(() => {
     return transactions.some((t) => {
@@ -255,7 +266,7 @@ const Dashboard: React.FC = () => {
             <TrendingDown className="text-red-500" />
           </div>
           <p className="text-gray-400 text-xs mb-1">總支出 ({periodMode === 'month' ? '本月' : '本年'})</p>
-          <p className="text-2xl font-bold mb-1">{getCurrencySymbol(selectedCurrency)} {periodStats.expense.toLocaleString()}</p>
+          <p className="text-2xl font-bold mb-1">{formatMoney(periodStats.expense, selectedCurrency)}</p>
           <p className={`text-xs ${periodStats.expense <= previousPeriodStats.expense ? 'text-green-400' : 'text-red-400'}`}>
             {comparisonLabel(periodStats.expense, previousPeriodStats.expense)}
           </p>
@@ -265,7 +276,7 @@ const Dashboard: React.FC = () => {
             <TrendingUp className="text-green-500" />
           </div>
           <p className="text-gray-400 text-xs mb-1">總收入 ({periodMode === 'month' ? '本月' : '本年'})</p>
-          <p className="text-2xl font-bold mb-1">{getCurrencySymbol(selectedCurrency)} {periodStats.income.toLocaleString()}</p>
+          <p className="text-2xl font-bold mb-1">{formatMoney(periodStats.income, selectedCurrency)}</p>
           <p className={`text-xs ${periodStats.income >= previousPeriodStats.income ? 'text-green-400' : 'text-red-400'}`}>
             {comparisonLabel(periodStats.income, previousPeriodStats.income)}
           </p>
@@ -310,7 +321,7 @@ const Dashboard: React.FC = () => {
               <div className="flex flex-col">
                 <span className="text-gray-300">{item.name}</span>
                 <span className="text-[11px] text-gray-500">
-                  {getCurrencySymbol(selectedCurrency)} {item.value.toLocaleString()} ({Math.round(item.value / (periodStats.expense || 1) * 100)}%)
+                  {formatMoney(item.value, selectedCurrency)} ({Math.round(item.value / (periodStats.expense || 1) * 100)}%)
                 </span>
               </div>
             </div>

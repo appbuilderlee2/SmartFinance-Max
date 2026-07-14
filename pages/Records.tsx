@@ -5,8 +5,8 @@ import { Search, Filter, Plus } from 'lucide-react';
 import { useData } from '../contexts/DataContext';
 import { Icon } from '../components/Icon';
 import { Currency, TransactionType } from '../types';
-import { getCurrencySymbol } from '../utils/currency';
 import { parseLocalYMD, toLocalYMD } from '../utils/date';
+import { formatMoney } from '../utils/money';
 
 const Records: React.FC = () => {
   const navigate = useNavigate();
@@ -221,7 +221,7 @@ const Records: React.FC = () => {
                         </div>
                       </div>
                       <span className={`font-semibold whitespace-nowrap ${isExpense ? 'text-white' : 'text-green-500'}`}>
-                        {isExpense ? '-' : '+'} {getCurrencySymbol((tx.currency as Currency) || currency)} {tx.amount.toLocaleString()}
+                        {isExpense ? '-' : '+'} {formatMoney(tx.amount, (tx.currency as Currency) || currency)}
                       </span>
                     </div>
                   );

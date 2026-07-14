@@ -9,6 +9,7 @@ import { parseDate, isSameMonth } from '../utils/date';
 import { clearAppStorage } from '../utils/backup';
 import { canUseReplacement, getCategoryUsage, reassignCategoryReferences } from '../utils/categoryIntegrity';
 import { processDueSubscriptions } from '../utils/subscriptionProcessing';
+import { fromMinorUnits, toMinorUnits } from '../utils/money';
 
 export interface CreditCard {
   id: string;
@@ -186,13 +187,13 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (!dt) continue;
       if (!isSameMonth(dt, currentMonth, currentYear)) continue;
       const prev = spentByCategory.get(t.categoryId) || 0;
-      spentByCategory.set(t.categoryId, prev + (Number(t.amount) || 0));
+      spentByCategory.set(t.categoryId, prev + toMinorUnits(Number(t.amount) || 0, currency));
     }
 
     // 3) Compute next budgets and apply only if changed
     let changed = missingBudgets.length > 0;
     const nextBudgets = baseBudgets.map((b) => {
-      const spent = spentByCategory.get(b.categoryId) || 0;
+      const spent = fromMinorUnits(spentByCategory.get(b.categoryId) || 0, currency);
       if (b.spent !== spent) changed = true;
       return { ...b, spent };
     });
@@ -259,6 +260,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         transactions,
         subscriptions,
         budgets,
+        currency,
       );
       setTransactions(reassigned.transactions);
       setSubscriptions(reassigned.subscriptions);

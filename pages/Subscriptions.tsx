@@ -3,8 +3,8 @@ import React, { useMemo, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { ChevronLeft, Plus, Pencil } from 'lucide-react';
 import { useData } from '../contexts/DataContext';
-import { getCurrencySymbol } from '../utils/currency';
 import { toLocalYMD } from '../utils/date';
+import { formatMoney, roundMoney, sumMoney } from '../utils/money';
 
 const Subscriptions: React.FC = () => {
    const navigate = useNavigate();
@@ -49,13 +49,13 @@ const Subscriptions: React.FC = () => {
       });
    }, [subscriptions, filterCategory]);
 
-   const totalMonthly = filteredSubs.reduce((acc, sub) => {
-      if (sub.billingCycle === 'Weekly') return acc + (sub.amount * 4);
-      if (sub.billingCycle === 'Monthly') return acc + sub.amount;
-      if (sub.billingCycle === 'BiWeekly') return acc + (sub.amount * 2);
-      if (sub.billingCycle === 'Yearly') return acc + (sub.amount / 12);
-      return acc;
-   }, 0);
+   const monthlyAmounts = filteredSubs.map((sub) => {
+      if (sub.billingCycle === 'Weekly') return roundMoney(sub.amount * 4, currency);
+      if (sub.billingCycle === 'BiWeekly') return roundMoney(sub.amount * 2, currency);
+      if (sub.billingCycle === 'Yearly') return roundMoney(sub.amount / 12, currency);
+      return roundMoney(sub.amount, currency);
+   });
+   const totalMonthly = sumMoney(monthlyAmounts, currency);
 
    return (
       <div className="min-h-screen bg-background pb-24 pt-safe-top">
@@ -75,7 +75,7 @@ const Subscriptions: React.FC = () => {
          <div className="p-4 space-y-6">
             <div className="text-center mb-6">
                <p className="text-gray-400 text-sm">每月總計 (估算：每週×4、每2週×2、每年÷12)</p>
-               <h1 className="text-4xl font-bold mt-1">{getCurrencySymbol(currency)} {Math.round(totalMonthly).toLocaleString()}</h1>
+               <h1 className="text-4xl font-bold mt-1">{formatMoney(totalMonthly, currency)}</h1>
             </div>
 
             <div className="sf-panel rounded-xl p-3 flex items-center justify-between text-sm">
@@ -120,7 +120,7 @@ const Subscriptions: React.FC = () => {
                            </div>
                         </div>
                         <div className="text-right">
-                           <p className="font-bold">{getCurrencySymbol(currency)} {sub.amount}</p>
+                           <p className="font-bold">{formatMoney(sub.amount, currency)}</p>
                            <p className="text-xs text-gray-500">
                               {sub.billingCycle === 'Weekly'
                                  ? '每週（約每月×4）'

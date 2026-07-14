@@ -5,6 +5,7 @@ import { ChevronLeft } from 'lucide-react';
 import { useData } from '../contexts/DataContext';
 import { Icon } from '../components/Icon';
 import { getCurrencySymbol } from '../utils/currency';
+import { addMoney, formatMoney, parseMoneyInput, sumMoney } from '../utils/money';
 
 const BudgetSettings: React.FC = () => {
   const navigate = useNavigate();
@@ -14,8 +15,9 @@ const BudgetSettings: React.FC = () => {
     return new Map(categories.map(c => [c.id, c] as const));
   }, [categories]);
 
-  const totalBudget = budgets.reduce((acc, b) => acc + b.limit, 0);
-  const totalSpent = budgets.reduce((acc, b) => acc + b.spent, 0);
+  const totalBudget = sumMoney(budgets.map(b => b.limit), currency);
+  const totalSpent = sumMoney(budgets.map(b => b.spent), currency);
+  const remaining = addMoney(totalBudget, -totalSpent, currency);
 
   return (
     <div className="min-h-screen bg-background pb-20 pt-safe-top">
@@ -33,19 +35,19 @@ const BudgetSettings: React.FC = () => {
           <div className="flex justify-between items-end mb-2">
             <div>
               <p className="text-gray-400 text-sm">本月總預算</p>
-              <h1 className="text-3xl font-bold text-white">{getCurrencySymbol(currency)} {totalBudget.toLocaleString()}</h1>
+              <h1 className="text-3xl font-bold text-white">{formatMoney(totalBudget, currency)}</h1>
             </div>
           </div>
 
           <div className="flex justify-between text-xs text-gray-400 mb-2">
-            <span className="text-green-500">已使用 {getCurrencySymbol(currency)} {totalSpent.toLocaleString()}</span>
-            <span>剩餘 {getCurrencySymbol(currency)} {(totalBudget - totalSpent).toLocaleString()}</span>
+            <span className="text-green-500">已使用 {formatMoney(totalSpent, currency)}</span>
+            <span>剩餘 {formatMoney(remaining, currency)}</span>
           </div>
 
           <div className="w-full bg-gray-700 h-3 rounded-full overflow-hidden">
             <div
               className={`h-full rounded-full transition-all duration-500 ${totalSpent > totalBudget ? 'bg-red-500' : 'bg-green-500'}`}
-              style={{ width: `${Math.min(100, (totalSpent / totalBudget) * 100)}%` }}
+              style={{ width: `${totalBudget > 0 ? Math.min(100, (totalSpent / totalBudget) * 100) : 0}%` }}
             ></div>
           </div>
         </div>
@@ -84,7 +86,7 @@ const BudgetSettings: React.FC = () => {
                     <Icon name={cat.icon} className={cat.color.replace('bg-', 'text-')} size={24} />
                   )}
                   <span className="font-medium flex-1">{cat.name}</span>
-                  <span className="text-sm text-gray-300">{getCurrencySymbol(currency)} {budget.spent.toLocaleString()} / {getCurrencySymbol(currency)} {budget.limit.toLocaleString()}</span>
+                  <span className="text-sm text-gray-300">{formatMoney(budget.spent, currency)} / {formatMoney(budget.limit, currency)}</span>
                 </div>
 
                 {/* Progress Bar with Limit Indicator */}
@@ -114,7 +116,10 @@ const BudgetSettings: React.FC = () => {
                         inputMode="decimal"
                         className="bg-transparent text-right w-full focus:outline-none"
                         value={budget.limit}
-                        onChange={(e) => updateBudget(budget.categoryId, Math.max(0, parseInt(e.target.value) || 0))}
+                        onChange={(e) => {
+                          const amount = parseMoneyInput(e.target.value, currency);
+                          if (amount !== null) updateBudget(budget.categoryId, amount);
+                        }}
                       />
                     </div>
                   </div>
