@@ -56,6 +56,33 @@ const Dashboard: React.FC = () => {
     return { income, expense };
   }, [transactions, selectedMonth, selectedYear, currency, selectedCurrency, periodMode]);
 
+  const previousPeriodStats = useMemo(() => {
+    let targetYear = selectedYear - 1;
+    let targetMonth = selectedMonth;
+    if (periodMode === 'month') {
+      const previous = new Date(selectedYear, selectedMonth - 1, 1);
+      targetYear = previous.getFullYear();
+      targetMonth = previous.getMonth();
+    }
+    let income = 0;
+    let expense = 0;
+    transactions.forEach((transaction) => {
+      const date = new Date(transaction.date);
+      const transactionCurrency = (transaction.currency as Currency) || currency;
+      if (transactionCurrency !== selectedCurrency || date.getFullYear() !== targetYear) return;
+      if (periodMode === 'month' && date.getMonth() !== targetMonth) return;
+      if (transaction.type === TransactionType.INCOME) income += transaction.amount;
+      else expense += transaction.amount;
+    });
+    return { income, expense };
+  }, [transactions, selectedMonth, selectedYear, currency, selectedCurrency, periodMode]);
+
+  const comparisonLabel = (current: number, previous: number) => {
+    if (previous === 0) return current === 0 ? '與上期相同' : '上期無資料';
+    const change = ((current - previous) / Math.abs(previous)) * 100;
+    return `較上期 ${change >= 0 ? '+' : ''}${change.toFixed(1)}%`;
+  };
+
   // 2. Calculate Pie Data (Expenses by Category)
   const pieData = useMemo(() => {
     const map = new Map<string, number>();
@@ -229,7 +256,9 @@ const Dashboard: React.FC = () => {
           </div>
           <p className="text-gray-400 text-xs mb-1">總支出 ({periodMode === 'month' ? '本月' : '本年'})</p>
           <p className="text-2xl font-bold mb-1">{getCurrencySymbol(selectedCurrency)} {periodStats.expense.toLocaleString()}</p>
-          <p className="text-xs text-red-400">較上期 (示意)</p>
+          <p className={`text-xs ${periodStats.expense <= previousPeriodStats.expense ? 'text-green-400' : 'text-red-400'}`}>
+            {comparisonLabel(periodStats.expense, previousPeriodStats.expense)}
+          </p>
         </div>
         <div className="sf-panel p-4 relative overflow-hidden">
           <div className="absolute top-0 right-0 p-2">
@@ -237,7 +266,9 @@ const Dashboard: React.FC = () => {
           </div>
           <p className="text-gray-400 text-xs mb-1">總收入 ({periodMode === 'month' ? '本月' : '本年'})</p>
           <p className="text-2xl font-bold mb-1">{getCurrencySymbol(selectedCurrency)} {periodStats.income.toLocaleString()}</p>
-          <p className="text-xs text-green-400">較上期 (示意)</p>
+          <p className={`text-xs ${periodStats.income >= previousPeriodStats.income ? 'text-green-400' : 'text-red-400'}`}>
+            {comparisonLabel(periodStats.income, previousPeriodStats.income)}
+          </p>
         </div>
       </div>
 

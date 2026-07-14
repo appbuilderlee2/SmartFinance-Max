@@ -109,8 +109,17 @@ export function parseBackupJson(text: string): SmartFinanceBackup {
 
 export function restoreBackup(backup: SmartFinanceBackup, storage: StorageLike): void {
   for (const [key, value] of Object.entries(backup.storage)) validateStoredValue(key, value);
-  clearAppStorage(storage);
-  for (const [key, value] of Object.entries(backup.storage)) storage.setItem(key, value);
+  const previous = collectAppStorage(storage);
+  try {
+    clearAppStorage(storage);
+    for (const [key, value] of Object.entries(backup.storage)) storage.setItem(key, value);
+  } catch (error) {
+    // A quota/private-mode error must not leave the user with a half-restored
+    // database. Best-effort rollback to the exact previous app snapshot.
+    clearAppStorage(storage);
+    for (const [key, value] of Object.entries(previous)) storage.setItem(key, value);
+    throw error;
+  }
 }
 
 export function clearAppStorage(storage: StorageLike): void {

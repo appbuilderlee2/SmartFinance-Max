@@ -9,6 +9,15 @@ export type ParseResult<T> = {
   error: unknown;
 };
 
+export const STORAGE_ERROR_EVENT = 'sf-storage-error';
+
+export function reportStorageError(key: string, error: unknown): void {
+  if (typeof window === 'undefined') return;
+  window.dispatchEvent(new CustomEvent(STORAGE_ERROR_EVENT, {
+    detail: { key, message: error instanceof Error ? error.message : 'Storage write failed' },
+  }));
+}
+
 export function safeJsonParse<T>(raw: string): ParseResult<T> {
   try {
     return { ok: true, value: JSON.parse(raw) as T };
@@ -28,11 +37,23 @@ export function readJson<T>(key: string): T | null {
   }
 }
 
-export function writeJson(key: string, value: unknown): void {
+export function writeJson(key: string, value: unknown): boolean {
   try {
     localStorage.setItem(key, JSON.stringify(value));
-  } catch {
-    // ignore quota / privacy mode errors
+    return true;
+  } catch (error) {
+    reportStorageError(key, error);
+    return false;
+  }
+}
+
+export function writeText(key: string, value: string): boolean {
+  try {
+    localStorage.setItem(key, value);
+    return true;
+  } catch (error) {
+    reportStorageError(key, error);
+    return false;
   }
 }
 

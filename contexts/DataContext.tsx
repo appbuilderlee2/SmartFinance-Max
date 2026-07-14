@@ -2,7 +2,7 @@
 import React, { createContext, useContext, useState, useEffect, useMemo, useRef } from 'react';
 import { Transaction, Category, Budget, Subscription, TransactionType, Currency } from '../types';
 import { CATEGORIES } from '../constants';
-import { readJson, writeJson } from '../utils/storage';
+import { readJson, reportStorageError, writeJson, writeText } from '../utils/storage';
 import { makeId } from '../utils/id';
 import { ensureSchemaVersion } from '../utils/storageVersion';
 import { parseDate, isSameMonth, toLocalYMD } from '../utils/date';
@@ -83,7 +83,11 @@ export const useData = () => useContext(DataContext);
 export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   // Mark schema version early to help future migrations.
   useEffect(() => {
-    ensureSchemaVersion();
+    try {
+      ensureSchemaVersion();
+    } catch (error) {
+      reportStorageError('schema-migration', error);
+    }
   }, []);
 
   const DEFAULT_THEME: ThemeName = 'blue';
@@ -153,7 +157,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, [subscriptions]);
 
   useEffect(() => {
-    localStorage.setItem('smartfinance_currency', currency);
+    writeText('smartfinance_currency', currency);
   }, [currency]);
 
   // Budget Spending Logic (recalculate spent whenever transactions/categories/currency change)
@@ -340,7 +344,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // Persistence and application of theme (UI skin)
   useEffect(() => {
-    localStorage.setItem('smartfinance_themecolor', themeColor);
+    writeText('smartfinance_themecolor', themeColor);
     const root = document.documentElement;
 
     // Remove previous theme-* classes

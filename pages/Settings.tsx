@@ -3,7 +3,6 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ChevronRight, RefreshCw, FileDown, Upload, CloudOff, Info, CreditCard } from 'lucide-react';
 import { useData } from '../contexts/DataContext';
-import { makeId } from '../utils/id';
 import { toLocalYMD } from '../utils/date';
 import { forceReloadPwa } from '../utils/pwa';
 import { loadCycles } from '../utils/creditCardCycleStorage';
@@ -18,11 +17,7 @@ import {
 
 const Settings: React.FC = () => {
    const navigate = useNavigate();
-   const { resetData, transactions, categories, budgets, subscriptions, currency, setCurrency, themeColor, setThemeColor, creditCards } = useData();
-
-   const categoryById = useMemo(() => {
-      return new Map(categories.map(c => [c.id, c] as const));
-   }, [categories]);
+   const { resetData, subscriptions, currency, setCurrency, themeColor, setThemeColor, creditCards } = useData();
    const fileInputRef = useRef<HTMLInputElement>(null);
    const csvInputRef = useRef<HTMLInputElement>(null);
 
@@ -58,256 +53,19 @@ const Settings: React.FC = () => {
 
 
    const handleExportCSV = () => {
-      {
-         const backup = createBackup(localStorage, __APP_VERSION__);
-         const blob = new Blob(['\uFEFF' + backupToCsv(backup)], { type: 'text/csv;charset=utf-8' });
-         const url = URL.createObjectURL(blob);
-         const link = document.createElement('a');
-         link.href = url;
-         link.download = `smartfinance_backup_${toLocalYMD(new Date())}.csv`;
-         link.click();
-         URL.revokeObjectURL(url);
-         return;
-      }
-
-      // Unified CSV headers for full backup (all entities)
-      const headers = [
-         'recordType', 'ID', 'Name', 'Date', 'TxType', 'CategoryId', 'CategoryName', 'Amount', 'Currency', 'Note', 'Tags',
-         'BudgetLimit', 'BudgetSpent',
-         'Icon', 'Color', 'CategoryType',
-         'BillingCycle', 'NextBillingDate', 'AutoRenewal', 'SubNotes', 'LastProcessedDate',
-         'CreditLimit', 'AnnualFee', 'FeeMonth', 'CashbackType', 'ExpiryDate',
-         'ThemeColor'
-      ];
-
-      const defaultCurrencyCode = currency;
-
-      const txRows = transactions.map(tx => {
-         const category = categoryById.get(tx.categoryId);
-         const tags = tx.tags ? tx.tags.join(';') : '';
-         const dateStr = new Date(tx.date).toISOString();
-         const safeNote = `"${(tx.note || '').replace(/"/g, '""')}"`;
-         const txCurrency = tx.currency || defaultCurrencyCode;
-         return [
-            'transaction',
-            tx.id,
-            '',
-            dateStr,
-            tx.type,
-            tx.categoryId,
-            category?.name || 'Unknown',
-            tx.amount,
-            txCurrency,
-            safeNote,
-            tags,
-            '',
-            '',
-            '',
-            '',
-            '',
-            '',
-            '',
-            '',
-            '',
-            '',
-            '',
-            '',
-            '',
-            '',
-            ''
-         ].join(',');
-      });
-
-      const budgetRows = budgets.map(b => {
-         const category = categoryById.get(b.categoryId);
-         return [
-            'budget',
-            `budget-${b.categoryId}`,
-            '',
-            '',
-            '',
-            b.categoryId,
-            category?.name || 'Unknown',
-            '',
-            '',
-            '',
-            '',
-            b.limit,
-            b.spent,
-            '',
-            '',
-            '',
-            '',
-            '',
-            '',
-            '',
-            '',
-            '',
-            '',
-            '',
-            '',
-            ''
-         ].join(',');
-      });
-
-      const categoryRows = categories.map(c => [
-         'category',
-         c.id,
-         c.name,
-         '',
-         '',
-         c.id,
-         c.name,
-         '',
-         '',
-         '',
-         '',
-         '',
-         '',
-         c.icon,
-         c.color,
-         c.type,
-         '',
-         '',
-         '',
-         '',
-         '',
-         '',
-         '',
-         '',
-         '',
-         ''
-      ].join(','));
-
-      const subRows = subscriptions.map(s => [
-         'subscription',
-         s.id,
-         s.name,
-         '',
-         '',
-         s.categoryId || '',
-         '',
-         s.amount,
-         defaultCurrencyCode,
-         `"${(s.notes || '').replace(/"/g, '""')}"`,
-         '',
-         '',
-         '',
-         '',
-         '',
-         '',
-         s.billingCycle,
-         s.nextBillingDate,
-         s.autoRenewal ? 'true' : 'false',
-         s.notes || '',
-         s.lastProcessedDate || '',
-         '',
-         '',
-         '',
-         '',
-         '',
-         ''
-      ].join(','));
-
-      const cardRows = creditCards.map(c => [
-         'creditcard',
-         c.id,
-         c.name,
-         '',
-         '',
-         '',
-         '',
-         '',
-         '',
-         '',
-         '',
-         '',
-         '',
-         '',
-         '',
-         '',
-         '',
-         '',
-         '',
-         '',
-         '',
-         c.creditLimit ?? '',
-         c.annualFee,
-         c.feeMonth,
-         `"${(c.cashbackType || '').replace(/"/g, '""')}"`,
-         c.expiryDate,
-         ''
-      ].join(','));
-
-      const settingsRow = [
-         'setting',
-         'app-setting',
-         '',
-         '',
-         '',
-         '',
-         '',
-         '',
-         currency,
-         '',
-         '',
-         '',
-         '',
-         '',
-         '',
-         '',
-         '',
-         '',
-         '',
-         '',
-         '',
-         '',
-         '',
-         '',
-         '',
-         '',
-         themeColor
-      ].join(',');
-
-      const csvContent = [headers.join(','), ...txRows, ...budgetRows, ...categoryRows, ...subRows, ...cardRows, settingsRow].join('\n');
-
-      // Add BOM (\uFEFF) so Excel opens UTF-8 CSV with Chinese characters correctly
-      const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8' });
+      const backup = createBackup(localStorage, __APP_VERSION__);
+      const blob = new Blob(['\uFEFF' + backupToCsv(backup)], { type: 'text/csv;charset=utf-8' });
       const url = URL.createObjectURL(blob);
-
-      // Create download link
       const link = document.createElement('a');
-      link.setAttribute('href', url);
-      link.setAttribute('download', `smartfinance_export_${toLocalYMD(new Date())}.csv`);
-      link.style.visibility = 'hidden';
-      document.body.appendChild(link);
+      link.href = url;
+      link.download = `smartfinance_backup_${toLocalYMD(new Date())}.csv`;
       link.click();
-      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
    };
 
    const handleExportJSON = () => {
-      {
-         const backup = createBackup(localStorage, __APP_VERSION__);
-         const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
-         const url = URL.createObjectURL(blob);
-         const link = document.createElement('a');
-         link.href = url;
-         link.download = `smartfinance_backup_${toLocalYMD(new Date())}.json`;
-         link.click();
-         URL.revokeObjectURL(url);
-         return;
-      }
-
-      const payload = {
-         transactions,
-         categories,
-         budgets,
-         subscriptions,
-         currency,
-         creditCards,
-         themeColor
-      };
-      const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+      const backup = createBackup(localStorage, __APP_VERSION__);
+      const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
@@ -316,214 +74,47 @@ const Settings: React.FC = () => {
       URL.revokeObjectURL(url);
    };
 
+
    // Firebase cloud backup/restore removed: local-only mode
 
    const handleImport = (e: React.ChangeEvent<HTMLInputElement>) => {
-      {
-         const selectedFile = e.target.files?.[0];
-         e.target.value = '';
-         if (!selectedFile) return;
-         if (selectedFile.size > 10 * 1024 * 1024) {
-            alert('匯入失敗：備份檔案不可大過 10MB');
-            return;
-         }
-         selectedFile.text().then((text) => {
-            const backup = parseBackupJson(text);
-            const ok = window.confirm(`將會以備份資料取代目前資料（備份版本 ${backup.backupVersion}）。要繼續嗎？`);
-            if (!ok) return;
-            restoreBackup(backup, localStorage);
-            alert('JSON 匯入完成，將重新載入資料');
-            window.location.reload();
-         }).catch((error: unknown) => {
-            alert(`匯入失敗：${error instanceof Error ? error.message : '檔案格式錯誤'}`);
-         });
+      const selectedFile = e.target.files?.[0];
+      e.target.value = '';
+      if (!selectedFile) return;
+      if (selectedFile.size > 10 * 1024 * 1024) {
+         alert('匯入失敗：備份檔案不可大過 10MB');
          return;
       }
-
-      const file = e.target.files?.[0];
-      if (!file) return;
-      const reader = new FileReader();
-      reader.onload = evt => {
-         try {
-            const data = JSON.parse(String(evt.target?.result || '{}'));
-            if (data.transactions) localStorage.setItem('smartfinance_transactions', JSON.stringify(data.transactions));
-            if (data.categories) localStorage.setItem('smartfinance_categories', JSON.stringify(data.categories));
-            if (data.budgets) localStorage.setItem('smartfinance_budgets', JSON.stringify(data.budgets));
-            if (data.subscriptions) localStorage.setItem('smartfinance_subscriptions', JSON.stringify(data.subscriptions));
-            if (data.currency) localStorage.setItem('smartfinance_currency', data.currency);
-            if (data.creditCards) localStorage.setItem('smartfinance_creditcards', JSON.stringify(data.creditCards));
-            if (data.themeColor) localStorage.setItem('smartfinance_themecolor', data.themeColor);
-            alert('匯入完成，將重新載入資料');
-            window.location.reload();
-         } catch (err) {
-            alert('匯入失敗：檔案格式錯誤');
-         }
-      };
-      reader.readAsText(file as File);
+      selectedFile.text().then((text) => {
+         const backup = parseBackupJson(text);
+         const ok = window.confirm(`將會以備份資料取代目前資料（備份版本 ${backup.backupVersion}）。要繼續嗎？`);
+         if (!ok) return;
+         restoreBackup(backup, localStorage);
+         alert('JSON 匯入完成，將重新載入資料');
+         window.location.reload();
+      }).catch((error: unknown) => {
+         alert(`匯入失敗：${error instanceof Error ? error.message : '檔案格式錯誤'}`);
+      });
    };
 
    const handleImportCSV = (e: React.ChangeEvent<HTMLInputElement>) => {
-      {
-         const selectedFile = e.target.files?.[0];
-         e.target.value = '';
-         if (!selectedFile) return;
-         if (selectedFile.size > 10 * 1024 * 1024) {
-            alert('匯入失敗：備份檔案不可大過 10MB');
-            return;
-         }
-         selectedFile.text().then((text) => {
-            const backup = parseBackupCsv(text);
-            const ok = window.confirm('將會以 CSV 備份取代目前資料。要繼續嗎？');
-            if (!ok) return;
-            restoreBackup(backup, localStorage);
-            alert('CSV 匯入完成，將重新載入資料');
-            window.location.reload();
-         }).catch((error: unknown) => {
-            alert(`匯入失敗：${error instanceof Error ? error.message : '檔案格式錯誤'}`);
-         });
+      const selectedFile = e.target.files?.[0];
+      e.target.value = '';
+      if (!selectedFile) return;
+      if (selectedFile.size > 10 * 1024 * 1024) {
+         alert('匯入失敗：備份檔案不可大過 10MB');
          return;
       }
-
-      const file = e.target.files?.[0];
-      if (!file) return;
-      const reader = new FileReader();
-      reader.onload = evt => {
-         try {
-            const text = String(evt.target?.result || '');
-            const lines = text.split(/\r?\n/).filter(Boolean);
-            if (!lines.length) throw new Error('empty');
-            const headers = lines[0].split(',').map(h => h.trim().replace(/"/g, ''));
-            const idx = (name: string) => headers.findIndex(h => h.toLowerCase() === name.toLowerCase());
-            const rtIdx = idx('recordType');
-            const idIdx = idx('id');
-            const dateIdx = idx('date');
-            const txTypeIdx = idx('txtype');
-            const catIdIdx = idx('categoryid');
-            const catNameIdx = idx('categoryname');
-            const amtIdx = idx('amount');
-            const noteIdx = idx('note');
-            const currencyIdx = idx('currency');
-            const tagsIdx = idx('tags');
-            const budgetLimitIdx = idx('budgetlimit');
-            const budgetSpentIdx = idx('budgetspent');
-            const iconIdx = idx('icon');
-            const colorIdx = idx('color');
-            const catTypeIdx = idx('categorytype');
-            const billingIdx = idx('billingcycle');
-            const nextBillIdx = idx('nextbillingdate');
-            const autoIdx = idx('autorenewal');
-            const subNotesIdx = idx('subnotes');
-            const lastProcIdx = idx('lastprocesseddate');
-            const creditLimitIdx = idx('creditlimit');
-            const annualFeeIdx = idx('annualfee');
-            const feeMonthIdx = idx('feemonth');
-            const cashbackIdx = idx('cashbacktype');
-            const expiryIdx = idx('expirydate');
-            const themeIdx = idx('themecolor');
-            if (idIdx < 0 || (txTypeIdx < 0 && budgetLimitIdx < 0)) throw new Error('headers missing');
-
-            const parseCurrency = (raw: string | undefined) => {
-               const v = String(raw || '').trim();
-               if (!v) return null;
-               const upper = v.toUpperCase();
-               if (['TWD','HKD','USD','AUD','CNY','JPY','EUR','GBP'].includes(upper)) return upper;
-               // Legacy exports used symbols
-               if (v === 'NT$') return 'TWD';
-               if (v === 'HK$') return 'HKD';
-               if (v === 'A$') return 'AUD';
-               if (v === '$') return 'USD';
-               if (v === '€') return 'EUR';
-               if (v === '£') return 'GBP';
-               if (v === '¥') return 'JPY';
-               return null;
-            };
-
-            const importedTx: any[] = [];
-            const importedBudgets: any[] = [];
-            const importedCategories: any[] = [];
-            const importedSubs: any[] = [];
-            const importedCards: any[] = [];
-            let importedCurrency: string | null = null;
-            let importedTheme: string | null = null;
-
-            lines.slice(1).forEach(row => {
-               const cols = row.split(',');
-               const recordType = rtIdx >= 0 ? cols[rtIdx]?.toLowerCase() : 'transaction';
-               if (recordType === 'budget' || (budgetLimitIdx >= 0 && cols[budgetLimitIdx])) {
-                  const catId = catIdIdx >= 0 ? cols[catIdIdx] : '';
-                  importedBudgets.push({
-                     categoryId: catId,
-                     limit: Number(cols[budgetLimitIdx]) || 0,
-                     spent: Number(cols[budgetSpentIdx]) || 0
-                  });
-               } else {
-                  if (recordType === 'category') {
-                    importedCategories.push({
-                      id: cols[idIdx] || makeId('cat'),
-                      name: cols[catNameIdx] || cols[idIdx],
-                      icon: iconIdx >= 0 ? cols[iconIdx] : 'HelpCircle',
-                      color: colorIdx >= 0 ? cols[colorIdx] : 'bg-blue-500',
-                      type: catTypeIdx >= 0 ? cols[catTypeIdx] : 'EXPENSE'
-                    });
-                  } else if (recordType === 'subscription') {
-                    importedSubs.push({
-                      id: cols[idIdx] || makeId('sub'),
-                      name: cols[catNameIdx] || cols[idIdx],
-                      amount: Number(cols[amtIdx]) || 0,
-                      billingCycle: billingIdx >= 0 ? cols[billingIdx] : 'Monthly',
-                      nextBillingDate: nextBillIdx >= 0 ? cols[nextBillIdx] : '',
-                      autoRenewal: autoIdx >= 0 ? cols[autoIdx] === 'true' : true,
-                      notes: subNotesIdx >= 0 ? cols[subNotesIdx] : '',
-                      lastProcessedDate: lastProcIdx >= 0 ? cols[lastProcIdx] : '',
-                      categoryId: catIdIdx >= 0 ? cols[catIdIdx] : ''
-                    });
-                  } else if (recordType === 'creditcard') {
-                    importedCards.push({
-                      id: cols[idIdx] || makeId('card'),
-                      name: cols[catNameIdx] || cols[idIdx],
-                      creditLimit: creditLimitIdx >= 0 ? Number(cols[creditLimitIdx]) || 0 : undefined,
-                      annualFee: annualFeeIdx >= 0 ? Number(cols[annualFeeIdx]) || 0 : 0,
-                      feeMonth: feeMonthIdx >= 0 ? Number(cols[feeMonthIdx]) || 1 : 1,
-                      cashbackType: cashbackIdx >= 0 ? cols[cashbackIdx] : '',
-                      expiryDate: expiryIdx >= 0 ? cols[expiryIdx] : '',
-                      lastFourDigits: ''
-                    });
-                  } else if (recordType === 'setting') {
-                    if (currencyIdx >= 0 && cols[currencyIdx]) importedCurrency = cols[currencyIdx];
-                    if (themeIdx >= 0 && cols[themeIdx]) importedTheme = cols[themeIdx];
-                  } else {
-                    const catId = catIdIdx >= 0
-                      ? cols[catIdIdx]
-                      : categories.find(c => c.name === cols[catNameIdx])?.id || categories[0]?.id || '';
-                    const parsedCurrency = currencyIdx >= 0 ? parseCurrency(cols[currencyIdx]) : null;
-                    importedTx.push({
-                      id: cols[idIdx] || makeId('tx'),
-                      date: dateIdx >= 0 ? new Date(((cols[dateIdx] || '').trim()) + 'T00:00:00').toISOString() : new Date().toISOString(),
-                      type: txTypeIdx >= 0 ? cols[txTypeIdx] : 'EXPENSE',
-                      categoryId: catId,
-                      amount: Number(cols[amtIdx]) || 0,
-                      note: noteIdx >= 0 ? cols[noteIdx]?.replace(/^"|"$/g, '') : '',
-                      tags: tagsIdx >= 0 && cols[tagsIdx] ? cols[tagsIdx].split(';') : [],
-                      currency: parsedCurrency || undefined
-                    });
-                  }
-               }
-            });
-            if (!importedTx.length && !importedBudgets.length) throw new Error('no rows');
-            if (importedTx.length) localStorage.setItem('smartfinance_transactions', JSON.stringify(importedTx));
-            if (importedBudgets.length) localStorage.setItem('smartfinance_budgets', JSON.stringify(importedBudgets));
-            if (importedCategories.length) localStorage.setItem('smartfinance_categories', JSON.stringify(importedCategories));
-            if (importedSubs.length) localStorage.setItem('smartfinance_subscriptions', JSON.stringify(importedSubs));
-            if (importedCards.length) localStorage.setItem('smartfinance_creditcards', JSON.stringify(importedCards));
-            if (importedCurrency) localStorage.setItem('smartfinance_currency', importedCurrency);
-            if (importedTheme) localStorage.setItem('smartfinance_themecolor', importedTheme);
-            alert('CSV 匯入完成，將重新載入（交易與預算）');
-            window.location.reload();
-         } catch (err) {
-            alert('匯入失敗：請確認欄位包含 ID,Date,TxType/Category/Amount 或 BudgetLimit');
-         }
-      };
-      reader.readAsText(file as File);
+      selectedFile.text().then((text) => {
+         const backup = parseBackupCsv(text);
+         const ok = window.confirm('將會以 CSV 備份取代目前資料。要繼續嗎？');
+         if (!ok) return;
+         restoreBackup(backup, localStorage);
+         alert('CSV 匯入完成，將重新載入資料');
+         window.location.reload();
+      }).catch((error: unknown) => {
+         alert(`匯入失敗：${error instanceof Error ? error.message : '檔案格式錯誤'}`);
+      });
    };
 
    return (

@@ -1,8 +1,21 @@
 # SmartFinance-Max (PWA)
 
-目前版本：**v1.2.0**
+目前版本：**v1.3.0**
+
+Pages（啟用 GitHub Pages 後）：https://appbuilderlee2.github.io/SmartFinance-Max/
 
 SmartFinance-Max 以 SmartFinance v1.1.25 為基線，係一個 local-first 記帳 PWA，包含記帳、訂閱自動入帳、預算、報表、信用卡及信用卡週期管理。
+
+## v1.3.0 更新
+
+- 加入真正逐版本 localStorage migration；只有成功遷移後先更新 schema version
+- schema 升級至 v2，信用卡週期成為正式、必定存在嘅資料集合
+- 備份還原加入 transaction rollback；寫入中途失敗會自動恢復還原前資料
+- localStorage 寫入失敗不再靜默忽略，App 會顯示紅色資料安全提示
+- 統計首頁「較上期」改為真正比較上月／上年數據，移除示意文字
+- Settings 移除超過 300 行舊 CSV／JSON 死碼，備份 UI 只使用新版服務
+- 新增 migration 及 rollback 測試
+- 版本號及文件同步更新為 v1.3.0
 
 ## v1.2.0 更新
 

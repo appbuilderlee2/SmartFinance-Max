@@ -20,6 +20,14 @@ class MemoryStorage implements Storage {
   setItem(key: string, value: string) { this.values.set(key, String(value)); }
 }
 
+class FailingStorage extends MemoryStorage {
+  failOnKey = '';
+  override setItem(key: string, value: string) {
+    if (key === this.failOnKey) throw new Error('quota exceeded');
+    super.setItem(key, value);
+  }
+}
+
 describe('CSV codec', () => {
   it('round-trips commas, quotes and newlines', () => {
     const rows = [['name', 'note'], ['餐飲,聚會', '第一行\n第二行 "測試"']];
@@ -71,5 +79,21 @@ describe('SmartFinance backup', () => {
     clearAppStorage(storage);
     expect(storage.length).toBe(1);
     expect(storage.getItem('other_app')).toBe('safe');
+  });
+
+  it('rolls back the previous snapshot when restore cannot be completed', () => {
+    const storage = new FailingStorage();
+    storage.setItem('smartfinance_transactions', JSON.stringify([{ id: 'old' }]));
+    const backup = parseBackupJson(JSON.stringify({
+      format: 'smartfinance-backup',
+      backupVersion: 2,
+      storage: {
+        smartfinance_transactions: JSON.stringify([{ id: 'new' }]),
+        smartfinance_creditcards: '[]',
+      },
+    }));
+    storage.failOnKey = 'smartfinance_creditcards';
+    expect(() => restoreBackup(backup, storage)).toThrow('quota exceeded');
+    expect(storage.getItem('smartfinance_transactions')).toContain('old');
   });
 });

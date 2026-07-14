@@ -1,5 +1,15 @@
 # 更新日誌（Changelog）
 
+## v1.3.0 (2026-07-14)
+
+- 實作逐版本 localStorage migration framework，schema 升級至 v2。
+- 備份還原失敗時自動 rollback，避免只還原一半資料。
+- localStorage 寫入失敗會向使用者顯示資料安全提示。
+- Dashboard 改為真正計算上期比較數據。
+- 移除 Settings 舊版 CSV／JSON 匯入匯出死碼。
+- 加入 migration、還原 rollback 自動測試。
+- 補充 GitHub Pages 正式網址及啟用方式。
+
 ## v1.2.0 (2026-07-14)
 
 - 將 SmartFinance v1.1.25 完整帶入 SmartFinance-Max。

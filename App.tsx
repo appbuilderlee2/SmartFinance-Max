@@ -33,6 +33,7 @@ const CreditCard2SwipeWhich = lazy(() => import('./pages/CreditCard2SwipeWhich')
 // Layout
 import Layout from './components/Layout';
 import { hasOnboarded } from './utils/firstRun';
+import { STORAGE_ERROR_EVENT } from './utils/storage';
 
 const Loading: React.FC = () => <div className="p-4 text-gray-400">載入中…</div>;
 
@@ -40,7 +41,14 @@ const Loading: React.FC = () => <div className="p-4 text-gray-400">載入中…<
 const App: React.FC = () => {
   const [swUpdate, setSwUpdate] = useState<ServiceWorkerRegistration | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+  const [storageError, setStorageError] = useState(false);
 
+
+  useEffect(() => {
+    const onStorageError = () => setStorageError(true);
+    window.addEventListener(STORAGE_ERROR_EVENT, onStorageError);
+    return () => window.removeEventListener(STORAGE_ERROR_EVENT, onStorageError);
+  }, []);
 
   useEffect(() => {
     const handler = (event: Event) => {
@@ -85,6 +93,14 @@ const App: React.FC = () => {
             >
               重新載入
             </button>
+          </div>
+        )}
+        {storageError && (
+          <div role="alert" className="fixed top-safe-top left-1/2 -translate-x-1/2 z-[70] mt-3 w-[calc(100%-2rem)] max-w-md bg-red-950 border border-red-500 rounded-xl px-4 py-3 shadow-lg">
+            <div className="flex items-start justify-between gap-3">
+              <span className="text-sm text-red-100">資料未能儲存。請立即匯出備份，並檢查瀏覽器儲存空間。</span>
+              <button type="button" onClick={() => setStorageError(false)} className="text-red-200" aria-label="關閉儲存錯誤提示">×</button>
+            </div>
           </div>
         )}
         <Routes>
