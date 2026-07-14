@@ -1,5 +1,15 @@
 # 更新日誌（Changelog）
 
+## v1.5.0 (2026-07-14)
+
+- 新增 Playwright 手機／桌面 E2E 測試及設定。
+- CI 與 Pages deploy 加入 Chromium E2E gate。
+- Service Worker v4 安裝時預快取 Vite hashed entry assets。
+- PWA manifest 補充 id、scope、描述、語言及分類。
+- 移除禁止縮放 viewport 設定，改善無障礙。
+- 金額輸入及 NumPad icon buttons 加入 accessible names。
+- 新增交易日期使用嚴格日期轉換。
+
 ## v1.4.0 (2026-07-14)
 
 - 分類刪除加入資料使用檢查及重新指派流程。

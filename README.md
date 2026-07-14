@@ -1,10 +1,23 @@
 # SmartFinance-Max (PWA)
 
-目前版本：**v1.4.0**
+目前版本：**v1.5.0**
 
-Pages（啟用 GitHub Pages 後）：https://appbuilderlee2.github.io/SmartFinance-Max/
+Pages：https://appbuilderlee2.github.io/SmartFinance-Max/
 
 SmartFinance-Max 以 SmartFinance v1.1.25 為基線，係一個 local-first 記帳 PWA，包含記帳、訂閱自動入帳、預算、報表、信用卡及信用卡週期管理。
+
+## v1.5.0 更新
+
+- 加入 Playwright 瀏覽器 E2E 測試，覆蓋手機及桌面 Chromium
+- E2E 實際測試首次使用流程、Dashboard 顯示、記帳、頁面跳轉、重新載入及 localStorage 持久化
+- GitHub CI／Pages 部署會安裝 Chromium並先跑 E2E；測試失敗不會部署壞版本
+- Service Worker 升級至 v4，安裝時會由 Vite `index.html` 自動發現並預快取 hashed JS／CSS 核心資源
+- 保留 network-first HTML 更新策略，同時改善首次安裝後核心 App 離線啟動能力
+- PWA manifest 加入 id、scope、語言、描述及分類資料
+- 允許瀏覽器縮放，移除 `user-scalable=no` 無障礙限制
+- 金額輸入區支援鍵盤／讀屏操作，數字鍵盤圖示按鈕加入可讀標籤
+- 新增交易日期改用嚴格本地日期轉換，拒絕無效日期
+- 設定頁版本號、README、CHANGELOG 同步更新至 v1.5.0
 
 ## v1.4.0 更新
 
@@ -53,6 +66,7 @@ npm run dev
 
 ```bash
 npm test
+npm run test:e2e
 npm run build
 ```
 

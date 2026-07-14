@@ -1,16 +1,23 @@
 {
   "short_name": "SmartFinance",
   "name": "SmartFinance App",
+  "id": "./",
+  "scope": "./",
+  "description": "Local-first personal finance, budget and subscription tracker",
+  "lang": "zh-Hant",
+  "categories": ["finance", "productivity"],
   "icons": [
     {
       "src": "icon-192.png",
       "type": "image/png",
-      "sizes": "192x192"
+      "sizes": "192x192",
+      "purpose": "any maskable"
     },
     {
       "src": "icon-512.png",
       "type": "image/png",
-      "sizes": "512x512"
+      "sizes": "512x512",
+      "purpose": "any maskable"
     }
   ],
   "start_url": ".",

@@ -5,7 +5,7 @@
 // - Keep the implementation simple (no Workbox dependency yet)
 
 // Bump this when you change SW behavior.
-const SW_VERSION = 'v3';
+const SW_VERSION = 'v4';
 const CACHE_PREFIX = 'smartfinance-';
 const CACHE_NAME = `${CACHE_PREFIX}${SW_VERSION}`;
 
@@ -19,8 +19,25 @@ const SHELL_URLS = [
   `${scope}icon-512.png`,
 ];
 
+const precacheShell = async () => {
+  const cache = await caches.open(CACHE_NAME);
+  await cache.addAll(SHELL_URLS);
+
+  // Vite writes hashed JS/CSS entry assets into the built index. Discover and
+  // precache them at install time so the core app can start fully offline after
+  // the first successful installation, rather than caching only index.html.
+  const indexResponse = await fetch(`${scope}index.html`, { cache: 'no-store' });
+  if (!indexResponse.ok) throw new Error(`Unable to precache index: ${indexResponse.status}`);
+  const html = await indexResponse.clone().text();
+  await cache.put(`${scope}index.html`, indexResponse);
+  const assetUrls = [...html.matchAll(/(?:src|href)=["']\.\/([^"']+)["']/g)]
+    .map((match) => new URL(match[1], scope).href)
+    .filter((url) => url.startsWith(scope));
+  await cache.addAll([...new Set(assetUrls)]);
+};
+
 self.addEventListener('install', (event) => {
-  event.waitUntil(caches.open(CACHE_NAME).then((cache) => cache.addAll(SHELL_URLS)));
+  event.waitUntil(precacheShell());
 });
 
 self.addEventListener('activate', (event) => {

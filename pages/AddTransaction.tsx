@@ -8,7 +8,7 @@ import { getCurrencySymbol } from '../utils/currency';
 import { Currency, TransactionType } from '../types';
 import { triggerHaptic, HapticPatterns } from '../utils/haptics';
 import { clearTagHistory, deleteTagFromHistory, loadTagHistory, rememberTags } from '../utils/tagHistory';
-import { toLocalYMD } from '../utils/date';
+import { localYMDToStoredISOString, toLocalYMD } from '../utils/date';
 
 const AddTransaction: React.FC = () => {
   const navigate = useNavigate();
@@ -49,8 +49,8 @@ const AddTransaction: React.FC = () => {
       alert("請選擇日期");
       return;
     }
-    const localDate = new Date(date + 'T00:00:00');
-    if (Number.isNaN(localDate.getTime())) {
+    const storedDate = localYMDToStoredISOString(date);
+    if (!storedDate) {
       alert("日期格式不正確");
       return;
     }
@@ -66,7 +66,7 @@ const AddTransaction: React.FC = () => {
       categoryId: selectedCategory,
       note: note,
       // Store as ISO string, but make sure the UI always displays it as local date.
-      date: localDate.toISOString(),
+      date: storedDate,
       type: transactionType,
       isRecurring: recurrence !== 'none',
       receiptUrl: receiptPreview || undefined,
@@ -137,9 +137,11 @@ const AddTransaction: React.FC = () => {
 
 
         {/* Amount Display */}
-        <div 
+        <button
+          type="button"
+          aria-label="輸入金額"
           onClick={() => setIsNumPadOpen(true)}
-          className={`sf-card py-8 px-4 flex flex-col items-center justify-center mb-4 transition-colors duration-300 cursor-pointer ${transactionType === TransactionType.INCOME ? 'bg-green-500/10 border border-green-500/20' : ''
+          className={`sf-card w-full py-8 px-4 flex flex-col items-center justify-center mb-4 transition-colors duration-300 cursor-pointer ${transactionType === TransactionType.INCOME ? 'bg-green-500/10 border border-green-500/20' : ''
           }`}>
           <div className="flex items-baseline text-white">
             <span className="text-3xl mr-2 text-gray-400">{getCurrencySymbol(txCurrency)}</span>
@@ -147,7 +149,7 @@ const AddTransaction: React.FC = () => {
               {amount || '0'}
             </span>
           </div>
-        </div>
+        </button>
 
         {/* Categories Grid */}
         <div>
