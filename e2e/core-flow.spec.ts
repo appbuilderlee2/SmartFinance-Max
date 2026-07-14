@@ -85,7 +85,7 @@ test('subscription keeps its own currency', async ({ page }) => {
   await expect(page).toHaveURL(/#\/subscriptions$/);
   await page.getByRole('combobox', { name: '訂閱幣別篩選' }).selectOption('AUD');
   await expect(page.getByText('E2E Australian service')).toBeVisible();
-  await expect(page.getByText('A$ 12.5')).toBeVisible();
+  await expect(page.getByText('A$ 12.5').first()).toBeVisible();
   const stored = await readIndexedDbJson<any[]>(page, 'smartfinance_subscriptions');
   expect(stored).toHaveLength(1);
   expect(stored[0].currency).toBe('AUD');
@@ -109,7 +109,7 @@ test('legacy localStorage data migrates to IndexedDB', async ({ page }) => {
     });
     localStorage.setItem('smartfinance_has_onboarded', 'true');
     localStorage.setItem('smartfinance_transactions', JSON.stringify([{
-      id: 'legacy-e2e', type: 'expense', amount: 88, categoryId: 'food',
+      id: 'legacy-e2e', type: 'EXPENSE', amount: 88, categoryId: 'food',
       date: new Date().toISOString(), note: '舊資料遷移', currency: 'HKD',
     }]));
   });

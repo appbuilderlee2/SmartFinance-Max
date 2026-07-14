@@ -1,5 +1,11 @@
 # 更新日誌（Changelog）
 
+## v2.0.1 (2026-07-14)
+
+- 修正訂閱 E2E 金額 locator 同時命中摘要及項目而觸發 strict mode failure。
+- 修正 IndexedDB 舊資料遷移 E2E fixture 嘅交易類型大小寫。
+- Service Worker 升級至 v9。
+
 ## v2.0.0 (2026-07-14)
 
 - 以 IndexedDB `smartfinance-max`／`app-data` 作主要持久資料庫，並保留同步記憶體快取供現有功能使用。
