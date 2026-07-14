@@ -3,9 +3,9 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { ChevronLeft, Calendar } from 'lucide-react';
 import { useData } from '../contexts/DataContext';
-import { TransactionType } from '../types';
+import { Currency, TransactionType } from '../types';
 import { getCurrencySymbol } from '../utils/currency';
-import { toLocalYMD } from '../utils/date';
+import { parseLocalYMD, toLocalYMD } from '../utils/date';
 import { parseMoneyInput } from '../utils/money';
 
 const SERVICE_ICON_PRESETS = [
@@ -31,6 +31,7 @@ const AddSubscription: React.FC = () => {
 
   const [name, setName] = useState('');
   const [amount, setAmount] = useState('');
+  const [subscriptionCurrency, setSubscriptionCurrency] = useState<Currency>(currency);
   const [cycle, setCycle] = useState<'Monthly' | 'Yearly' | 'Weekly' | 'BiWeekly'>('Monthly');
   const [date, setDate] = useState(() => toLocalYMD(new Date()));
   const [autoRenewal, setAutoRenewal] = useState(true);
@@ -50,6 +51,7 @@ const AddSubscription: React.FC = () => {
     if (!target) return;
     setName(target.name);
     setAmount(String(target.amount));
+    setSubscriptionCurrency(target.currency || currency);
     setCycle(target.billingCycle);
     setDate(target.nextBillingDate || '');
     setAutoRenewal(target.autoRenewal ?? true);
@@ -86,9 +88,14 @@ const AddSubscription: React.FC = () => {
       alert("請輸入名稱與金額");
       return;
     }
-    const amountValue = parseMoneyInput(amount, currency);
+    const amountValue = parseMoneyInput(amount, subscriptionCurrency);
     if (amountValue === null || amountValue <= 0) {
-      alert(`請輸入有效金額（${currency === 'JPY' ? '不可輸入小數' : '最多兩位小數'}）`);
+      alert(`請輸入有效金額（${subscriptionCurrency === Currency.JPY ? '不可輸入小數' : '最多兩位小數'}）`);
+      return;
+    }
+    const billingDate = parseLocalYMD(date);
+    if (!billingDate) {
+      alert('請輸入有效扣款日期');
       return;
     }
 
@@ -107,8 +114,10 @@ const AddSubscription: React.FC = () => {
       updateSubscription(id, {
         name,
         amount: amountValue,
+        currency: subscriptionCurrency,
         billingCycle: cycle,
         nextBillingDate: date,
+        billingAnchorDay: billingDate.getDate(),
         autoRenewal,
         notes,
         categoryId: finalCategoryId,
@@ -118,8 +127,10 @@ const AddSubscription: React.FC = () => {
       addSubscription({
         name,
         amount: amountValue,
+        currency: subscriptionCurrency,
         billingCycle: cycle,
         nextBillingDate: date,
+        billingAnchorDay: billingDate.getDate(),
         autoRenewal,
         notes,
         categoryId: finalCategoryId,
@@ -161,6 +172,7 @@ const AddSubscription: React.FC = () => {
           <div className="sf-control rounded-xl px-4 py-3">
             <input
               type="text"
+              aria-label="訂閱名稱"
               placeholder="例如：Netflix"
               value={name}
               onChange={e => setName(e.target.value)}
@@ -170,17 +182,32 @@ const AddSubscription: React.FC = () => {
         </div>
 
         {/* Amount */}
-        <div>
-          <label className="text-gray-400 text-xs ml-1 mb-2 block">金額</label>
-          <div className="sf-control rounded-xl px-4 py-3 flex justify-between items-center">
-            <input
-              type="number"
-              placeholder="0.00"
-              value={amount}
-              onChange={e => setAmount(e.target.value)}
-              className="w-full bg-transparent text-white placeholder-gray-500 focus:outline-none"
-            />
-            <span className="text-gray-400 text-sm">{getCurrencySymbol(currency)}</span>
+        <div className="grid grid-cols-[1fr_8rem] gap-3">
+          <div>
+            <label className="text-gray-400 text-xs ml-1 mb-2 block">金額</label>
+            <div className="sf-control rounded-xl px-4 py-3 flex justify-between items-center">
+              <input
+                type="number"
+                aria-label="訂閱金額"
+                inputMode="decimal"
+                placeholder={subscriptionCurrency === Currency.JPY ? '0' : '0.00'}
+                value={amount}
+                onChange={e => setAmount(e.target.value)}
+                className="w-full bg-transparent text-white placeholder-gray-500 focus:outline-none"
+              />
+              <span className="text-gray-400 text-sm">{getCurrencySymbol(subscriptionCurrency)}</span>
+            </div>
+          </div>
+          <div>
+            <label className="text-gray-400 text-xs ml-1 mb-2 block">幣別</label>
+            <select
+              value={subscriptionCurrency}
+              aria-label="訂閱幣別"
+              onChange={(e) => setSubscriptionCurrency(e.target.value as Currency)}
+              className="w-full sf-control rounded-xl px-3 py-3 text-white"
+            >
+              {Object.values(Currency).map((item) => <option key={item} value={item}>{item}</option>)}
+            </select>
           </div>
         </div>
 
@@ -234,6 +261,7 @@ const AddSubscription: React.FC = () => {
           <div className="sf-control rounded-xl px-4 py-3 flex justify-between items-center cursor-pointer">
             <input
               type="date"
+              aria-label="扣款日期"
               value={date}
               onChange={(e) => setDate(e.target.value)}
               className="bg-transparent text-white focus:outline-none w-full"

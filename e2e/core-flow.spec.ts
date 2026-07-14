@@ -39,3 +39,25 @@ test('transaction survives navigation and reload', async ({ page }) => {
   expect(stored[0].amount).toBe(123);
   expect(stored[0].recurrence).toBe('monthly');
 });
+
+test('subscription keeps its own currency', async ({ page }) => {
+  await page.goto('/');
+  await page.evaluate(() => {
+    localStorage.clear();
+    localStorage.setItem('smartfinance_has_onboarded', 'true');
+  });
+  await page.goto('/#/subscriptions');
+  await page.getByRole('button', { name: '新增訂閱' }).click();
+  await page.getByRole('textbox', { name: '訂閱名稱' }).fill('E2E Australian service');
+  await page.getByRole('spinbutton', { name: '訂閱金額' }).fill('12.50');
+  await page.getByRole('combobox', { name: '訂閱幣別' }).selectOption('AUD');
+  await page.getByRole('button', { name: '儲存', exact: true }).click();
+
+  await expect(page).toHaveURL(/#\/subscriptions$/);
+  await page.getByRole('combobox', { name: '訂閱幣別篩選' }).selectOption('AUD');
+  await expect(page.getByText('E2E Australian service')).toBeVisible();
+  await expect(page.getByText('A$ 12.5')).toBeVisible();
+  const stored = await page.evaluate(() => JSON.parse(localStorage.getItem('smartfinance_subscriptions') || '[]'));
+  expect(stored).toHaveLength(1);
+  expect(stored[0].currency).toBe('AUD');
+});

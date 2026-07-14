@@ -5,6 +5,7 @@ import { ChevronLeft, Plus, Pencil } from 'lucide-react';
 import { useData } from '../contexts/DataContext';
 import { toLocalYMD } from '../utils/date';
 import { formatMoney, roundMoney, sumMoney } from '../utils/money';
+import { Currency } from '../types';
 
 const Subscriptions: React.FC = () => {
    const navigate = useNavigate();
@@ -15,6 +16,7 @@ const Subscriptions: React.FC = () => {
       return new Map(categories.map(c => [c.id, c] as const));
    }, [categories]);
    const [filterCategory, setFilterCategory] = useState<string>('all');
+   const [selectedCurrency, setSelectedCurrency] = useState<Currency>(currency);
    const fromPath = (location.state as any)?.from || '/settings';
 
    const getSubIcon = (name: string) => {
@@ -31,9 +33,17 @@ const Subscriptions: React.FC = () => {
       return null;
    };
 
-   // Calculate monthly total roughly
+   const availableCurrencies = useMemo(() => {
+      const values = new Set<Currency>([currency]);
+      subscriptions.forEach(sub => values.add(sub.currency || currency));
+      return Array.from(values);
+   }, [subscriptions, currency]);
+
    const filteredSubs = useMemo(() => {
-      const base = filterCategory === 'all' ? subscriptions : subscriptions.filter(s => s.categoryId === filterCategory);
+      const base = subscriptions.filter((subscription) => {
+         if ((subscription.currency || currency) !== selectedCurrency) return false;
+         return filterCategory === 'all' || subscription.categoryId === filterCategory;
+      });
       const today = toLocalYMD(new Date());
       return [...base].sort((a, b) => {
          const ad = a.nextBillingDate || '';
@@ -47,15 +57,15 @@ const Subscriptions: React.FC = () => {
          if (aDiff === bDiff) return new Date(ad).getTime() - new Date(bd).getTime();
          return aDiff - bDiff;
       });
-   }, [subscriptions, filterCategory]);
+   }, [subscriptions, filterCategory, selectedCurrency, currency]);
 
    const monthlyAmounts = filteredSubs.map((sub) => {
-      if (sub.billingCycle === 'Weekly') return roundMoney(sub.amount * 4, currency);
-      if (sub.billingCycle === 'BiWeekly') return roundMoney(sub.amount * 2, currency);
-      if (sub.billingCycle === 'Yearly') return roundMoney(sub.amount / 12, currency);
-      return roundMoney(sub.amount, currency);
+      if (sub.billingCycle === 'Weekly') return roundMoney((sub.amount * 52) / 12, selectedCurrency);
+      if (sub.billingCycle === 'BiWeekly') return roundMoney((sub.amount * 26) / 12, selectedCurrency);
+      if (sub.billingCycle === 'Yearly') return roundMoney(sub.amount / 12, selectedCurrency);
+      return roundMoney(sub.amount, selectedCurrency);
    });
-   const totalMonthly = sumMoney(monthlyAmounts, currency);
+   const totalMonthly = sumMoney(monthlyAmounts, selectedCurrency);
 
    return (
       <div className="min-h-screen bg-background pb-24 pt-safe-top">
@@ -74,22 +84,36 @@ const Subscriptions: React.FC = () => {
 
          <div className="p-4 space-y-6">
             <div className="text-center mb-6">
-               <p className="text-gray-400 text-sm">每月總計 (估算：每週×4、每2週×2、每年÷12)</p>
-               <h1 className="text-4xl font-bold mt-1">{formatMoney(totalMonthly, currency)}</h1>
+               <p className="text-gray-400 text-sm">每月總計（每週×52÷12、每2週×26÷12、每年÷12）</p>
+               <h1 className="text-4xl font-bold mt-1">{formatMoney(totalMonthly, selectedCurrency)}</h1>
             </div>
 
-            <div className="sf-panel rounded-xl p-3 flex items-center justify-between text-sm">
-               <span className="text-gray-300">分類篩選</span>
-               <select
-                  value={filterCategory}
-                  onChange={(e) => setFilterCategory(e.target.value)}
-                  className="sf-control text-white rounded-lg px-3 py-2 text-sm"
-               >
-                  <option value="all">全部</option>
-                  {categories.filter(c => c.type === 'EXPENSE').map(cat => (
-                     <option key={cat.id} value={cat.id}>{cat.name}</option>
-                  ))}
-               </select>
+            <div className="sf-panel rounded-xl p-3 grid grid-cols-2 gap-3 text-sm">
+               <label className="space-y-1">
+                  <span className="text-xs text-gray-400">幣別</span>
+                  <select
+                     value={selectedCurrency}
+                     aria-label="訂閱幣別篩選"
+                     onChange={(e) => setSelectedCurrency(e.target.value as Currency)}
+                     className="sf-control text-white rounded-lg px-3 py-2 text-sm w-full"
+                  >
+                     {availableCurrencies.map(item => <option key={item} value={item}>{item}</option>)}
+                  </select>
+               </label>
+               <label className="space-y-1">
+                  <span className="text-xs text-gray-400">分類</span>
+                  <select
+                     value={filterCategory}
+                     aria-label="訂閱分類篩選"
+                     onChange={(e) => setFilterCategory(e.target.value)}
+                     className="sf-control text-white rounded-lg px-3 py-2 text-sm w-full"
+                  >
+                     <option value="all">全部</option>
+                     {categories.filter(c => c.type === 'EXPENSE').map(cat => (
+                        <option key={cat.id} value={cat.id}>{cat.name}</option>
+                     ))}
+                  </select>
+               </label>
             </div>
 
             <div className="space-y-3">
@@ -120,12 +144,12 @@ const Subscriptions: React.FC = () => {
                            </div>
                         </div>
                         <div className="text-right">
-                           <p className="font-bold">{formatMoney(sub.amount, currency)}</p>
+                           <p className="font-bold">{formatMoney(sub.amount, sub.currency || currency)}</p>
                            <p className="text-xs text-gray-500">
                               {sub.billingCycle === 'Weekly'
-                                 ? '每週（約每月×4）'
+                                 ? '每週（每月估算×52÷12）'
                                  : sub.billingCycle === 'BiWeekly'
-                                    ? '每2週（約每月×2）'
+                                    ? '每2週（每月估算×26÷12）'
                                     : sub.billingCycle === 'Monthly'
                                        ? '每月'
                                        : '每年（約每月÷12）'}
@@ -144,6 +168,7 @@ const Subscriptions: React.FC = () => {
 
             <button
                onClick={() => navigate('/add-subscription', { state: { from: fromPath, returnTo: '/subscriptions' } })}
+               aria-label="新增訂閱"
                className="fixed bottom-24 right-6 w-14 h-14 bg-green-500 rounded-full flex items-center justify-center shadow-lg text-white active:scale-95 transition-transform"
             >
                <Plus size={30} />

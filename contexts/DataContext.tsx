@@ -403,6 +403,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       subscriptions,
       transactions,
       categories,
+      defaultCurrency: currency,
       makeTransactionId: () => makeId('tx'),
     });
 
@@ -422,7 +423,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // Release guard on next tick.
       setTimeout(() => { isAutoPostingRef.current = false; }, 0);
     }
-  }, [subscriptions, categories, transactions]);
+  }, [subscriptions, categories, transactions, currency]);
 
   // Generate due occurrences for transactions configured as weekly,
   // biweekly or monthly. The pure processor records source/date identity so

@@ -52,6 +52,8 @@ export interface Subscription {
   icon?: string;
   categoryId?: string;
   lastProcessedDate?: string; // 用來避免同一天重複生成交易紀錄
+  currency?: Currency;
+  billingAnchorDay?: number;
 }
 
 export interface Budget {
