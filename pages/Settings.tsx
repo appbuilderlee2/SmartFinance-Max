@@ -9,15 +9,15 @@ import { loadCycles } from '../utils/creditCardCycleStorage';
 import { getCurrentYearMonth, createOpenCycle } from '../utils/creditCardCycles';
 import {
    backupToCsv,
-   createBackup,
+   createBackupFromSnapshot,
    parseBackupCsv,
    parseBackupJson,
-   restoreBackup,
 } from '../utils/backup';
+import { getStorageSnapshot, replaceStorageSnapshot } from '../utils/storage';
 
 const Settings: React.FC = () => {
    const navigate = useNavigate();
-   const { resetData, subscriptions, currency, setCurrency, themeColor, setThemeColor, creditCards } = useData();
+   const { resetData, subscriptions, currency, setCurrency, themeColor, setThemeColor, creditCards, storageBackend } = useData();
    const fileInputRef = useRef<HTMLInputElement>(null);
    const csvInputRef = useRef<HTMLInputElement>(null);
 
@@ -53,7 +53,7 @@ const Settings: React.FC = () => {
 
 
    const handleExportCSV = () => {
-      const backup = createBackup(localStorage, __APP_VERSION__);
+      const backup = createBackupFromSnapshot(getStorageSnapshot(), __APP_VERSION__);
       const blob = new Blob(['\uFEFF' + backupToCsv(backup)], { type: 'text/csv;charset=utf-8' });
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
@@ -64,7 +64,7 @@ const Settings: React.FC = () => {
    };
 
    const handleExportJSON = () => {
-      const backup = createBackup(localStorage, __APP_VERSION__);
+      const backup = createBackupFromSnapshot(getStorageSnapshot(), __APP_VERSION__);
       const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
@@ -85,11 +85,11 @@ const Settings: React.FC = () => {
          alert('匯入失敗：備份檔案不可大過 10MB');
          return;
       }
-      selectedFile.text().then((text) => {
+      selectedFile.text().then(async (text) => {
          const backup = parseBackupJson(text);
          const ok = window.confirm(`將會以備份資料取代目前資料（備份版本 ${backup.backupVersion}）。要繼續嗎？`);
          if (!ok) return;
-         restoreBackup(backup, localStorage);
+         await replaceStorageSnapshot(backup.storage);
          alert('JSON 匯入完成，將重新載入資料');
          window.location.reload();
       }).catch((error: unknown) => {
@@ -105,11 +105,11 @@ const Settings: React.FC = () => {
          alert('匯入失敗：備份檔案不可大過 10MB');
          return;
       }
-      selectedFile.text().then((text) => {
+      selectedFile.text().then(async (text) => {
          const backup = parseBackupCsv(text);
          const ok = window.confirm('將會以 CSV 備份取代目前資料。要繼續嗎？');
          if (!ok) return;
-         restoreBackup(backup, localStorage);
+         await replaceStorageSnapshot(backup.storage);
          alert('CSV 匯入完成，將重新載入資料');
          window.location.reload();
       }).catch((error: unknown) => {
@@ -339,6 +339,7 @@ const Settings: React.FC = () => {
                         <CloudOff size={16} />
                      </div>
                      <span className="text-sm text-gray-300">本機模式（無登入／無雲端）</span>
+                     <span className="text-xs text-gray-500">{storageBackend === 'indexeddb' ? 'IndexedDB' : 'localStorage 後備'}</span>
                   </div>
                </div>
 

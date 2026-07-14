@@ -53,12 +53,16 @@ export function collectAppStorage(storage: StorageLike): Record<string, string> 
 }
 
 export function createBackup(storage: StorageLike, appVersion: string): SmartFinanceBackup {
+  return createBackupFromSnapshot(collectAppStorage(storage), appVersion);
+}
+
+export function createBackupFromSnapshot(storage: Record<string, string>, appVersion: string): SmartFinanceBackup {
   return {
     format: BACKUP_FORMAT,
     backupVersion: BACKUP_VERSION,
     appVersion,
     exportedAt: new Date().toISOString(),
-    storage: collectAppStorage(storage),
+    storage: Object.fromEntries(Object.entries(storage).filter(([key]) => isAppStorageKey(key))),
   };
 }
 

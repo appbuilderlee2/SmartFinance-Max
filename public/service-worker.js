@@ -5,7 +5,7 @@
 // - Keep the implementation simple (no Workbox dependency yet)
 
 // Bump this when you change SW behavior.
-const SW_VERSION = 'v7';
+const SW_VERSION = 'v8';
 const CACHE_PREFIX = 'smartfinance-';
 const CACHE_NAME = `${CACHE_PREFIX}${SW_VERSION}`;
 

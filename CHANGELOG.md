@@ -1,5 +1,16 @@
 # 更新日誌（Changelog）
 
+## v2.0.0 (2026-07-14)
+
+- 以 IndexedDB `smartfinance-max`／`app-data` 作主要持久資料庫，並保留同步記憶體快取供現有功能使用。
+- 首次啟動先執行既有 localStorage schema migration，再以單一 transaction 複製及讀回核對所有 SmartFinance 鍵。
+- migration marker、非覆寫重跑及保留原 localStorage 安全副本，降低轉換期間遺失或倒退資料風險。
+- IndexedDB 開啟失敗時自動退回 localStorage，設定頁顯示目前使用嘅儲存後端。
+- 備份匯出改讀取新資料層；JSON／CSV 格式及舊版備份匯入維持相容。
+- 重置、示範資料、提醒及信用卡配對資料全部接駁新儲存 facade。
+- 新增 2 個 IndexedDB migration 單元測試，合共 35 個單元測試；E2E 新增舊資料遷移流程。
+- Service Worker 升級至 v8。
+
 ## v1.9.0 (2026-07-14)
 
 - 訂閱新增獨立幣別欄位，支援全部現有 App 貨幣。

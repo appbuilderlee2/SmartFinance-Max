@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ChevronLeft } from 'lucide-react';
 import { useData } from '../contexts/DataContext';
+import { readJson } from '../utils/storage';
 
 type SwipeWhichCard = {
   id: string;
@@ -47,7 +48,7 @@ const CreditCard2SwipeWhich: React.FC = () => {
     let matchedIds: string[] = [];
     if (onlyMine) {
       try {
-        const map = JSON.parse(localStorage.getItem(KEY_SW) || '{}') as Record<string, string>;
+        const map = readJson<Record<string, string>>(KEY_SW) || {};
         const ids = (creditCards || [])
           .map((c: any) => map[c.id])
           .filter(Boolean);

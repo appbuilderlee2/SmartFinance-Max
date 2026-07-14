@@ -2,11 +2,19 @@
 import React, { createContext, useContext, useState, useEffect, useMemo, useRef } from 'react';
 import { Transaction, Category, Budget, Subscription, TransactionType, Currency } from '../types';
 import { CATEGORIES } from '../constants';
-import { readJson, reportStorageError, writeJson, writeText } from '../utils/storage';
+import {
+  clearStorageData,
+  initializeStorage,
+  readJson,
+  readText,
+  reportStorageError,
+  StorageBackend,
+  writeJson,
+  writeText,
+} from '../utils/storage';
 import { makeId } from '../utils/id';
 import { ensureSchemaVersion } from '../utils/storageVersion';
 import { parseDate, isSameMonth, toLocalYMD } from '../utils/date';
-import { clearAppStorage } from '../utils/backup';
 import { canUseReplacement, getCategoryUsage, reassignCategoryReferences } from '../utils/categoryIntegrity';
 import { processDueSubscriptions } from '../utils/subscriptionProcessing';
 import { fromMinorUnits, toMinorUnits } from '../utils/money';
@@ -57,6 +65,7 @@ interface DataContextType {
   currency: Currency;
   creditCards: CreditCard[];
   themeColor: ThemeName;
+  storageBackend: StorageBackend;
   addTransaction: (tx: Omit<Transaction, 'id'>) => void;
   updateTransaction: (id: string, tx: Partial<Transaction>) => void;
   deleteTransaction: (id: string) => void;
@@ -77,7 +86,7 @@ interface DataContextType {
   updateCreditCard: (id: string, updates: Partial<CreditCard>) => void;
   setCreditCards: (cards: CreditCard[]) => void;
   setThemeColor: (color: ThemeName) => void;
-  resetData: () => void;
+  resetData: () => Promise<void>;
 }
 
 const DataContext = createContext<DataContextType>({} as DataContextType);
@@ -85,15 +94,6 @@ const DataContext = createContext<DataContextType>({} as DataContextType);
 export const useData = () => useContext(DataContext);
 
 export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  // Mark schema version early to help future migrations.
-  useEffect(() => {
-    try {
-      ensureSchemaVersion();
-    } catch (error) {
-      reportStorageError('schema-migration', error);
-    }
-  }, []);
-
   const DEFAULT_THEME: ThemeName = 'blue';
   const normalizeThemeName = (value: unknown): ThemeName => {
     if (typeof value !== 'string') return DEFAULT_THEME;
@@ -104,69 +104,73 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return trimmed;
   };
 
-  // Load data from localStorage or fallback to Mock Data
-  const [transactions, setTransactions] = useState<Transaction[]>(() => {
-    return readJson<Transaction[]>('smartfinance_transactions') ?? [];
-  });
-
-  const [categories, setCategories] = useState<Category[]>(() => {
-    const parsed = readJson<Category[]>('smartfinance_categories') ?? CATEGORIES;
-    return normalizeCategories(parsed);
-  });
-
-  const [budgets, setBudgets] = useState<Budget[]>(() => {
-    return readJson<Budget[]>('smartfinance_budgets') ?? [];
-  });
-
-  const [subscriptions, setSubscriptions] = useState<Subscription[]>(() => {
-    return readJson<Subscription[]>('smartfinance_subscriptions') ?? [];
-  });
-
-  const [currency, setCurrencyState] = useState<Currency>(() => {
-    // currency is stored as a string
-    const saved = (() => {
-      try { return localStorage.getItem('smartfinance_currency'); } catch { return null; }
-    })();
-    return (saved as Currency) || Currency.HKD;
-  });
+  const [storageReady, setStorageReady] = useState(false);
+  const [storageBackend, setStorageBackend] = useState<StorageBackend>('indexeddb');
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [categories, setCategories] = useState<Category[]>(CATEGORIES);
+  const [budgets, setBudgets] = useState<Budget[]>([]);
+  const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
+  const [currency, setCurrencyState] = useState<Currency>(Currency.HKD);
 
   const getTxCurrency = (t: Transaction): Currency => (t.currency as Currency) || currency;
 
-  const [creditCards, setCreditCards] = useState<CreditCard[]>(() => {
-    return readJson<CreditCard[]>('smartfinance_creditcards') ?? [];
-  });
+  const [creditCards, setCreditCards] = useState<CreditCard[]>([]);
+  const [themeColor, setThemeColorState] = useState<ThemeName>(DEFAULT_THEME);
 
-  const [themeColor, setThemeColorState] = useState<ThemeName>(() => {
-    const saved = (() => {
-      try { return localStorage.getItem('smartfinance_themecolor'); } catch { return null; }
+  // Run existing localStorage schema upgrades before the one-time IndexedDB copy.
+  useEffect(() => {
+    let active = true;
+    void (async () => {
+      try {
+        ensureSchemaVersion();
+      } catch (error) {
+        reportStorageError('schema-migration', error);
+      }
+      const result = await initializeStorage();
+      if (!active) return;
+      setTransactions(readJson<Transaction[]>('smartfinance_transactions') ?? []);
+      setCategories(normalizeCategories(readJson<Category[]>('smartfinance_categories') ?? CATEGORIES));
+      setBudgets(readJson<Budget[]>('smartfinance_budgets') ?? []);
+      setSubscriptions(readJson<Subscription[]>('smartfinance_subscriptions') ?? []);
+      setCurrencyState((readText('smartfinance_currency') as Currency) || Currency.HKD);
+      setCreditCards(readJson<CreditCard[]>('smartfinance_creditcards') ?? []);
+      setThemeColorState(normalizeThemeName(readText('smartfinance_themecolor')));
+      setStorageBackend(result.backend);
+      setStorageReady(true);
     })();
-    return normalizeThemeName(saved);
-  });
+    return () => { active = false; };
+  }, []);
 
   // Persistence Effects
   useEffect(() => {
+    if (!storageReady) return;
     writeJson('smartfinance_transactions', transactions);
-  }, [transactions]);
+  }, [storageReady, transactions]);
 
   useEffect(() => {
+    if (!storageReady) return;
     writeJson('smartfinance_categories', categories);
-  }, [categories]);
+  }, [storageReady, categories]);
 
   useEffect(() => {
+    if (!storageReady) return;
     writeJson('smartfinance_budgets', budgets);
-  }, [budgets]);
+  }, [storageReady, budgets]);
 
   useEffect(() => {
+    if (!storageReady) return;
     writeJson('smartfinance_subscriptions', subscriptions);
-  }, [subscriptions]);
+  }, [storageReady, subscriptions]);
 
   useEffect(() => {
+    if (!storageReady) return;
     writeText('smartfinance_currency', currency);
-  }, [currency]);
+  }, [storageReady, currency]);
 
   // Budget Spending Logic (recalculate spent whenever transactions/categories/currency change)
   // Improvement: avoid JSON.stringify object-wide compare and reduce repeated date parsing.
   useEffect(() => {
+    if (!storageReady) return;
     const now = new Date();
     const currentMonth = now.getMonth();
     const currentYear = now.getFullYear();
@@ -200,7 +204,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     });
 
     if (changed) setBudgets(nextBudgets);
-  }, [transactions, categories, currency]);
+  }, [storageReady, transactions, categories, currency]);
 
   const addTransaction = (tx: Omit<Transaction, 'id'>) => {
     const newTx: Transaction = {
@@ -309,13 +313,11 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setCreditCards(prev => prev.map(c => c.id === id ? { ...c, ...updates } : c));
   };
 
-  const resetData = () => {
+  const resetData = async () => {
     if (!window.confirm("確定要重置所有資料？這將清除您的所有紀錄（包含交易/訂閱/信用卡等）。")) return;
 
     try {
-      // Clear every SmartFinance-owned key, including credit-card cycles,
-      // reminders, tag history and future versioned keys.
-      clearAppStorage(localStorage);
+      await clearStorageData();
     } catch {
       // ignore
     }
@@ -367,11 +369,13 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // Persistence for credit cards
   useEffect(() => {
+    if (!storageReady) return;
     writeJson('smartfinance_creditcards', creditCards);
-  }, [creditCards]);
+  }, [storageReady, creditCards]);
 
   // Persistence and application of theme (UI skin)
   useEffect(() => {
+    if (!storageReady) return;
     writeText('smartfinance_themecolor', themeColor);
     const root = document.documentElement;
 
@@ -390,12 +394,13 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } else {
       root.classList.add('dark');
     }
-  }, [themeColor]);
+  }, [storageReady, themeColor]);
 
   // Auto-create expense transactions for due subscriptions
   // Guardrail: avoid tight loops / double processing when this effect updates state.
   const isAutoPostingRef = useRef(false);
   useEffect(() => {
+    if (!storageReady) return;
     if (isAutoPostingRef.current) return;
     if (!subscriptions.length) return;
 
@@ -423,12 +428,13 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // Release guard on next tick.
       setTimeout(() => { isAutoPostingRef.current = false; }, 0);
     }
-  }, [subscriptions, categories, transactions, currency]);
+  }, [storageReady, subscriptions, categories, transactions, currency]);
 
   // Generate due occurrences for transactions configured as weekly,
   // biweekly or monthly. The pure processor records source/date identity so
   // repeated effects, reloads and React StrictMode cannot double-post them.
   useEffect(() => {
+    if (!storageReady) return;
     const result = processDueRecurringTransactions({
       transactions,
       makeTransactionId: () => makeId('tx'),
@@ -452,7 +458,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       });
       return missing.length ? [...missing, ...previous] : previous;
     });
-  }, [transactions]);
+  }, [storageReady, transactions]);
 
   const sortedCategories = useMemo(() => {
     return [...categories].sort((a, b) => {
@@ -463,6 +469,10 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     });
   }, [categories]);
 
+  if (!storageReady) {
+    return <div className="min-h-screen bg-slate-950 text-slate-200 flex items-center justify-center">正在載入本機資料庫…</div>;
+  }
+
   return (
     <DataContext.Provider value={{
       transactions,
@@ -472,6 +482,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       currency,
       creditCards,
       themeColor,
+      storageBackend,
       addTransaction,
       deleteTransaction,
       updateTransaction,

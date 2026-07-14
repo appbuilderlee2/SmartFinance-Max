@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { TrendingUp, PlayCircle } from 'lucide-react';
 import { DEMO_PAYLOAD } from '../utils/demoData';
 import { setOnboarded } from '../utils/firstRun';
+import { getStorageSnapshot, replaceStorageSnapshot } from '../utils/storage';
 
 const Welcome: React.FC = () => {
   const navigate = useNavigate();
@@ -12,19 +13,19 @@ const Welcome: React.FC = () => {
     navigate('/');
   };
 
-  const handleDemo = () => {
-    try {
-      localStorage.setItem('smartfinance_transactions', JSON.stringify(DEMO_PAYLOAD.transactions));
-      localStorage.setItem('smartfinance_budgets', JSON.stringify(DEMO_PAYLOAD.budgets));
-      localStorage.setItem('smartfinance_subscriptions', JSON.stringify(DEMO_PAYLOAD.subscriptions));
-      localStorage.setItem('smartfinance_creditcards', JSON.stringify(DEMO_PAYLOAD.creditCards));
-      localStorage.setItem('smartfinance_currency', DEMO_PAYLOAD.currency);
-      localStorage.setItem('smartfinance_themecolor', DEMO_PAYLOAD.themeColor);
-    } catch {
-      // ignore
-    }
+  const handleDemo = async () => {
+    await replaceStorageSnapshot({
+      ...getStorageSnapshot(),
+      smartfinance_transactions: JSON.stringify(DEMO_PAYLOAD.transactions),
+      smartfinance_budgets: JSON.stringify(DEMO_PAYLOAD.budgets),
+      smartfinance_subscriptions: JSON.stringify(DEMO_PAYLOAD.subscriptions),
+      smartfinance_creditcards: JSON.stringify(DEMO_PAYLOAD.creditCards),
+      smartfinance_currency: DEMO_PAYLOAD.currency,
+      smartfinance_themecolor: DEMO_PAYLOAD.themeColor,
+    });
     setOnboarded();
-    navigate('/');
+    window.location.hash = '/';
+    window.location.reload();
   };
 
   return (

@@ -5,6 +5,7 @@ import type { Subscription } from '../types';
 import { loadCycles } from './creditCardCycleStorage';
 import { getStatementAndDueForMonth } from './creditCardSchedule';
 import { parseLocalYMD, toLocalYMD } from './date';
+import { readJson, readText, writeJson, writeText } from './storage';
 
 export type ReminderType =
   | 'cc_amount_due'
@@ -70,9 +71,8 @@ const BACKUP_STAMP_KEY = 'sf_last_backup_export_ymd';
 
 export function loadReminderSettings(): ReminderSettings {
   try {
-    const raw = localStorage.getItem(SETTINGS_KEY);
-    if (!raw) return DEFAULT_REMINDER_SETTINGS;
-    const parsed = JSON.parse(raw);
+    const parsed = readJson<Partial<ReminderSettings>>(SETTINGS_KEY);
+    if (!parsed) return DEFAULT_REMINDER_SETTINGS;
     return { ...DEFAULT_REMINDER_SETTINGS, ...parsed };
   } catch {
     return DEFAULT_REMINDER_SETTINGS;
@@ -81,7 +81,7 @@ export function loadReminderSettings(): ReminderSettings {
 
 export function saveReminderSettings(s: ReminderSettings): void {
   try {
-    localStorage.setItem(SETTINGS_KEY, JSON.stringify(s));
+    writeJson(SETTINGS_KEY, s);
   } catch {
     // ignore
   }
@@ -89,9 +89,8 @@ export function saveReminderSettings(s: ReminderSettings): void {
 
 export function loadReminders(): Reminder[] {
   try {
-    const raw = localStorage.getItem(REMINDERS_KEY);
-    if (!raw) return [];
-    const parsed = JSON.parse(raw);
+    const parsed = readJson<Reminder[]>(REMINDERS_KEY);
+    if (!parsed) return [];
     if (!Array.isArray(parsed)) return [];
     return parsed as Reminder[];
   } catch {
@@ -101,7 +100,7 @@ export function loadReminders(): Reminder[] {
 
 export function saveReminders(list: Reminder[]): void {
   try {
-    localStorage.setItem(REMINDERS_KEY, JSON.stringify(list));
+    writeJson(REMINDERS_KEY, list);
   } catch {
     // ignore
   }
@@ -318,7 +317,7 @@ export function regenerateReminders(params: {
   // --- Backup reminders ---
   if (settings.backupEnabled) {
     const every = Math.max(1, settings.backupEveryDays || 14);
-    const last = localStorage.getItem(BACKUP_STAMP_KEY);
+    const last = readText(BACKUP_STAMP_KEY);
     const lastDt = last ? parseLocalYMD(last) : null;
 
     let should = false;
@@ -374,7 +373,7 @@ export function regenerateReminders(params: {
 
 export function stampBackupExportToday(): void {
   try {
-    localStorage.setItem(BACKUP_STAMP_KEY, getTodayYmd());
+    writeText(BACKUP_STAMP_KEY, getTodayYmd());
   } catch {
     // ignore
   }

@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ChevronLeft, Save, Search } from 'lucide-react';
 import { useData } from '../contexts/DataContext';
+import { readJson, writeJson } from '../utils/storage';
 
 type SwipeWhichCard = { id: string; name: string; issuer?: string };
 type PCRCard = { id: string; slug: string; name: string; bank?: string };
@@ -11,15 +12,6 @@ type PCRData = { cards: PCRCard[] };
 
 const KEY_SW = 'sf_cc_match_source_a_v1';
 const KEY_PCR = 'sf_cc_match_source_b_v1';
-
-const safeJsonParse = <T,>(raw: string | null): T | null => {
-  if (!raw) return null;
-  try {
-    return JSON.parse(raw) as T;
-  } catch {
-    return null;
-  }
-};
 
 const CreditCard2Match: React.FC = () => {
   const navigate = useNavigate();
@@ -31,11 +23,11 @@ const CreditCard2Match: React.FC = () => {
   const [q, setQ] = useState('');
 
   const [mapSW, setMapSW] = useState<Record<string, string>>(() => {
-    return safeJsonParse<Record<string, string>>(localStorage.getItem(KEY_SW)) || {};
+    return readJson<Record<string, string>>(KEY_SW) || {};
   });
 
   const [mapPCR, setMapPCR] = useState<Record<string, string>>(() => {
-    return safeJsonParse<Record<string, string>>(localStorage.getItem(KEY_PCR)) || {};
+    return readJson<Record<string, string>>(KEY_PCR) || {};
   });
 
   useEffect(() => {
@@ -92,8 +84,8 @@ const CreditCard2Match: React.FC = () => {
   };
 
   const onSave = () => {
-    localStorage.setItem(KEY_SW, JSON.stringify(mapSW || {}));
-    localStorage.setItem(KEY_PCR, JSON.stringify(mapPCR || {}));
+    writeJson(KEY_SW, mapSW || {});
+    writeJson(KEY_PCR, mapPCR || {});
     alert('已儲存配對');
   };
 
