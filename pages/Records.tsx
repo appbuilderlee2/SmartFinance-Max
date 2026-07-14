@@ -1,12 +1,13 @@
 
 import React, { useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, Filter, Plus } from 'lucide-react';
+import { Search, Filter, Plus, Repeat2 } from 'lucide-react';
 import { useData } from '../contexts/DataContext';
 import { Icon } from '../components/Icon';
 import { Currency, TransactionType } from '../types';
 import { parseLocalYMD, toLocalYMD } from '../utils/date';
 import { formatMoney } from '../utils/money';
+import { RECURRENCE_LABELS } from '../utils/recurringTransactions';
 
 const Records: React.FC = () => {
   const navigate = useNavigate();
@@ -199,6 +200,12 @@ const Records: React.FC = () => {
                           {tx.note ? (
                             <p className="text-xs text-gray-400 line-clamp-1">{tx.note}</p>
                           ) : null}
+                          {(tx.recurrence || tx.recurrenceSourceId) && (
+                            <p className="text-[10px] text-primary mt-1 flex items-center gap-1">
+                              <Repeat2 size={11} />
+                              {tx.recurrence ? RECURRENCE_LABELS[tx.recurrence] : '週期自動帳目'}
+                            </p>
+                          )}
 
                           {/* Tags */}
                           {Array.isArray(tx.tags) && tx.tags.length > 0 && (

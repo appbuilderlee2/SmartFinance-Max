@@ -3,6 +3,8 @@ export enum TransactionType {
   INCOME = 'INCOME',
 }
 
+export type RecurrenceFrequency = 'weekly' | 'biweekly' | 'monthly';
+
 export interface Category {
   id: string;
   name: string;
@@ -20,6 +22,8 @@ export interface Transaction {
   categoryId: string;
   type: TransactionType;
   isRecurring?: boolean;
+  recurrence?: RecurrenceFrequency;
+  recurrenceSourceId?: string;
   receiptUrl?: string;
   tags?: string[];
   currency?: Currency; // Optional per-transaction currency; defaults to app currency

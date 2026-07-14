@@ -1,5 +1,16 @@
 # 更新日誌（Changelog）
 
+## v1.8.0 (2026-07-14)
+
+- 實作真正嘅每週、每兩週及每月自動週期帳目引擎。
+- 新增 `recurrence` 與 `recurrenceSourceId`，保留頻率並以來源／日期防止重複補帳。
+- 月週期使用原始日子作錨點，正確處理月底及短月份。
+- 編輯頁可修改／停止週期，列表及明細顯示週期狀態。
+- 修正 `parseDate` 對無效純日期作瀏覽器 rollover 嘅漏洞。
+- Service Worker 升級至 v6，刷新離線 code-split cache。
+- 新增 5 個週期處理測試；合共 30 個單元測試。
+- 既有 localStorage 及 JSON／CSV 備份保持相容。
+
 ## v1.7.0 (2026-07-14)
 
 - 全部頁面改用 route-level lazy loading，按需要下載功能程式。

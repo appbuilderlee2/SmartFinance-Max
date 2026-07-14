@@ -5,7 +5,7 @@ import { useData } from '../contexts/DataContext';
 import { Icon } from '../components/Icon';
 import NumPad from '../components/NumPad';
 import { getCurrencySymbol } from '../utils/currency';
-import { Currency, TransactionType } from '../types';
+import { Currency, RecurrenceFrequency, TransactionType } from '../types';
 import { triggerHaptic, HapticPatterns } from '../utils/haptics';
 import { clearTagHistory, deleteTagFromHistory, loadTagHistory, rememberTags } from '../utils/tagHistory';
 import { localYMDToStoredISOString, toLocalYMD } from '../utils/date';
@@ -26,7 +26,7 @@ const AddTransaction: React.FC = () => {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [note, setNote] = useState('');
   const [date, setDate] = useState(getTodayString());
-  const [recurrence, setRecurrence] = useState<'none' | 'weekly' | 'biweekly' | 'monthly'>('none');
+  const [recurrence, setRecurrence] = useState<RecurrenceFrequency | 'none'>('none');
   const [receiptPreview, setReceiptPreview] = useState<string | null>(null);
   const [tags, setTags] = useState<string[]>([]);
   const [tagInput, setTagInput] = useState('');
@@ -70,6 +70,7 @@ const AddTransaction: React.FC = () => {
       date: storedDate,
       type: transactionType,
       isRecurring: recurrence !== 'none',
+      recurrence: recurrence === 'none' ? undefined : recurrence,
       receiptUrl: receiptPreview || undefined,
       tags: tags,
       currency: txCurrency
@@ -376,7 +377,7 @@ const AddTransaction: React.FC = () => {
                 <h3 className="text-gray-400 text-sm mb-2 ml-1">週期</h3>
                 <div className="flex sf-control rounded-xl p-1">
                   {['無', '每週', '每2週', '每月'].map((label, idx) => {
-                    const value = ['none', 'weekly', 'biweekly', 'monthly'][idx] as any;
+                    const value = ['none', 'weekly', 'biweekly', 'monthly'][idx] as RecurrenceFrequency | 'none';
                     return (
                       <button
                         key={value}

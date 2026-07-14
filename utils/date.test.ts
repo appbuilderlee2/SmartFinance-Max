@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { parseLocalYMD, toLocalYMD } from './date';
+import { parseDate, parseLocalYMD, toLocalYMD } from './date';
 
 describe('local dates', () => {
   it('accepts real calendar dates', () => {
@@ -11,5 +11,6 @@ describe('local dates', () => {
     expect(parseLocalYMD('2026-02-29')).toBeNull();
     expect(parseLocalYMD('2026-04-31')).toBeNull();
     expect(parseLocalYMD('2026-13-01')).toBeNull();
+    expect(parseDate('2026-02-31')).toBeNull();
   });
 });

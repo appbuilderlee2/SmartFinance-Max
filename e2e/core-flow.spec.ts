@@ -26,13 +26,16 @@ test('transaction survives navigation and reload', async ({ page }) => {
   await page.getByRole('button', { name: '餐飲' }).click();
   await page.getByRole('button', { name: /詳細資訊/ }).click();
   await page.getByPlaceholder('輸入備註...').fill('E2E 午餐');
+  await page.getByRole('button', { name: '每月', exact: true }).click();
   await page.getByRole('button', { name: '儲存', exact: true }).click();
 
   await expect(page).toHaveURL(/#\/records$/);
   await expect(page.getByText('E2E 午餐')).toBeVisible();
+  await expect(page.getByText('每月', { exact: true })).toBeVisible();
   await page.reload();
   await expect(page.getByText('E2E 午餐')).toBeVisible();
   const stored = await page.evaluate(() => JSON.parse(localStorage.getItem('smartfinance_transactions') || '[]'));
   expect(stored).toHaveLength(1);
   expect(stored[0].amount).toBe(123);
+  expect(stored[0].recurrence).toBe('monthly');
 });

@@ -5,11 +5,12 @@ import { CATEGORIES } from '../constants';
 import { readJson, reportStorageError, writeJson, writeText } from '../utils/storage';
 import { makeId } from '../utils/id';
 import { ensureSchemaVersion } from '../utils/storageVersion';
-import { parseDate, isSameMonth } from '../utils/date';
+import { parseDate, isSameMonth, toLocalYMD } from '../utils/date';
 import { clearAppStorage } from '../utils/backup';
 import { canUseReplacement, getCategoryUsage, reassignCategoryReferences } from '../utils/categoryIntegrity';
 import { processDueSubscriptions } from '../utils/subscriptionProcessing';
 import { fromMinorUnits, toMinorUnits } from '../utils/money';
+import { processDueRecurringTransactions } from '../utils/recurringTransactions';
 
 export interface CreditCard {
   id: string;
@@ -422,6 +423,35 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setTimeout(() => { isAutoPostingRef.current = false; }, 0);
     }
   }, [subscriptions, categories, transactions]);
+
+  // Generate due occurrences for transactions configured as weekly,
+  // biweekly or monthly. The pure processor records source/date identity so
+  // repeated effects, reloads and React StrictMode cannot double-post them.
+  useEffect(() => {
+    const result = processDueRecurringTransactions({
+      transactions,
+      makeTransactionId: () => makeId('tx'),
+    });
+    if (!result.changed) return;
+
+    setTransactions((previous) => {
+      const existing = new Set(previous.flatMap((transaction) => {
+        if (!transaction.recurrenceSourceId) return [];
+        const date = parseDate(transaction.date);
+        return date ? [`${transaction.recurrenceSourceId}:${toLocalYMD(date)}`] : [];
+      }));
+      const missing = result.transactions.filter((transaction) => {
+        const date = parseDate(transaction.date);
+        const key = date && transaction.recurrenceSourceId
+          ? `${transaction.recurrenceSourceId}:${toLocalYMD(date)}`
+          : '';
+        if (!key || existing.has(key)) return false;
+        existing.add(key);
+        return true;
+      });
+      return missing.length ? [...missing, ...previous] : previous;
+    });
+  }, [transactions]);
 
   const sortedCategories = useMemo(() => {
     return [...categories].sort((a, b) => {

@@ -5,7 +5,7 @@ import { ChevronLeft, Camera, X, Tag, Pencil } from 'lucide-react';
 import { useData } from '../contexts/DataContext';
 import { Icon } from '../components/Icon';
 import { getCurrencySymbol } from '../utils/currency';
-import { Currency, TransactionType } from '../types';
+import { Currency, RecurrenceFrequency, TransactionType } from '../types';
 import { localYMDToStoredISOString, toLocalYMD } from '../utils/date';
 import { clearTagHistory, deleteTagFromHistory, loadTagHistory, rememberTags } from '../utils/tagHistory';
 import { parseMoneyInput } from '../utils/money';
@@ -30,7 +30,7 @@ const TransactionDetail: React.FC = () => {
    const [tagInput, setTagInput] = useState('');
    const [tagHistory, setTagHistory] = useState<string[]>(() => loadTagHistory());
    const [receiptUrl, setReceiptUrl] = useState<string | undefined>(tx?.receiptUrl);
-   const [isRecurring, setIsRecurring] = useState(tx?.isRecurring || false);
+   const [recurrence, setRecurrence] = useState<RecurrenceFrequency | 'none'>(tx?.recurrence || 'none');
    const [date, setDate] = useState(tx?.date ? toLocalYMD(new Date(tx.date)) : '');
    const [txCurrency, setTxCurrency] = useState<Currency>((tx?.currency as Currency) || currency);
    const [editTagHistory, setEditTagHistory] = useState(false);
@@ -46,7 +46,7 @@ const TransactionDetail: React.FC = () => {
       setNote(tx.note || '');
       setTags(Array.isArray(tx.tags) ? tx.tags : []);
       setReceiptUrl(tx.receiptUrl);
-      setIsRecurring(!!tx.isRecurring);
+      setRecurrence(tx.recurrence || 'none');
       setDate(tx.date ? toLocalYMD(new Date(tx.date)) : '');
       setTxCurrency(((tx.currency as Currency) || currency) as Currency);
       setTagInput('');
@@ -90,7 +90,8 @@ const TransactionDetail: React.FC = () => {
          note,
          tags,
          receiptUrl,
-         isRecurring,
+         isRecurring: recurrence !== 'none',
+         recurrence: recurrence === 'none' ? undefined : recurrence,
          date: storedDate,
          type: transactionType,
          currency: txCurrency
@@ -336,15 +337,26 @@ const TransactionDetail: React.FC = () => {
                   )}
                </div>
 
-               <div className="flex justify-between items-center p-4">
+               <div className="p-4 space-y-2">
                   <span className="text-white text-base">週期性帳目</span>
-                  <div
-                     className="relative inline-block w-12 h-6 align-middle select-none transition duration-200 ease-in cursor-pointer"
-                     onClick={() => setIsRecurring(!isRecurring)}
-                  >
-                     <div className={`absolute block w-6 h-6 rounded-full bg-white border-4 appearance-none cursor-pointer transition-transform duration-300 ${isRecurring ? 'translate-x-6 border-green-500' : 'translate-x-0 border-gray-400'}`}></div>
-                     <div className={`block overflow-hidden h-6 rounded-full cursor-pointer transition-colors duration-300 ${isRecurring ? 'bg-green-500' : 'bg-gray-600'}`}></div>
+                  <div className="flex sf-control rounded-xl p-1">
+                     {([
+                        ['none', '無'],
+                        ['weekly', '每週'],
+                        ['biweekly', '每2週'],
+                        ['monthly', '每月'],
+                     ] as Array<[RecurrenceFrequency | 'none', string]>).map(([value, label]) => (
+                        <button
+                           key={value}
+                           type="button"
+                           onClick={() => setRecurrence(value)}
+                           className={`flex-1 py-2 rounded-lg text-sm ${recurrence === value ? 'bg-primary text-white' : 'text-gray-400'}`}
+                        >
+                           {label}
+                        </button>
+                     ))}
                   </div>
+                  {tx.recurrenceSourceId && <p className="text-xs text-gray-500">此帳目由週期設定自動建立；修改只影響本次。</p>}
                </div>
 
                {/* Receipt Editing */}

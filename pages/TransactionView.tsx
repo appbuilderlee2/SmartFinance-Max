@@ -6,6 +6,7 @@ import { Icon } from '../components/Icon';
 import { useData } from '../contexts/DataContext';
 import { Currency, TransactionType } from '../types';
 import { formatMoney } from '../utils/money';
+import { RECURRENCE_LABELS } from '../utils/recurringTransactions';
 
 const TransactionView: React.FC = () => {
   const navigate = useNavigate();
@@ -25,6 +26,10 @@ const TransactionView: React.FC = () => {
 
   const category = categoryById.get(transaction.categoryId);
   const txCurrency = (transaction.currency as Currency) || currency;
+  const recurrenceSource = transaction.recurrenceSourceId
+    ? transactions.find(item => item.id === transaction.recurrenceSourceId)
+    : undefined;
+  const recurrence = transaction.recurrence || recurrenceSource?.recurrence;
 
   const isExpense = transaction.type === TransactionType.EXPENSE;
   const formattedDate = new Date(transaction.date).toLocaleString('zh-TW', {
@@ -82,6 +87,15 @@ const TransactionView: React.FC = () => {
               <span className="text-white block mb-1">備註</span>
               <span className="text-gray-400">{transaction.note || '無備註'}</span>
             </div>
+
+            {recurrence && (
+              <div className="flex justify-between p-4">
+                <span className="text-white">週期</span>
+                <span className="text-gray-400">
+                  {RECURRENCE_LABELS[recurrence]}{transaction.recurrenceSourceId ? '（自動建立）' : ''}
+                </span>
+              </div>
+            )}
 
             <div className="flex justify-between items-center p-4">
               <span className="text-white">標籤</span>

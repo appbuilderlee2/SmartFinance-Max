@@ -49,8 +49,7 @@ export function parseDate(value: unknown): Date | null {
   if (value instanceof Date && !isNaN(value.getTime())) return value;
   if (typeof value === 'string') {
     // If it's a plain date (YYYY-MM-DD), parse as local midnight to avoid day shifts.
-    const local = parseLocalYMD(value);
-    if (local) return local;
+    if (/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/.test(value)) return parseLocalYMD(value);
 
     const dt = new Date(value);
     if (!isNaN(dt.getTime())) return dt;
