@@ -3,7 +3,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ChevronLeft, GripVertical, Plus, Trash2, Edit2, X } from 'lucide-react';
 import { useData } from '../contexts/DataContext';
-import { Icon } from '../components/Icon';
+import { CATEGORY_ICON_NAMES, Icon } from '../components/Icon';
 import { TransactionType, Category } from '../types';
 import { makeId } from '../utils/id';
 import { getCategoryUsage } from '../utils/categoryIntegrity';
@@ -11,12 +11,6 @@ import { getCategoryUsage } from '../utils/categoryIntegrity';
 const AVAILABLE_COLORS = [
    'bg-red-500', 'bg-orange-500', 'bg-yellow-500', 'bg-green-500',
    'bg-teal-500', 'bg-blue-500', 'bg-indigo-500', 'bg-purple-500', 'bg-pink-500', 'bg-gray-500'
-];
-
-const AVAILABLE_ICONS = [
-   'Utensils', 'Car', 'Film', 'ShoppingBag', 'Home', 'Heart', 'Tag', 'Briefcase',
-   'Gift', 'Plane', 'Coffee', 'Book', 'Music', 'Gamepad2', 'Dumbbell', 'Pill',
-   'Wallet', 'CreditCard', 'Banknote', 'TrendingUp', 'Building2', 'Bus', 'Train'
 ];
 
 const AVAILABLE_EMOJIS = [
@@ -361,7 +355,7 @@ const CategoryManager: React.FC = () => {
                         </div>
                         {iconTab === 'icons' ? (
                            <div className="grid grid-cols-8 gap-2 max-h-32 overflow-y-auto">
-                              {AVAILABLE_ICONS.map(icon => (
+                              {CATEGORY_ICON_NAMES.map(icon => (
                                  <button
                                     key={icon}
                                     onClick={() => setFormData({ ...formData, icon })}

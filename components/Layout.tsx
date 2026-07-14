@@ -1,9 +1,10 @@
 
-import React, { useEffect, useMemo } from 'react';
+import React from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { BarChart3, CalendarDays, Settings, CircleDollarSign, List } from 'lucide-react';
 
 import { triggerHaptic, HapticPatterns } from '../utils/haptics';
+import { navRoutePreloads } from '../routeModules';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -13,16 +14,6 @@ interface LayoutProps {
 const Layout: React.FC<LayoutProps> = ({ children, hideNav }) => {
   const navigate = useNavigate();
   const location = useLocation();
-
-  // Note: bottom-nav core pages are synchronous now (see App.tsx),
-  // so prefetching them is unnecessary.
-  const prefetchByPath = useMemo(() => {
-    return {} as Record<string, () => Promise<unknown>>;
-  }, []);
-
-  useEffect(() => {
-    // no-op
-  }, []);
 
   // Navigation:
   // 1. Bookkeeping ($) -> Add Transaction
@@ -56,13 +47,14 @@ const Layout: React.FC<LayoutProps> = ({ children, hideNav }) => {
               const isActive = location.pathname === item.path;
               const IconComp = item.icon;
 
-              const prefetch = prefetchByPath[item.path];
+              const prefetch = navRoutePreloads[item.path];
 
               return (
                 <button
                   key={item.path}
                   onClick={() => handleNavClick(item.path)}
                   onPointerEnter={() => prefetch?.().catch(() => undefined)}
+                  onFocus={() => prefetch?.().catch(() => undefined)}
                   onTouchStart={() => prefetch?.().catch(() => undefined)}
                   className={`flex flex-col items-center gap-1 w-16 py-1 transition-colors active:scale-95 duration-200 ${isActive ? 'text-primary' : 'text-gray-500'
                     }`}

@@ -5,7 +5,7 @@
 // - Keep the implementation simple (no Workbox dependency yet)
 
 // Bump this when you change SW behavior.
-const SW_VERSION = 'v4';
+const SW_VERSION = 'v5';
 const CACHE_PREFIX = 'smartfinance-';
 const CACHE_NAME = `${CACHE_PREFIX}${SW_VERSION}`;
 
@@ -17,6 +17,7 @@ const SHELL_URLS = [
   `${scope}manifest.json`,
   `${scope}icon-192.png`,
   `${scope}icon-512.png`,
+  `${scope}precache-manifest.json`,
 ];
 
 const precacheShell = async () => {
@@ -34,6 +35,17 @@ const precacheShell = async () => {
     .map((match) => new URL(match[1], scope).href)
     .filter((url) => url.startsWith(scope));
   await cache.addAll([...new Set(assetUrls)]);
+
+  // The build emits every code-split JS/CSS chunk into this manifest. Fetching
+  // them during SW installation keeps lazy routes available offline without
+  // putting those chunks back into the initial page download.
+  const manifestResponse = await fetch(`${scope}precache-manifest.json`, { cache: 'no-store' });
+  if (!manifestResponse.ok) throw new Error(`Unable to precache manifest: ${manifestResponse.status}`);
+  const manifestFiles = await manifestResponse.json();
+  const lazyAssetUrls = Array.isArray(manifestFiles)
+    ? manifestFiles.map((path) => new URL(path, scope).href).filter((url) => url.startsWith(scope))
+    : [];
+  await cache.addAll([...new Set(lazyAssetUrls)]);
 };
 
 self.addEventListener('install', (event) => {

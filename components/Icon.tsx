@@ -1,5 +1,33 @@
 import React from 'react';
-import * as Lucide from 'lucide-react';
+import {
+  Banknote,
+  Book,
+  Briefcase,
+  Building2,
+  Bus,
+  Car,
+  Coffee,
+  CreditCard,
+  Dumbbell,
+  Film,
+  Gamepad2,
+  Gift,
+  Heart,
+  HelpCircle,
+  Home,
+  Image,
+  Music,
+  Pill,
+  Plane,
+  ShoppingBag,
+  Stethoscope,
+  Tag,
+  Train,
+  TrendingUp,
+  Utensils,
+  Wallet,
+  type LucideIcon,
+} from 'lucide-react';
 
 interface IconProps {
   name: string;
@@ -7,7 +35,43 @@ interface IconProps {
   className?: string;
 }
 
-// Helper to dynamically render Lucide icons
+export const CATEGORY_ICON_NAMES = [
+  'Utensils', 'Car', 'Film', 'ShoppingBag', 'Home', 'Heart', 'Tag', 'Briefcase',
+  'Gift', 'Plane', 'Coffee', 'Book', 'Music', 'Gamepad2', 'Dumbbell', 'Pill',
+  'Wallet', 'CreditCard', 'Banknote', 'TrendingUp', 'Building2', 'Bus', 'Train',
+] as const;
+
+const ICONS: Record<string, LucideIcon> = {
+  Banknote,
+  Book,
+  Briefcase,
+  Building2,
+  Bus,
+  Car,
+  Coffee,
+  CreditCard,
+  Dumbbell,
+  Film,
+  Gamepad2,
+  Gift,
+  Heart,
+  HelpCircle,
+  Home,
+  Image,
+  Music,
+  Pill,
+  Plane,
+  ShoppingBag,
+  Stethoscope,
+  Tag,
+  Train,
+  TrendingUp,
+  Utensils,
+  Wallet,
+};
+
+export const isSupportedIcon = (name: string): boolean => name.startsWith('emoji:') || name in ICONS;
+
 export const Icon: React.FC<IconProps> = ({ name, size = 24, className }) => {
   if (name.startsWith('emoji:')) {
     return (
@@ -16,7 +80,7 @@ export const Icon: React.FC<IconProps> = ({ name, size = 24, className }) => {
       </span>
     );
   }
-  const LucideIcon = (Lucide as any)[name];
-  if (!LucideIcon) return <Lucide.HelpCircle size={size} className={className} />;
+  const LucideIcon = ICONS[name];
+  if (!LucideIcon) return <HelpCircle size={size} className={className} />;
   return <LucideIcon size={size} className={className} />;
 };

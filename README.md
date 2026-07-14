@@ -1,10 +1,21 @@
 # SmartFinance-Max (PWA)
 
-目前版本：**v1.6.0**
+目前版本：**v1.7.0**
 
 Pages：https://appbuilderlee2.github.io/SmartFinance-Max/
 
 SmartFinance-Max 以 SmartFinance v1.1.25 為基線，係一個 local-first 記帳 PWA，包含記帳、訂閱自動入帳、預算、報表、信用卡及信用卡週期管理。
+
+## v1.7.0 更新
+
+- 所有功能頁改為 route-level lazy loading，首次開啟只下載目前路由所需程式
+- 移除 `lucide-react` 全庫動態匯入，改用明確圖示 registry，保留所有可選分類圖示及安全 fallback
+- 主 entry bundle 由約 851KB 降至約 33KB，縮減約 96%
+- Recharts 圖表庫不再由首頁 HTML 預載，只有進入 Dashboard／報表相關功能時先下載
+- 底部導覽支援 hover、鍵盤 focus 及 touch 預載，減少切頁等待
+- Service Worker 升級至 v5，build 會自動產生 precache manifest，背景快取所有 lazy chunks
+- 新增圖示 registry 完整性測試，測試總數增至 25 個
+- 設定頁版本號、README、CHANGELOG 同步更新至 v1.7.0
 
 ## v1.6.0 更新
 

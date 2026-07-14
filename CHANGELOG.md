@@ -1,5 +1,14 @@
 # 更新日誌（Changelog）
 
+## v1.7.0 (2026-07-14)
+
+- 全部頁面改用 route-level lazy loading，按需要下載功能程式。
+- Lucide 圖示由全庫 wildcard import 改成明確 registry，主 entry 約由 851KB 降至 33KB。
+- Recharts 不再出現在初始 HTML preload，Dashboard／報表載入時先下載。
+- 底部導覽加入 pointer、focus 及 touch route preload。
+- Service Worker v5 配合 build-time precache manifest，離線保留所有 lazy routes。
+- 新增 2 個圖示 registry 測試，合共 25 個單元測試。
+
 ## v1.6.0 (2026-07-14)
 
 - 新增以最小貨幣單位運算嘅統一金額模組，消除常見浮點累加誤差。

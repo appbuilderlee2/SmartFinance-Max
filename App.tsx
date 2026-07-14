@@ -1,34 +1,27 @@
 import React, { Suspense, lazy, useEffect, useState } from 'react';
 import { HashRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { DataProvider } from './contexts/DataContext';
+import { routeModules } from './routeModules';
 
-// Keep the bottom-nav core routes synchronous to avoid noticeable pauses when switching tabs.
-// These are the pages users expect to be instant: 記帳 / 月曆 / 記錄 / 設定.
-import Welcome from './pages/Welcome';
-import Dashboard from './pages/Dashboard';
-import AddTransaction from './pages/AddTransaction';
-import Calendar from './pages/Calendar';
-import Records from './pages/Records';
-import Settings from './pages/Settings';
-
-// Lazy-load everything else to keep the initial open reasonably fast.
-const TransactionDetail = lazy(() => import('./pages/TransactionDetail'));
-const TransactionView = lazy(() => import('./pages/TransactionView'));
-const CategoryManager = lazy(() => import('./pages/CategoryManager'));
-const BudgetSettings = lazy(() => import('./pages/BudgetSettings'));
-const Subscriptions = lazy(() => import('./pages/Subscriptions'));
-const NotificationSettings = lazy(() => import('./pages/NotificationSettings'));
-const CreditCardManager = lazy(() => import('./pages/CreditCardManager'));
-const CreditCardCycles = lazy(() => import('./pages/CreditCardCycles'));
-const AddSubscriptionPage = lazy(() => import('./pages/AddSubscription'));
-
-// Reports is heavy (recharts). Lazy-load to reduce initial bundle.
-const Reports = lazy(() => import('./pages/Reports'));
-
-// Lazy pages (non-core / hidden behind Easter egg)
-const CreditCard2 = lazy(() => import('./pages/CreditCard2'));
-const CreditCard2Match = lazy(() => import('./pages/CreditCard2Match'));
-const CreditCard2SwipeWhich = lazy(() => import('./pages/CreditCard2SwipeWhich'));
+const Welcome = lazy(routeModules.welcome);
+const Dashboard = lazy(routeModules.dashboard);
+const AddTransaction = lazy(routeModules.addTransaction);
+const Calendar = lazy(routeModules.calendar);
+const Records = lazy(routeModules.records);
+const Settings = lazy(routeModules.settings);
+const TransactionDetail = lazy(routeModules.transactionDetail);
+const TransactionView = lazy(routeModules.transactionView);
+const CategoryManager = lazy(routeModules.categoryManager);
+const BudgetSettings = lazy(routeModules.budgetSettings);
+const Subscriptions = lazy(routeModules.subscriptions);
+const NotificationSettings = lazy(routeModules.notificationSettings);
+const CreditCardManager = lazy(routeModules.creditCardManager);
+const CreditCardCycles = lazy(routeModules.creditCardCycles);
+const AddSubscriptionPage = lazy(routeModules.addSubscription);
+const Reports = lazy(routeModules.reports);
+const CreditCard2 = lazy(routeModules.creditCard2);
+const CreditCard2Match = lazy(routeModules.creditCard2Match);
+const CreditCard2SwipeWhich = lazy(routeModules.creditCard2SwipeWhich);
 
 // Layout
 import Layout from './components/Layout';
@@ -105,10 +98,10 @@ const App: React.FC = () => {
         )}
         <Routes>
           {/* Public but local-only: keep Welcome as landing (1B) */}
-          <Route path="/welcome" element={<Welcome />} />
+          <Route path="/welcome" element={<Suspense fallback={<Loading />}><Welcome /></Suspense>} />
 
           {/* App routes (no login required) */}
-          <Route path="/" element={<Layout><Dashboard /></Layout>} />
+          <Route path="/" element={<Suspense fallback={<Layout><Loading /></Layout>}><Layout><Dashboard /></Layout></Suspense>} />
 
           <Route
             path="/records"
