@@ -1,5 +1,14 @@
 # 更新日誌（Changelog）
 
+## v2.0.3 (2026-07-18)
+
+- 導航由 network-first 改為 cache-first + background refresh，移除離線網絡 timeout 等待。
+- `online` 事件會刷新 App shell cache 及呼叫 Service Worker update check。
+- 修正已存在 waiting worker 時未必顯示新版提示嘅情況。
+- 加入 iOS safe-area 內離線／恢復網絡提示。
+- E2E 改用 production preview，新增離線重載及重新連線流程；合共 10 個瀏覽器 case。
+- Service Worker 升級至 v11。
+
 ## v2.0.2 (2026-07-14)
 
 - 修正遷移 E2E 在 Dashboard 尋找只會於記錄頁顯示嘅交易備註。

@@ -1,10 +1,19 @@
 # SmartFinance-Max (PWA)
 
-目前版本：**v2.0.2**
+目前版本：**v2.0.3**
 
 Pages：https://appbuilderlee2.github.io/SmartFinance-Max/
 
 SmartFinance-Max 以 SmartFinance v1.1.25 為基線，係一個 local-first 記帳 PWA，包含記帳、訂閱自動入帳、預算、報表、信用卡及信用卡週期管理。v2.0 起主要資料儲存於瀏覽器 IndexedDB。
+
+## v2.0.3 更新
+
+- 導航改為 cache-first + 背景更新；已有快取時立即顯示 App，離線啟動毋須等待網絡 timeout
+- 網絡恢復時自動刷新 App shell 快取及檢查 Service Worker 新版
+- 新 Service Worker 已在等待時顯示「有新版本可用／重新載入」，包括重新打開已安裝 PWA 嘅情況
+- 加入安全區內「離線模式」及短暫「網絡已恢復」提示，避免被 iPhone 狀態列遮住
+- Playwright 改用 production preview，新增完整離線重新載入及恢復網絡 E2E；手機／桌面合共 10 個 case
+- Service Worker 升級至 v11；版本號及文件同步更新至 v2.0.3
 
 ## v2.0.2 更新
 

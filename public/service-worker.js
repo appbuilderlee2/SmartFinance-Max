@@ -5,7 +5,7 @@
 // - Keep the implementation simple (no Workbox dependency yet)
 
 // Bump this when you change SW behavior.
-const SW_VERSION = 'v10';
+const SW_VERSION = 'v11';
 const CACHE_PREFIX = 'smartfinance-';
 const CACHE_NAME = `${CACHE_PREFIX}${SW_VERSION}`;
 
@@ -71,6 +71,9 @@ self.addEventListener('message', (event) => {
   if (event?.data?.type === 'SKIP_WAITING') {
     self.skipWaiting();
   }
+  if (event?.data?.type === 'REFRESH_CACHE') {
+    event.waitUntil(precacheShell().catch(() => undefined));
+  }
 });
 
 // Helpers
@@ -84,8 +87,8 @@ const sameOrigin = (url) => {
 };
 
 // Fetch strategy:
-// - For navigations (index.html): network-first, fallback to cached index.html
-//   This prevents "stuck on old app" after deploy.
+// - For navigations (index.html): cached shell immediately, refresh in background.
+//   This avoids waiting for a network timeout when the device is offline.
 // - For other GET requests on same origin: cache-first (simple offline)
 // - For cross-origin or non-GET: passthrough
 self.addEventListener('fetch', (event) => {
@@ -98,15 +101,24 @@ self.addEventListener('fetch', (event) => {
   if (isNavigate(req)) {
     event.respondWith(
       (async () => {
-        try {
-          const fresh = await fetch(req);
-          // Keep a copy of the latest index.html for offline.
+        const cached = await caches.match(`${scope}index.html`);
+        const refresh = async () => {
+          const fresh = await fetch(req, { cache: 'no-store' });
+          if (!fresh.ok) throw new Error(`Navigation refresh failed: ${fresh.status}`);
           const cache = await caches.open(CACHE_NAME);
-          cache.put(`${scope}index.html`, fresh.clone());
+          await cache.put(`${scope}index.html`, fresh.clone());
           return fresh;
+        };
+
+        if (cached) {
+          event.waitUntil(refresh().catch(() => undefined));
+          return cached;
+        }
+
+        try {
+          return await refresh();
         } catch {
-          const cached = await caches.match(`${scope}index.html`);
-          return cached || Response.error();
+          return Response.error();
         }
       })()
     );

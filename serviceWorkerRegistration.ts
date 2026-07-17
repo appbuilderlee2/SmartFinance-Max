@@ -102,6 +102,12 @@ function registerValidSW(swUrl: string, config?: Config) {
           }
         };
       };
+
+      // A waiting worker can already exist before React attaches its listener
+      // (for example when reopening an installed PWA). Surface it immediately.
+      if (registration.waiting && navigator.serviceWorker.controller) {
+        emitUpdate();
+      }
     })
     .catch((error) => {
       console.error('Error during service worker registration:', error);

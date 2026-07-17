@@ -121,3 +121,23 @@ test('legacy localStorage data migrates to IndexedDB', async ({ page }) => {
   expect(stored[0].id).toBe('legacy-e2e');
   expect(await page.evaluate(() => localStorage.getItem('smartfinance_transactions'))).toContain('legacy-e2e');
 });
+
+test('cached app opens immediately offline and reports reconnection', async ({ page, context }) => {
+  await page.goto('/');
+  await page.evaluate(() => localStorage.setItem('smartfinance_has_onboarded', 'true'));
+  await page.reload();
+  await expect(page.getByRole('heading', { name: '統計總覽' })).toBeVisible();
+  await page.evaluate(async () => { await navigator.serviceWorker.ready; });
+  if (!await page.evaluate(() => Boolean(navigator.serviceWorker.controller))) {
+    await page.reload();
+    await expect(page.getByRole('heading', { name: '統計總覽' })).toBeVisible();
+  }
+
+  await context.setOffline(true);
+  await page.reload();
+  await expect(page.getByRole('heading', { name: '統計總覽' })).toBeVisible();
+  await expect(page.getByRole('status').filter({ hasText: '離線模式' })).toBeVisible();
+
+  await context.setOffline(false);
+  await expect(page.getByRole('status').filter({ hasText: '網絡已恢復' })).toBeVisible();
+});

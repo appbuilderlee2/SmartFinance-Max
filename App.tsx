@@ -35,12 +35,38 @@ const App: React.FC = () => {
   const [swUpdate, setSwUpdate] = useState<ServiceWorkerRegistration | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [storageError, setStorageError] = useState(false);
+  const [networkNotice, setNetworkNotice] = useState<'offline' | 'restored' | null>(
+    typeof navigator !== 'undefined' && !navigator.onLine ? 'offline' : null,
+  );
 
 
   useEffect(() => {
     const onStorageError = () => setStorageError(true);
     window.addEventListener(STORAGE_ERROR_EVENT, onStorageError);
     return () => window.removeEventListener(STORAGE_ERROR_EVENT, onStorageError);
+  }, []);
+
+  useEffect(() => {
+    let restoredTimer: number | undefined;
+    const onOffline = () => {
+      if (restoredTimer) window.clearTimeout(restoredTimer);
+      setNetworkNotice('offline');
+    };
+    const onOnline = () => {
+      setNetworkNotice('restored');
+      void navigator.serviceWorker?.getRegistration().then((registration) => {
+        registration?.active?.postMessage({ type: 'REFRESH_CACHE' });
+        return registration?.update();
+      }).catch(() => undefined);
+      restoredTimer = window.setTimeout(() => setNetworkNotice(null), 4000);
+    };
+    window.addEventListener('offline', onOffline);
+    window.addEventListener('online', onOnline);
+    return () => {
+      window.removeEventListener('offline', onOffline);
+      window.removeEventListener('online', onOnline);
+      if (restoredTimer) window.clearTimeout(restoredTimer);
+    };
   }, []);
 
   useEffect(() => {
@@ -76,8 +102,22 @@ const App: React.FC = () => {
   return (
     <DataProvider>
       <Router>
+        {networkNotice && (
+          <div
+            role="status"
+            aria-live="polite"
+            className={`fixed left-1/2 -translate-x-1/2 z-[90] w-[calc(100%-2rem)] max-w-sm rounded-xl border px-4 py-3 shadow-lg text-sm font-medium text-center ${
+              networkNotice === 'offline'
+                ? 'bg-amber-950 border-amber-500 text-amber-100'
+                : 'bg-emerald-950 border-emerald-500 text-emerald-100'
+            }`}
+            style={{ top: 'calc(env(safe-area-inset-top, 0px) + 12px)' }}
+          >
+            {networkNotice === 'offline' ? '離線模式' : '網絡已恢復'}
+          </div>
+        )}
         {swUpdate && (
-          <div className="fixed bottom-24 left-1/2 -translate-x-1/2 z-[60] sf-panel px-4 py-3 flex items-center gap-3">
+          <div role="status" aria-live="polite" className="fixed bottom-24 left-1/2 -translate-x-1/2 z-[80] sf-panel border border-primary/40 rounded-xl px-4 py-3 flex items-center gap-3 shadow-lg">
             <span className="text-sm text-gray-200">有新版本可用</span>
             <button
               type="button"
