@@ -113,7 +113,7 @@ self.addEventListener('fetch', (event) => {
     event.waitUntil(refreshPromise.then(() => undefined).catch(() => undefined));
     event.respondWith(
       (async () => {
-        const cached = await caches.match(`${scope}index.html`);
+        const cached = await caches.match(`${scope}index.html`, { ignoreVary: true });
         if (cached) {
           return cached;
         }
@@ -128,5 +128,8 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  event.respondWith(caches.match(req).then((cached) => cached || fetch(req)));
+  // Same-origin build assets are content-hashed. Ignore response `Vary`
+  // differences (notably Vite preview's `Vary: Origin`) so a precached module
+  // is still usable when its runtime request carries a different Origin header.
+  event.respondWith(caches.match(req, { ignoreVary: true }).then((cached) => cached || fetch(req)));
 });
