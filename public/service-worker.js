@@ -99,24 +99,27 @@ self.addEventListener('fetch', (event) => {
   if (!sameOrigin(req.url)) return;
 
   if (isNavigate(req)) {
+    const refresh = async () => {
+      const fresh = await fetch(req, { cache: 'no-store' });
+      if (!fresh.ok) throw new Error(`Navigation refresh failed: ${fresh.status}`);
+      const cache = await caches.open(CACHE_NAME);
+      await cache.put(`${scope}index.html`, fresh.clone());
+      return fresh;
+    };
+    const refreshPromise = refresh();
+
+    // Register background work while the fetch event is still active. Calling
+    // waitUntil after an awaited operation can make browsers reject the event.
+    event.waitUntil(refreshPromise.then(() => undefined).catch(() => undefined));
     event.respondWith(
       (async () => {
         const cached = await caches.match(`${scope}index.html`);
-        const refresh = async () => {
-          const fresh = await fetch(req, { cache: 'no-store' });
-          if (!fresh.ok) throw new Error(`Navigation refresh failed: ${fresh.status}`);
-          const cache = await caches.open(CACHE_NAME);
-          await cache.put(`${scope}index.html`, fresh.clone());
-          return fresh;
-        };
-
         if (cached) {
-          event.waitUntil(refresh().catch(() => undefined));
           return cached;
         }
 
         try {
-          return await refresh();
+          return await refreshPromise;
         } catch {
           return Response.error();
         }
