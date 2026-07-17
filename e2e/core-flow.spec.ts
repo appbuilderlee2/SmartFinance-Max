@@ -127,6 +127,9 @@ test('cached app opens immediately offline and reports reconnection', async ({ p
     if (message.type() === 'error') console.log(`BROWSER ERROR: ${message.text()}`);
   });
   page.on('pageerror', (error) => console.log(`PAGE ERROR: ${error.message}`));
+  page.on('requestfailed', (request) => {
+    console.log(`REQUEST FAILED: ${request.url()} — ${request.failure()?.errorText ?? 'unknown'}`);
+  });
   await page.goto('/');
   await page.evaluate(() => localStorage.setItem('smartfinance_has_onboarded', 'true'));
   await page.reload();
@@ -136,10 +139,18 @@ test('cached app opens immediately offline and reports reconnection', async ({ p
     await page.reload();
     await expect(page.getByRole('heading', { name: '統計總覽' })).toBeVisible();
   }
-  const cacheState = await page.evaluate(async () => ({
-    keys: await caches.keys(),
-    indexCached: Boolean(await caches.match(new URL('index.html', location.href).href)),
-  }));
+  const cacheState = await page.evaluate(async () => {
+    const keys = await caches.keys();
+    const entries = (await Promise.all(keys.map(async (key) => {
+      const cache = await caches.open(key);
+      return (await cache.keys()).map((request) => request.url);
+    }))).flat();
+    return {
+      keys,
+      entries,
+      indexCached: Boolean(await caches.match(new URL('index.html', location.href).href)),
+    };
+  });
   console.log(`OFFLINE CACHE: ${JSON.stringify(cacheState)}`);
 
   await context.setOffline(true);
