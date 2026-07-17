@@ -123,13 +123,6 @@ test('legacy localStorage data migrates to IndexedDB', async ({ page }) => {
 });
 
 test('cached app opens immediately offline and reports reconnection', async ({ page, context }) => {
-  page.on('console', (message) => {
-    if (message.type() === 'error') console.log(`BROWSER ERROR: ${message.text()}`);
-  });
-  page.on('pageerror', (error) => console.log(`PAGE ERROR: ${error.message}`));
-  page.on('requestfailed', (request) => {
-    console.log(`REQUEST FAILED: ${request.url()} — ${request.failure()?.errorText ?? 'unknown'}`);
-  });
   await page.goto('/');
   await page.evaluate(() => localStorage.setItem('smartfinance_has_onboarded', 'true'));
   await page.reload();
@@ -139,24 +132,13 @@ test('cached app opens immediately offline and reports reconnection', async ({ p
     await page.reload();
     await expect(page.getByRole('heading', { name: '統計總覽' })).toBeVisible();
   }
-  const cacheState = await page.evaluate(async () => {
-    const keys = await caches.keys();
-    const entries = (await Promise.all(keys.map(async (key) => {
-      const cache = await caches.open(key);
-      return (await cache.keys()).map((request) => request.url);
-    }))).flat();
-    return {
-      keys,
-      entries,
-      indexCached: Boolean(await caches.match(new URL('index.html', location.href).href)),
-    };
-  });
-  console.log(`OFFLINE CACHE: ${JSON.stringify(cacheState)}`);
+  const indexCached = await page.evaluate(async () => (
+    Boolean(await caches.match(new URL('index.html', location.href).href))
+  ));
+  expect(indexCached).toBe(true);
 
   await context.setOffline(true);
-  const offlineResponse = await page.reload({ waitUntil: 'domcontentloaded' });
-  console.log(`OFFLINE RESPONSE: ${offlineResponse?.status() ?? 'none'}`);
-  console.log(`OFFLINE BODY: ${(await page.locator('body').innerText()).slice(0, 1000)}`);
+  await page.reload({ waitUntil: 'domcontentloaded' });
   await expect(page.getByRole('heading', { name: '統計總覽' })).toBeVisible();
   await expect(page.getByRole('status').filter({ hasText: '離線模式' })).toBeVisible();
 
