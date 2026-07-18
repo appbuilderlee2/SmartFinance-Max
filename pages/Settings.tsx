@@ -15,6 +15,8 @@ import {
   SmartFinanceBackup,
 } from '../utils/backup';
 import { getStorageSnapshot, replaceStorageSnapshot } from '../utils/storage';
+import { ALL_CURRENCIES, loadPreferences, savePreferences, type AppPreferences } from '../utils/preferences';
+import { Currency } from '../types';
 
 type Notice = { tone: 'success' | 'warning' | 'info'; text: string } | null;
 
@@ -62,6 +64,14 @@ const Settings: React.FC = () => {
   const [diagnosticTick, setDiagnosticTick] = useState(0);
   const [versionTapCount, setVersionTapCount] = useState(0);
   const [rewardsUnlocked, setRewardsUnlocked] = useState(false);
+  const [preferences, setPreferences] = useState<AppPreferences>(() => loadPreferences());
+
+  const updatePreferences = (updates: Partial<AppPreferences>) => {
+    const next = { ...preferences, ...updates };
+    setPreferences(next);
+    savePreferences(next);
+    setDiagnosticTick(value => value + 1);
+  };
 
   useEffect(() => {
     try { setRewardsUnlocked(localStorage.getItem('sf_rewards_unlocked') === 'true'); } catch { /* ignore */ }
@@ -178,7 +188,7 @@ const Settings: React.FC = () => {
 
   const sections = {
     finance: matches('帳務', '信用卡', '訂閱', '分類', '預算', '報表'),
-    preferences: matches('個人化', '貨幣', '主題', '外觀', '通知'),
+    preferences: matches('個人化', '貨幣', '主題', '外觀', '通知', '日期', '每週', '負數'),
     data: matches('資料', 'IndexedDB', '儲存', '備份', '匯出', '匯入', '還原', '完整性'),
     update: matches('離線', '更新', '快取', '重新載入', '版本'),
     danger: matches('進階', '危險', '清除', '重置', '刪除'),
@@ -236,9 +246,45 @@ const Settings: React.FC = () => {
           <div className="sf-panel divide-y sf-divider overflow-hidden">
             <div className="p-4 flex items-center justify-between">
               <div className="flex items-center gap-2"><Database size={17} /><span>主貨幣</span></div>
-              <select aria-label="主貨幣" className="bg-transparent text-gray-300 outline-none" value={currency} onChange={event => setCurrency(event.target.value as never)}>
+              <select aria-label="主貨幣" className="bg-transparent text-gray-300 outline-none" value={currency} onChange={event => {
+                const next = event.target.value as Currency;
+                setCurrency(next);
+                if (!preferences.enabledCurrencies.includes(next)) updatePreferences({ enabledCurrencies: [...preferences.enabledCurrencies, next] });
+              }}>
                 {['TWD', 'HKD', 'USD', 'AUD', 'CNY', 'JPY', 'EUR', 'GBP'].map(code => <option key={code} value={code}>{code}</option>)}
               </select>
+            </div>
+            <div className="p-4 space-y-3">
+              <div><div className="text-sm">常用貨幣</div><div className="text-xs text-gray-500 mt-1">新增訂閱時只顯示已選貨幣；主貨幣不可停用。</div></div>
+              <div className="grid grid-cols-4 gap-2">
+                {ALL_CURRENCIES.map(code => {
+                  const active = preferences.enabledCurrencies.includes(code);
+                  const locked = code === currency;
+                  return <button key={code} disabled={locked} aria-pressed={active} onClick={() => updatePreferences({ enabledCurrencies: active ? preferences.enabledCurrencies.filter(item => item !== code) : [...preferences.enabledCurrencies, code] })} className={`rounded-lg border py-2 text-xs ${active ? 'border-primary bg-primary/10 text-primary' : 'sf-divider text-gray-500'} disabled:opacity-70`}>{code}</button>;
+                })}
+              </div>
+            </div>
+            <div className="p-4 grid grid-cols-2 gap-4">
+              <label className="text-sm text-gray-300">日期格式
+                <select aria-label="日期格式" value={preferences.dateFormat} onChange={event => updatePreferences({ dateFormat: event.target.value as AppPreferences['dateFormat'] })} className="mt-2 w-full sf-control rounded-lg p-2 text-white">
+                  <option value="YYYY-MM-DD">2026-07-18</option><option value="DD/MM/YYYY">18/07/2026</option><option value="MM/DD/YYYY">07/18/2026</option>
+                </select>
+              </label>
+              <label className="text-sm text-gray-300">每週開始日
+                <select aria-label="每週開始日" value={preferences.weekStartsOn} onChange={event => updatePreferences({ weekStartsOn: Number(event.target.value) as 0 | 1 })} className="mt-2 w-full sf-control rounded-lg p-2 text-white">
+                  <option value={1}>星期一</option><option value={0}>星期日</option>
+                </select>
+              </label>
+              <label className="text-sm text-gray-300">貨幣符號
+                <select aria-label="貨幣符號位置" value={preferences.symbolPosition} onChange={event => updatePreferences({ symbolPosition: event.target.value as AppPreferences['symbolPosition'] })} className="mt-2 w-full sf-control rounded-lg p-2 text-white">
+                  <option value="before">HK$ 100</option><option value="after">100 HK$</option>
+                </select>
+              </label>
+              <label className="text-sm text-gray-300">負數格式
+                <select aria-label="負數格式" value={preferences.negativeStyle} onChange={event => updatePreferences({ negativeStyle: event.target.value as AppPreferences['negativeStyle'] })} className="mt-2 w-full sf-control rounded-lg p-2 text-white">
+                  <option value="minus">-HK$ 100</option><option value="parentheses">(HK$ 100)</option>
+                </select>
+              </label>
             </div>
             <button onClick={() => navigate('/settings/notifications')} className="w-full p-4 flex items-center justify-between">
               <span className="flex items-center gap-2"><Bell size={17} />通知與提醒</span><ChevronRight size={18} className="text-gray-500" />

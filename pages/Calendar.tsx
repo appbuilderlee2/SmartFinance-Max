@@ -6,6 +6,7 @@ import { useData } from '../contexts/DataContext';
 import { Currency, TransactionType } from '../types';
 import { Icon } from '../components/Icon';
 import { formatMoney, formatMoneyNumber, fromMinorUnits, toMinorUnits } from '../utils/money';
+import { loadPreferences } from '../utils/preferences';
 
 const Calendar: React.FC = () => {
     const navigate = useNavigate();
@@ -128,13 +129,15 @@ const Calendar: React.FC = () => {
         setSelectedDay(null);
     };
 
-    const weekDays = ['日', '一', '二', '三', '四', '五', '六'];
+    const weekStartsOn = loadPreferences().weekStartsOn;
+    const weekDays = weekStartsOn === 1 ? ['一', '二', '三', '四', '五', '六', '日'] : ['日', '一', '二', '三', '四', '五', '六'];
 
     const renderCalendarDays = () => {
         const days = [];
 
         // Empty cells for days before the first day of month
-        for (let i = 0; i < firstDayOfMonth; i++) {
+        const leadingDays = (firstDayOfMonth - weekStartsOn + 7) % 7;
+        for (let i = 0; i < leadingDays; i++) {
             days.push(<div key={`empty-${i}`} className="h-12" />);
         }
 

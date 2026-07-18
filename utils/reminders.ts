@@ -1,7 +1,7 @@
 // utils/reminders.ts
 
 import type { CreditCard } from '../contexts/DataContext';
-import type { Subscription } from '../types';
+import type { Budget, Category, Currency, Subscription } from '../types';
 import { loadCycles } from './creditCardCycleStorage';
 import { getStatementAndDueForMonth } from './creditCardSchedule';
 import { parseLocalYMD, toLocalYMD } from './date';
@@ -12,6 +12,8 @@ export type ReminderType =
   | 'cc_payment_due'
   | 'cc_annual_fee'
   | 'subscription_upcoming'
+  | 'budget_near_limit'
+  | 'budget_over_limit'
   | 'backup_export_json';
 
 export type ReminderStatus = 'open' | 'done' | 'dismissed';
@@ -48,6 +50,10 @@ export type ReminderSettings = {
   subEnabled: boolean;
   subAheadDays: number; // e.g. 7
 
+  // budgets
+  budgetEnabled: boolean;
+  budgetThresholdPercent: number;
+
   // backup
   backupEnabled: boolean;
   backupEveryDays: number; // e.g. 14
@@ -61,6 +67,8 @@ export const DEFAULT_REMINDER_SETTINGS: ReminderSettings = {
   ccFeeEnabled: true,
   subEnabled: true,
   subAheadDays: 7,
+  budgetEnabled: true,
+  budgetThresholdPercent: 80,
   backupEnabled: true,
   backupEveryDays: 14,
 };
@@ -152,6 +160,9 @@ export function getTodayYmd(): string {
 export function regenerateReminders(params: {
   creditCards: CreditCard[];
   subscriptions: Subscription[];
+  budgets?: Budget[];
+  categories?: Category[];
+  currency?: Currency;
   now?: Date;
 }): Reminder[] {
   const settings = loadReminderSettings();
@@ -310,6 +321,33 @@ export function regenerateReminders(params: {
         snoozeUntilYmd: prev?.snoozeUntilYmd,
         action: { kind: 'navigate', to: '/subscriptions' },
         dedupeKey,
+      });
+    }
+  }
+
+  // --- Budget threshold reminders ---
+  if (settings.budgetEnabled) {
+    const threshold = Math.min(99, Math.max(50, settings.budgetThresholdPercent || 80));
+    const categoryNames = new Map((params.categories || []).map(category => [category.id, category.name]));
+    const monthKey = todayYmd.slice(0, 7);
+    for (const budget of params.budgets || []) {
+      if (!(budget.limit > 0)) continue;
+      const percent = Math.round((budget.spent / budget.limit) * 100);
+      if (percent < threshold) continue;
+      const over = percent >= 100;
+      const type: ReminderType = over ? 'budget_over_limit' : 'budget_near_limit';
+      const dedupeKey = `${type}|${budget.categoryId}|${monthKey}`;
+      const prev = existingByKey.get(dedupeKey);
+      const name = categoryNames.get(budget.categoryId) || '未分類';
+      out.push({
+        id: prev?.id ?? uid(), type,
+        title: over ? `預算已超支：${name}` : `預算接近上限：${name}`,
+        detail: `${percent}% · 已用 ${budget.spent} / ${budget.limit} ${params.currency || ''}`,
+        dueYmd: todayYmd,
+        severity: over ? 'urgent' : 'warn',
+        status: prev?.status ?? 'open', createdAt: prev?.createdAt ?? new Date().toISOString(),
+        doneAt: prev?.doneAt, snoozeUntilYmd: prev?.snoozeUntilYmd,
+        action: { kind: 'navigate', to: '/budget' }, dedupeKey,
       });
     }
   }

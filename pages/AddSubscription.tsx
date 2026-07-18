@@ -7,6 +7,7 @@ import { Currency, TransactionType } from '../types';
 import { getCurrencySymbol } from '../utils/currency';
 import { parseLocalYMD, toLocalYMD } from '../utils/date';
 import { parseMoneyInput } from '../utils/money';
+import { loadPreferences } from '../utils/preferences';
 
 const SERVICE_ICON_PRESETS = [
   { label: 'Netflix', value: 'emoji:🎬' },
@@ -43,6 +44,7 @@ const AddSubscription: React.FC = () => {
   const [icon, setIcon] = useState<string>('');
   const [iconTab, setIconTab] = useState<'preset' | 'emoji'>('preset');
   const [customEmoji, setCustomEmoji] = useState('');
+  const availableCurrencies = Array.from(new Set([...loadPreferences().enabledCurrencies, subscriptionCurrency, currency]));
 
   // Prefill when editing
   useEffect(() => {
@@ -206,7 +208,7 @@ const AddSubscription: React.FC = () => {
               onChange={(e) => setSubscriptionCurrency(e.target.value as Currency)}
               className="w-full sf-control rounded-xl px-3 py-3 text-white"
             >
-              {Object.values(Currency).map((item) => <option key={item} value={item}>{item}</option>)}
+              {availableCurrencies.map((item) => <option key={item} value={item}>{item}</option>)}
             </select>
           </div>
         </div>

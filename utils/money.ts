@@ -1,5 +1,6 @@
 import { Currency } from '../types';
 import { getCurrencySymbol } from './currency';
+import { loadPreferences } from './preferences';
 
 export function getCurrencyFractionDigits(currency: Currency): number {
   return currency === Currency.JPY ? 0 : 2;
@@ -58,5 +59,11 @@ export function formatMoneyNumber(amount: number, currency: Currency): string {
 }
 
 export function formatMoney(amount: number, currency: Currency): string {
-  return `${getCurrencySymbol(currency)} ${formatMoneyNumber(amount, currency)}`;
+  const preferences = loadPreferences();
+  const absolute = formatMoneyNumber(Math.abs(amount), currency);
+  const value = preferences.symbolPosition === 'after'
+    ? `${absolute} ${getCurrencySymbol(currency)}`
+    : `${getCurrencySymbol(currency)} ${absolute}`;
+  if (amount >= 0) return value;
+  return preferences.negativeStyle === 'parentheses' ? `(${value})` : `-${value}`;
 }

@@ -15,10 +15,11 @@ import {
   type Reminder,
   type ReminderSettings,
 } from '../utils/reminders';
+import { formatDisplayYmd } from '../utils/preferences';
 
 const NotificationSettings: React.FC = () => {
   const navigate = useNavigate();
-  const { creditCards, subscriptions } = useData();
+  const { creditCards, subscriptions, budgets, categories, currency } = useData();
 
   const [enabled, setEnabled] = useState(true);
   const [time, setTime] = useState("20:00");
@@ -61,7 +62,7 @@ const NotificationSettings: React.FC = () => {
   }, [remSettings]);
 
   const refreshReminders = () => {
-    const list = regenerateReminders({ creditCards: creditCards || [], subscriptions: subscriptions || [] });
+    const list = regenerateReminders({ creditCards: creditCards || [], subscriptions: subscriptions || [], budgets, categories, currency });
     setReminders(list);
   };
 
@@ -78,6 +79,8 @@ const NotificationSettings: React.FC = () => {
     remSettings.ccFeeEnabled,
     remSettings.subEnabled,
     remSettings.subAheadDays,
+    remSettings.budgetEnabled,
+    remSettings.budgetThresholdPercent,
     remSettings.backupEnabled,
     remSettings.backupEveryDays,
   ]);
@@ -361,6 +364,20 @@ const NotificationSettings: React.FC = () => {
                            </select>
                         </div>
                         <div className="flex items-center justify-between">
+                           <span className="text-gray-200">預算提醒</span>
+                           <button type="button" role="switch" aria-checked={remSettings.budgetEnabled} onClick={() => setRemSettings(prev => ({ ...prev, budgetEnabled: !prev.budgetEnabled }))} className={`w-12 h-7 rounded-full relative ${remSettings.budgetEnabled ? 'bg-green-500' : 'bg-gray-600'}`}>
+                              <span className={`w-6 h-6 bg-white rounded-full absolute top-0.5 transition-all ${remSettings.budgetEnabled ? 'left-5' : 'left-0.5'}`} />
+                           </button>
+                        </div>
+                        {remSettings.budgetEnabled && (
+                           <div className="flex items-center justify-between">
+                              <span className="text-gray-200">接近上限門檻</span>
+                              <select aria-label="預算提醒門檻" value={remSettings.budgetThresholdPercent} onChange={(e) => setRemSettings(prev => ({ ...prev, budgetThresholdPercent: Number(e.target.value) }))} className="bg-transparent text-gray-400 outline-none">
+                                 <option value={70}>70%</option><option value={80}>80%</option><option value={90}>90%</option>
+                              </select>
+                           </div>
+                        )}
+                        <div className="flex items-center justify-between">
                            <span className="text-gray-200">備份提醒（每）</span>
                            <select
                               value={remSettings.backupEveryDays}
@@ -390,7 +407,7 @@ const NotificationSettings: React.FC = () => {
                                  <div className="min-w-0">
                                     <div className="text-white text-sm font-medium truncate">{r.title}</div>
                                     <div className={r.severity === 'urgent' ? 'text-xs text-red-300 mt-0.5' : r.severity === 'warn' ? 'text-xs text-yellow-200 mt-0.5' : 'text-xs text-gray-400 mt-0.5'}>
-                                       {r.dueYmd}{r.detail ? ` · ${r.detail}` : ''}
+                                       {formatDisplayYmd(r.dueYmd)}{r.detail ? ` · ${r.detail}` : ''}
                                     </div>
                                  </div>
                                  <div className="shrink-0 text-xs">

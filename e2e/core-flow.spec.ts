@@ -154,6 +154,15 @@ test('settings data centre protects IndexedDB data during cache maintenance', as
   await expect(page.getByText('IndexedDB 正常')).toBeVisible();
 
   const search = page.getByLabel('搜尋設定');
+  await search.fill('日期');
+  await page.getByLabel('日期格式').selectOption('DD/MM/YYYY');
+  await page.getByLabel('每週開始日').selectOption('0');
+  await page.getByLabel('貨幣符號位置').selectOption('after');
+  await page.getByLabel('負數格式').selectOption('parentheses');
+  await page.reload();
+  await expect(page.getByLabel('日期格式')).toHaveValue('DD/MM/YYYY');
+  await expect(page.getByLabel('每週開始日')).toHaveValue('0');
+
   await search.fill('備份');
   await expect(page.getByRole('heading', { name: '資料、備份與還原' })).toBeVisible();
   await expect(page.getByRole('heading', { name: '帳務管理' })).toBeHidden();
