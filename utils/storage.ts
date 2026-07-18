@@ -41,6 +41,17 @@ let initializationPromise: Promise<StorageInitialization> | null = null;
 
 const THEME_KEY = 'smartfinance_themecolor';
 
+export async function reconcileThemeMirror(
+  targetDatabase: IDBDatabase,
+  storage: Pick<Storage, 'getItem'>,
+  snapshot: KeyValueSnapshot,
+): Promise<KeyValueSnapshot> {
+  const mirroredTheme = storage.getItem(THEME_KEY);
+  if (!mirroredTheme || snapshot[THEME_KEY] === mirroredTheme) return snapshot;
+  await writeDatabaseValue(targetDatabase, THEME_KEY, mirroredTheme);
+  return { ...snapshot, [THEME_KEY]: mirroredTheme };
+}
+
 function replaceCache(snapshot: KeyValueSnapshot): void {
   cache = new Map(Object.entries(snapshot));
 }
@@ -56,8 +67,15 @@ export function initializeStorage(): Promise<StorageInitialization> {
     try {
       database = await openSmartFinanceDatabase();
       const migration = await migrateLegacyStorage(database, localStorage);
-      const snapshot = await readDatabaseSnapshot(database);
+      const snapshot = await reconcileThemeMirror(
+        database,
+        localStorage,
+        await readDatabaseSnapshot(database),
+      );
       replaceCache(snapshot);
+      // Theme changes are mirrored synchronously so an immediate reload cannot
+      // race the asynchronous IndexedDB write. Reconcile that durable mirror
+      // before consumers hydrate from the database snapshot.
       backend = 'indexeddb';
       initialized = true;
       return {

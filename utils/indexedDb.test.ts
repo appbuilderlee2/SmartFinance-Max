@@ -6,6 +6,7 @@ import {
   readDatabaseSnapshot,
   replaceDatabaseSnapshot,
 } from './indexedDb';
+import { reconcileThemeMirror } from './storage';
 
 class MemoryStorage {
   private values = new Map<string, string>();
@@ -46,6 +47,24 @@ describe('IndexedDB storage', () => {
 
     expect(result.migrated).toBe(false);
     expect(snapshot.smartfinance_currency).toBe('AUD');
+    database.close();
+  });
+
+  it('reconciles the synchronous theme mirror before app hydration', async () => {
+    const factory = new IDBFactory();
+    const legacy = new MemoryStorage();
+    const database = await openSmartFinanceDatabase(factory);
+    await replaceDatabaseSnapshot(database, { smartfinance_themecolor: 'blue' });
+    legacy.setItem('smartfinance_themecolor', 'applefluid');
+
+    const snapshot = await reconcileThemeMirror(
+      database,
+      legacy,
+      await readDatabaseSnapshot(database),
+    );
+
+    expect(snapshot.smartfinance_themecolor).toBe('applefluid');
+    expect((await readDatabaseSnapshot(database)).smartfinance_themecolor).toBe('applefluid');
     database.close();
   });
 });
