@@ -333,7 +333,8 @@ const Settings: React.FC = () => {
                 {[
                   ['blue', '藍色'], ['red', '紅色'], ['green', '綠色'], ['purple', '紫色'], ['orange', '橙色'],
                   ['pink', '粉紅'], ['ios26', '玻璃'], ['blackgold', '黑金'], ['tech', '科技'], ['light', '淺色'],
-                  ['applefluid', 'Apple Fluid'],
+                  ['applefluid-dark', 'Fluid 深色'], ['applefluid-light', 'Fluid 淺色'],
+                  ['applefluid-system', 'Fluid 跟隨系統'],
                 ].map(([value, label]) => (
                   <button key={value} onClick={() => setThemeColor(value)} className={`rounded-lg border px-2 py-3 text-xs ${themeColor === value ? 'border-primary text-primary bg-primary/10' : 'sf-divider text-gray-400'}`}>{label}</button>
                 ))}

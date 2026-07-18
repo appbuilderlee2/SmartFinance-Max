@@ -164,10 +164,23 @@ test('settings data centre protects IndexedDB data during cache maintenance', as
   await expect(page.getByLabel('每週開始日')).toHaveValue('0');
 
   await search.fill('主題');
-  await page.getByRole('button', { name: 'Apple Fluid' }).click();
-  await expect(page.locator('html')).toHaveAttribute('data-sf-theme', 'applefluid');
+  await page.getByRole('button', { name: 'Fluid 深色' }).click();
+  await expect(page.locator('html')).toHaveAttribute('data-sf-theme', 'applefluid-dark');
   await page.reload();
-  await expect(page.locator('html')).toHaveClass(/theme-applefluid/);
+  await expect(page.locator('html')).toHaveClass(/theme-applefluid-dark/);
+
+  await page.getByRole('button', { name: 'Fluid 淺色' }).click();
+  await expect(page.locator('html')).toHaveClass(/theme-applefluid-light/);
+  await expect(page.locator('html')).not.toHaveClass(/\bdark\b/);
+
+  await page.emulateMedia({ colorScheme: 'dark' });
+  await page.getByRole('button', { name: 'Fluid 跟隨系統' }).click();
+  await expect(page.locator('html')).toHaveAttribute('data-sf-theme', 'applefluid-system');
+  await expect(page.locator('html')).toHaveAttribute('data-sf-resolved-theme', 'applefluid-dark');
+  await page.emulateMedia({ colorScheme: 'light' });
+  await expect(page.locator('html')).toHaveAttribute('data-sf-resolved-theme', 'applefluid-light');
+  await page.reload();
+  await expect(page.locator('html')).toHaveClass(/theme-applefluid-light/);
 
   await search.fill('備份');
   await expect(page.getByRole('heading', { name: '資料、備份與還原' })).toBeVisible();

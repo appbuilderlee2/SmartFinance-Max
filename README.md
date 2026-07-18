@@ -1,10 +1,17 @@
 # SmartFinance-Max (PWA)
 
-目前版本：**v2.4.1**
+目前版本：**v2.5.0**
 
 Pages：https://appbuilderlee2.github.io/SmartFinance-Max/
 
 SmartFinance-Max 以 SmartFinance v1.1.25 為基線，係一個 local-first 記帳 PWA，包含記帳、訂閱自動入帳、預算、報表、信用卡及信用卡週期管理。v2.0 起主要資料儲存於瀏覽器 IndexedDB。
+
+## v2.5.0 Apple Fluid 日夜模式
+
+- 新增 Apple Fluid 深色、Apple Fluid 淺色及跟隨系統三個選項
+- 跟隨系統會在裝置外觀轉變時即時切換，毋須重新載入 App
+- 舊 Apple Fluid 設定自動保留並升級成深色模式
+- 深淺模式同樣保留浮動 tab bar、分層玻璃、按壓回饋及無障礙 fallback
 
 ## v2.4.1 修正
 

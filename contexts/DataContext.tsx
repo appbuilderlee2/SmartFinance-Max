@@ -100,6 +100,8 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (typeof value !== 'string') return DEFAULT_THEME;
     const trimmed = value.trim();
     if (!trimmed) return DEFAULT_THEME;
+    // v2.4 compatibility: the original Apple Fluid theme was dark-only.
+    if (trimmed === 'applefluid') return 'applefluid-dark';
     // Only allow safe class suffixes (matches `.theme-xxx` blocks in CSS)
     if (!/^[a-z0-9-]+$/i.test(trimmed)) return DEFAULT_THEME;
     return trimmed;
@@ -378,24 +380,31 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // Persistence and application of theme (UI skin)
   useEffect(() => {
     if (!storageReady) return;
-    writeText('smartfinance_themecolor', themeColor);
-    const root = document.documentElement;
-
-    // Remove previous theme-* classes
-    for (const className of Array.from(root.classList)) {
-      if (className.startsWith('theme-')) root.classList.remove(className);
-    }
-
     const normalized = normalizeThemeName(themeColor);
-    root.classList.add(`theme-${normalized}`);
-    root.dataset.sfTheme = normalized;
+    writeText('smartfinance_themecolor', normalized);
+    const root = document.documentElement;
+    const systemScheme = window.matchMedia('(prefers-color-scheme: dark)');
 
-    // Tailwind `darkMode: 'class'` support
-    if (themeColor === 'light') {
-      root.classList.remove('dark');
-    } else {
-      root.classList.add('dark');
-    }
+    const applyTheme = () => {
+      for (const className of Array.from(root.classList)) {
+        if (className.startsWith('theme-')) root.classList.remove(className);
+      }
+
+      const resolved = normalized === 'applefluid-system'
+        ? `applefluid-${systemScheme.matches ? 'dark' : 'light'}`
+        : normalized;
+      root.classList.add(`theme-${resolved}`);
+      root.dataset.sfTheme = normalized;
+      root.dataset.sfResolvedTheme = resolved;
+
+      if (resolved === 'light' || resolved === 'applefluid-light') root.classList.remove('dark');
+      else root.classList.add('dark');
+    };
+
+    applyTheme();
+    if (normalized !== 'applefluid-system') return;
+    systemScheme.addEventListener('change', applyTheme);
+    return () => systemScheme.removeEventListener('change', applyTheme);
   }, [storageReady, themeColor]);
 
   // Auto-create expense transactions for due subscriptions

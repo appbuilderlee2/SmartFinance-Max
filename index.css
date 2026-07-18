@@ -152,7 +152,7 @@ html.theme-ios26 {
   Immediate press feedback, floating chrome and accessibility fallbacks are
   intentionally part of the skin rather than one-off component overrides.
 */
-html.theme-applefluid {
+html:is(.theme-applefluid-dark, .theme-applefluid-light) {
   color-scheme: dark;
   --sf-primary: 10 132 255;
   --sf-danger: 255 69 58;
@@ -204,40 +204,78 @@ html.theme-applefluid {
   --sf-gray-900: 28 28 30;
 }
 
-html.theme-applefluid body {
+html.theme-applefluid-light {
+  color-scheme: light;
+  --sf-primary: 0 122 255;
+  --sf-danger: 255 59 48;
+  --sf-success: 52 199 89;
+  --sf-app-bg: 242 242 247;
+  --sf-surface-bg: 255 255 255;
+  --sf-text-primary: 28 28 30;
+  --sf-text-secondary: 72 72 74;
+  --sf-text-muted: 99 99 102;
+  --sf-divider-opacity: 0.13;
+  --sf-surface-alpha: 0.66;
+  --sf-surface-border-opacity: 0.62;
+  --sf-shadow-sm: 0 1px 0 rgb(255 255 255 / 0.88), 0 8px 22px rgb(31 38 52 / 0.08);
+  --sf-shadow-md: 0 1px 0 rgb(255 255 255 / 0.92), 0 16px 38px rgb(31 38 52 / 0.12);
+  --sf-shadow-lg: 0 1px 0 rgb(255 255 255 / 0.94), 0 26px 70px rgb(31 38 52 / 0.16);
+  --sf-shadow-xl: 0 40px 110px rgb(31 38 52 / 0.20);
+  --sf-topbar-alpha: 0.68;
+  --sf-topbar-shadow: 0 12px 34px rgb(31 38 52 / 0.08);
+  --sf-panel-alpha: 0.64;
+  --sf-control-alpha: 0.62;
+  --sf-control-shadow: inset 0 1px 0 rgb(255 255 255 / 0.78);
+  --sf-app-bg-image:
+    radial-gradient(900px 620px at 8% -8%, rgb(10 132 255 / 0.18), transparent 62%),
+    radial-gradient(800px 620px at 100% 28%, rgb(175 82 222 / 0.12), transparent 58%),
+    linear-gradient(180deg, rgb(248 250 255), rgb(235 240 249));
+  --sf-gray-50: 28 28 30;
+  --sf-gray-100: 44 44 46;
+  --sf-gray-200: 58 58 60;
+  --sf-gray-300: 72 72 74;
+  --sf-gray-400: 99 99 102;
+  --sf-gray-500: 118 118 128;
+  --sf-gray-600: 142 142 147;
+  --sf-gray-700: 174 174 178;
+  --sf-gray-800: 229 229 234;
+  --sf-gray-900: 242 242 247;
+}
+
+html:is(.theme-applefluid-dark, .theme-applefluid-light) body {
   font-family: ui-rounded, -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif;
   font-optical-sizing: auto;
   letter-spacing: -0.006em;
 }
 
-html.theme-applefluid h1,
-html.theme-applefluid h2,
-html.theme-applefluid h3 {
+html:is(.theme-applefluid-dark, .theme-applefluid-light) h1,
+html:is(.theme-applefluid-dark, .theme-applefluid-light) h2,
+html:is(.theme-applefluid-dark, .theme-applefluid-light) h3 {
   letter-spacing: -0.022em;
   line-height: 1.12;
 }
 
-html.theme-applefluid button,
-html.theme-applefluid [role="button"] {
+html:is(.theme-applefluid-dark, .theme-applefluid-light) button,
+html:is(.theme-applefluid-dark, .theme-applefluid-light) [role="button"] {
   touch-action: manipulation;
   transform: translateZ(0) scale(1);
   transition: transform var(--sf-motion-fast) var(--sf-ease-out), opacity var(--sf-motion-fast) linear, background-color var(--sf-motion-normal) var(--sf-ease-out);
 }
 
-html.theme-applefluid button:active,
-html.theme-applefluid [role="button"]:active {
+html:is(.theme-applefluid-dark, .theme-applefluid-light) button:active,
+html:is(.theme-applefluid-dark, .theme-applefluid-light) [role="button"]:active {
   transform: translateZ(0) scale(0.965);
   opacity: 0.82;
 }
 
-html.theme-applefluid .sf-card,
-html.theme-applefluid .sf-panel,
-html.theme-applefluid .sf-surface {
+html:is(.theme-applefluid-dark, .theme-applefluid-light) .sf-card,
+html:is(.theme-applefluid-dark, .theme-applefluid-light) .sf-panel,
+html:is(.theme-applefluid-dark, .theme-applefluid-light) .sf-surface {
   border-top-color: rgb(255 255 255 / 0.22);
   border-left-color: rgb(255 255 255 / 0.13);
 }
 
-html.theme-applefluid .sf-tabbar {
+html:is(.theme-applefluid-dark, .theme-applefluid-light) .sf-tabbar {
   left: 12px;
   right: 12px;
   bottom: calc(env(safe-area-inset-bottom, 0px) + 10px);
@@ -248,16 +286,20 @@ html.theme-applefluid .sf-tabbar {
   overflow: hidden;
 }
 
-html.theme-applefluid .sf-tabbar button {
+html:is(.theme-applefluid-dark, .theme-applefluid-light) .sf-tabbar button {
   min-width: 44px;
   min-height: 44px;
   border-radius: 16px;
 }
 
+html.theme-applefluid-light .sf-tabbar {
+  border-color: rgb(255 255 255 / 0.74);
+}
+
 @media (prefers-reduced-motion: reduce) {
-  html.theme-applefluid *,
-  html.theme-applefluid *::before,
-  html.theme-applefluid *::after {
+  html:is(.theme-applefluid-dark, .theme-applefluid-light) *,
+  html:is(.theme-applefluid-dark, .theme-applefluid-light) *::before,
+  html:is(.theme-applefluid-dark, .theme-applefluid-light) *::after {
     scroll-behavior: auto !important;
     transition-duration: 1ms !important;
     animation-duration: 1ms !important;
@@ -266,7 +308,7 @@ html.theme-applefluid .sf-tabbar button {
 }
 
 @media (prefers-reduced-transparency: reduce) {
-  html.theme-applefluid {
+  html:is(.theme-applefluid-dark, .theme-applefluid-light) {
     --sf-surface-alpha: 0.96;
     --sf-panel-alpha: 0.96;
     --sf-topbar-alpha: 0.96;
@@ -279,7 +321,7 @@ html.theme-applefluid .sf-tabbar button {
 }
 
 @media (prefers-contrast: more) {
-  html.theme-applefluid {
+  html:is(.theme-applefluid-dark, .theme-applefluid-light) {
     --sf-surface-alpha: 0.94;
     --sf-panel-alpha: 0.94;
     --sf-surface-border-opacity: 0.42;
@@ -509,6 +551,7 @@ body {
 /* Base styles */
 body {
   @apply bg-background text-white antialiased select-none touch-pan-y;
+  color: rgb(var(--sf-text-primary) / 1);
   background-image: var(--sf-app-bg-image);
   background-attachment: fixed;
   background-size: cover;
@@ -518,11 +561,14 @@ body {
 
 @layer base {
   /* Light mode: keep text readable without rewriting every component today. */
-  html.theme-light .text-white {
+  html.theme-light .text-white,
+  html.theme-applefluid-light .text-white {
     color: rgb(var(--sf-text-primary) / 1) !important;
   }
   html.theme-light .bg-primary,
-  html.theme-light .bg-primary * {
+  html.theme-light .bg-primary *,
+  html.theme-applefluid-light .bg-primary,
+  html.theme-applefluid-light .bg-primary * {
     color: rgb(var(--sf-on-primary) / 1) !important;
   }
 }
