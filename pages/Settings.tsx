@@ -1,4 +1,4 @@
-import React, { useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   AlertTriangle, Bell, ChevronRight, CloudOff, Database, FileDown,
@@ -60,6 +60,18 @@ const Settings: React.FC = () => {
   const [dangerText, setDangerText] = useState('');
   const [checkingUpdate, setCheckingUpdate] = useState(false);
   const [diagnosticTick, setDiagnosticTick] = useState(0);
+  const [versionTapCount, setVersionTapCount] = useState(0);
+  const [rewardsUnlocked, setRewardsUnlocked] = useState(false);
+
+  useEffect(() => {
+    try { setRewardsUnlocked(localStorage.getItem('sf_rewards_unlocked') === 'true'); } catch { /* ignore */ }
+  }, []);
+
+  useEffect(() => {
+    if (!versionTapCount) return;
+    const timer = window.setTimeout(() => setVersionTapCount(0), 5000);
+    return () => window.clearTimeout(timer);
+  }, [versionTapCount]);
 
   const snapshot = useMemo(() => getStorageSnapshot(), [diagnosticTick]);
   const diagnostics = useMemo(() => {
@@ -208,6 +220,7 @@ const Settings: React.FC = () => {
             {[
               ['信用卡管理', '/settings/creditcards'], ['信用卡週期', '/settings/creditcard-cycles'],
               ['訂閱服務', '/subscriptions'], ['分類管理', '/categories'], ['月預算設定', '/budget'], ['報告統計', '/reports'],
+              ...(rewardsUnlocked ? [['回贈助手', '/settings/creditcards2']] : []),
             ].map(([label, path]) => (
               <button key={path} onClick={() => navigate(path, path === '/subscriptions' ? { state: { from: '/settings' } } : undefined)} className="w-full p-4 flex items-center justify-between text-white hover:bg-surface/80">
                 <span>{label}</span><ChevronRight size={18} className="text-gray-500" />
@@ -234,7 +247,8 @@ const Settings: React.FC = () => {
               <div className="flex items-center gap-2 mb-3"><Palette size={17} /><span>主題</span></div>
               <div className="grid grid-cols-4 gap-2">
                 {[
-                  ['blue', '藍色'], ['ios26', '玻璃'], ['blackgold', '黑金'], ['light', '淺色'],
+                  ['blue', '藍色'], ['red', '紅色'], ['green', '綠色'], ['purple', '紫色'], ['orange', '橙色'],
+                  ['pink', '粉紅'], ['ios26', '玻璃'], ['blackgold', '黑金'], ['tech', '科技'], ['light', '淺色'],
                 ].map(([value, label]) => (
                   <button key={value} onClick={() => setThemeColor(value)} className={`rounded-lg border px-2 py-3 text-xs ${themeColor === value ? 'border-primary text-primary bg-primary/10' : 'sf-divider text-gray-400'}`}>{label}</button>
                 ))}
@@ -280,7 +294,19 @@ const Settings: React.FC = () => {
         <section>
           <h2 className="text-gray-500 text-xs ml-3 mb-2 uppercase tracking-wider">離線與更新</h2>
           <div className="sf-panel divide-y sf-divider overflow-hidden">
-            <div className="p-4 flex justify-between"><span>目前版本</span><span className="text-gray-400">v{__APP_VERSION__}</span></div>
+            <button
+              className="w-full p-4 flex justify-between"
+              title={rewardsUnlocked ? '已解鎖' : `再按 ${Math.max(0, 20 - versionTapCount)} 次解鎖`}
+              onClick={() => {
+                if (rewardsUnlocked) return;
+                const next = versionTapCount + 1;
+                if (next < 20) { setVersionTapCount(next); return; }
+                try { localStorage.setItem('sf_rewards_unlocked', 'true'); } catch { /* ignore */ }
+                setRewardsUnlocked(true);
+                setVersionTapCount(0);
+                setNotice({ tone: 'success', text: '已解鎖信用卡回贈助手。' });
+              }}
+            ><span>目前版本</span><span className="text-gray-400">v{__APP_VERSION__}</span></button>
             <div className="p-4 flex justify-between"><span>網絡狀態</span><span className={navigator.onLine ? 'text-green-400' : 'text-amber-300'}>{navigator.onLine ? '已連線' : '離線模式'}</span></div>
             <button disabled={checkingUpdate} onClick={checkUpdate} className="w-full p-4 flex items-center justify-center gap-2 disabled:opacity-60"><RefreshCw size={17} className={checkingUpdate ? 'animate-spin' : ''} />{checkingUpdate ? '檢查中…' : '檢查更新'}</button>
             <button onClick={() => window.location.reload()} className="w-full p-4 flex items-center justify-center gap-2"><RefreshCw size={17} />重新載入 App</button>
