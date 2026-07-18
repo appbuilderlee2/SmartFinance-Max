@@ -41,7 +41,7 @@ const Layout: React.FC<LayoutProps> = ({ children, hideNav }) => {
       </div>
 
       {!hideNav && (
-        <div className="fixed bottom-0 left-0 right-0 sf-surface border-t sf-divider pb-safe-bottom pt-2 px-4 z-50">
+        <div className="sf-tabbar fixed bottom-0 left-0 right-0 sf-surface border-t sf-divider pb-safe-bottom pt-2 px-4 z-50">
           <div className="flex justify-between items-end max-w-md mx-auto">
             {navItems.map((item) => {
               const isActive = location.pathname === item.path;

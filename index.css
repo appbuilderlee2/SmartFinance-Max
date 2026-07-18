@@ -148,6 +148,146 @@ html.theme-ios26 {
 }
 
 /*
+  theme-applefluid: calm Apple-inspired material hierarchy for the web.
+  Immediate press feedback, floating chrome and accessibility fallbacks are
+  intentionally part of the skin rather than one-off component overrides.
+*/
+html.theme-applefluid {
+  color-scheme: dark;
+  --sf-primary: 10 132 255;
+  --sf-danger: 255 69 58;
+  --sf-success: 48 209 88;
+  --sf-app-bg: 8 10 16;
+  --sf-surface-bg: 38 40 48;
+  --sf-text-primary: 248 248 250;
+  --sf-text-secondary: 199 199 204;
+  --sf-text-muted: 142 142 147;
+  --sf-divider-opacity: 0.11;
+  --sf-surface-alpha: 0.58;
+  --sf-surface-border-opacity: 0.18;
+  --sf-radius-xl: 18px;
+  --sf-radius-2xl: 24px;
+  --sf-radius-3xl: 30px;
+  --sf-shadow-sm: 0 1px 0 rgb(255 255 255 / 0.10), 0 8px 22px rgb(0 0 0 / 0.18);
+  --sf-shadow-md: 0 1px 0 rgb(255 255 255 / 0.12), 0 16px 38px rgb(0 0 0 / 0.28);
+  --sf-shadow-lg: 0 1px 0 rgb(255 255 255 / 0.13), 0 26px 70px rgb(0 0 0 / 0.36);
+  --sf-shadow-xl: 0 40px 110px rgb(0 0 0 / 0.46);
+  --sf-blur-sm: 12px;
+  --sf-blur-md: 20px;
+  --sf-blur-lg: 28px;
+  --sf-blur-xl: 36px;
+  --sf-motion-fast: 110ms;
+  --sf-motion-normal: 300ms;
+  --sf-motion-slow: 420ms;
+  --sf-ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --sf-ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --sf-topbar-alpha: 0.52;
+  --sf-topbar-shadow: 0 12px 34px rgb(0 0 0 / 0.18);
+  --sf-topbar-blur: 24px;
+  --sf-panel-alpha: 0.56;
+  --sf-panel-shadow: var(--sf-shadow-md);
+  --sf-control-alpha: 0.48;
+  --sf-control-shadow: inset 0 1px 0 rgb(255 255 255 / 0.08);
+  --sf-app-bg-image:
+    radial-gradient(900px 620px at 8% -8%, rgb(10 132 255 / 0.24), transparent 62%),
+    radial-gradient(800px 620px at 100% 28%, rgb(94 92 230 / 0.18), transparent 58%),
+    linear-gradient(180deg, rgb(8 10 16), rgb(13 16 24));
+  --sf-gray-50: 248 248 250;
+  --sf-gray-100: 235 235 240;
+  --sf-gray-200: 209 209 214;
+  --sf-gray-300: 199 199 204;
+  --sf-gray-400: 174 174 178;
+  --sf-gray-500: 142 142 147;
+  --sf-gray-600: 99 99 102;
+  --sf-gray-700: 72 72 74;
+  --sf-gray-800: 44 44 46;
+  --sf-gray-900: 28 28 30;
+}
+
+html.theme-applefluid body {
+  font-family: ui-rounded, -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif;
+  font-optical-sizing: auto;
+  letter-spacing: -0.006em;
+}
+
+html.theme-applefluid h1,
+html.theme-applefluid h2,
+html.theme-applefluid h3 {
+  letter-spacing: -0.022em;
+  line-height: 1.12;
+}
+
+html.theme-applefluid button,
+html.theme-applefluid [role="button"] {
+  touch-action: manipulation;
+  transform: translateZ(0) scale(1);
+  transition: transform var(--sf-motion-fast) var(--sf-ease-out), opacity var(--sf-motion-fast) linear, background-color var(--sf-motion-normal) var(--sf-ease-out);
+}
+
+html.theme-applefluid button:active,
+html.theme-applefluid [role="button"]:active {
+  transform: translateZ(0) scale(0.965);
+  opacity: 0.82;
+}
+
+html.theme-applefluid .sf-card,
+html.theme-applefluid .sf-panel,
+html.theme-applefluid .sf-surface {
+  border-top-color: rgb(255 255 255 / 0.22);
+  border-left-color: rgb(255 255 255 / 0.13);
+}
+
+html.theme-applefluid .sf-tabbar {
+  left: 12px;
+  right: 12px;
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 10px);
+  border: 1px solid rgb(255 255 255 / 0.16);
+  border-radius: 28px;
+  padding-bottom: 8px;
+  box-shadow: var(--sf-shadow-lg);
+  overflow: hidden;
+}
+
+html.theme-applefluid .sf-tabbar button {
+  min-width: 44px;
+  min-height: 44px;
+  border-radius: 16px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html.theme-applefluid *,
+  html.theme-applefluid *::before,
+  html.theme-applefluid *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 1ms !important;
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  html.theme-applefluid {
+    --sf-surface-alpha: 0.96;
+    --sf-panel-alpha: 0.96;
+    --sf-topbar-alpha: 0.96;
+    --sf-control-alpha: 0.92;
+    --sf-blur-sm: 0px;
+    --sf-blur-md: 0px;
+    --sf-blur-lg: 0px;
+    --sf-blur-xl: 0px;
+  }
+}
+
+@media (prefers-contrast: more) {
+  html.theme-applefluid {
+    --sf-surface-alpha: 0.94;
+    --sf-panel-alpha: 0.94;
+    --sf-surface-border-opacity: 0.42;
+    --sf-divider-opacity: 0.28;
+  }
+}
+
+/*
   theme-light: clean, flat, high-contrast, no glass
 */
 html.theme-light {

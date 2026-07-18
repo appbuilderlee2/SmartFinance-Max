@@ -1,5 +1,14 @@
 # 更新日誌（Changelog）
 
+## v2.4.0 (2026-07-19)
+
+- 新增可獨立選擇及保存嘅 Apple Fluid 主題，原有主題保持不變。
+- 加入 Apple system typography、分層玻璃材質、亮邊、深度及藍紫環境光。
+- Apple Fluid 底部導覽使用浮動 safe-area tab bar，互動目標最少 44px。
+- 按鈕加入即時按壓回饋；動態只使用 transform／opacity 等 compositor-friendly 屬性。
+- 新增 reduced motion、reduced transparency 及 more contrast 無障礙 fallback。
+- E2E 加入主題套用及重載持久化驗證；Service Worker 升級至 v15。
+
 ## v2.3.0 (2026-07-19)
 
 - 新增以 PBKDF2-SHA-256 衍生保存嘅本機 App PIN 鎖及 5 種自動鎖定時間。

@@ -6,6 +6,18 @@ Pages：https://appbuilderlee2.github.io/SmartFinance-Max/
 
 SmartFinance-Max 以 SmartFinance v1.1.25 為基線，係一個 local-first 記帳 PWA，包含記帳、訂閱自動入帳、預算、報表、信用卡及信用卡週期管理。v2.0 起主要資料儲存於瀏覽器 IndexedDB。
 
+## v2.4.0 更新
+
+- 新增獨立「Apple Fluid」主題，保留全部原有主題並可隨時切換
+- 採用 Apple system font stack、optical sizing、標題負 tracking 及較清晰文字層級
+- 加入藍紫環境光、分層半透明材質、亮邊、深度陰影及較厚大型玻璃面板
+- 底部導覽改為 Apple Fluid 專用浮動 tab bar，保留 iPhone safe area 及 44px 觸控範圍
+- 按鈕在 pointer-down／touch-down 即時縮放及降低透明度，減少操作延遲感
+- 支援 `prefers-reduced-motion`、`prefers-reduced-transparency` 及 `prefers-contrast: more`
+- Apple Fluid 選擇會保存到 IndexedDB，重新載入及離線啟動後繼續使用
+- 手機／桌面 E2E 加入主題選擇、套用及重新載入持久化驗證
+- Service Worker 升級至 v15；版本號及文件同步更新至 v2.4.0
+
 ## v2.3.0 更新
 
 - 新增 4 至 8 位 App PIN 鎖，PIN 以隨機 salt + PBKDF2-SHA-256 120,000 次衍生後保存，不儲存明文

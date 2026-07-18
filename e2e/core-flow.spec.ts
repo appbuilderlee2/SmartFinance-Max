@@ -163,6 +163,12 @@ test('settings data centre protects IndexedDB data during cache maintenance', as
   await expect(page.getByLabel('日期格式')).toHaveValue('DD/MM/YYYY');
   await expect(page.getByLabel('每週開始日')).toHaveValue('0');
 
+  await search.fill('主題');
+  await page.getByRole('button', { name: 'Apple Fluid' }).click();
+  await expect(page.locator('html')).toHaveAttribute('data-sf-theme', 'applefluid');
+  await page.reload();
+  await expect(page.locator('html')).toHaveClass(/theme-applefluid/);
+
   await search.fill('備份');
   await expect(page.getByRole('heading', { name: '資料、備份與還原' })).toBeVisible();
   await expect(page.getByRole('heading', { name: '帳務管理' })).toBeHidden();
