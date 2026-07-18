@@ -1,6 +1,7 @@
 import { Currency } from '../types';
 import { getCurrencySymbol } from './currency';
 import { loadPreferences } from './preferences';
+import { loadSecuritySettings } from './security';
 
 export function getCurrencyFractionDigits(currency: Currency): number {
   return currency === Currency.JPY ? 0 : 2;
@@ -51,6 +52,7 @@ export function parseMoneyInput(value: string, currency: Currency): number | nul
 }
 
 export function formatMoneyNumber(amount: number, currency: Currency): string {
+  if (loadSecuritySettings().privacyMode) return '••••';
   const digits = getCurrencyFractionDigits(currency);
   return new Intl.NumberFormat('en-US', {
     minimumFractionDigits: 0,
@@ -59,6 +61,7 @@ export function formatMoneyNumber(amount: number, currency: Currency): string {
 }
 
 export function formatMoney(amount: number, currency: Currency): string {
+  if (loadSecuritySettings().privacyMode) return '••••';
   const preferences = loadPreferences();
   const absolute = formatMoneyNumber(Math.abs(amount), currency);
   const value = preferences.symbolPosition === 'after'

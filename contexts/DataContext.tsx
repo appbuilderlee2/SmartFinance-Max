@@ -19,6 +19,7 @@ import { canUseReplacement, getCategoryUsage, reassignCategoryReferences } from 
 import { processDueSubscriptions } from '../utils/subscriptionProcessing';
 import { fromMinorUnits, toMinorUnits } from '../utils/money';
 import { processDueRecurringTransactions } from '../utils/recurringTransactions';
+import { resetSecurityCache } from '../utils/security';
 
 export interface CreditCard {
   id: string;
@@ -318,6 +319,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     try {
       await clearStorageData();
+      resetSecurityCache();
     } catch {
       // ignore
     }

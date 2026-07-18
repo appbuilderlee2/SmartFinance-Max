@@ -27,6 +27,7 @@ const CreditCard2SwipeWhich = lazy(routeModules.creditCard2SwipeWhich);
 import Layout from './components/Layout';
 import { hasOnboarded } from './utils/firstRun';
 import { STORAGE_ERROR_EVENT } from './utils/storage';
+import SecurityGate from './components/SecurityGate';
 
 const Loading: React.FC = () => <div className="p-4 text-gray-400">載入中…</div>;
 
@@ -101,6 +102,7 @@ const App: React.FC = () => {
 
   return (
     <DataProvider>
+      <SecurityGate>
       <Router>
         {networkNotice && (
           <div
@@ -295,6 +297,7 @@ const App: React.FC = () => {
           <Route path="*" element={<Navigate to={hasOnboarded() ? "/" : "/welcome"} />} />
         </Routes>
       </Router>
+      </SecurityGate>
     </DataProvider>
   );
 };

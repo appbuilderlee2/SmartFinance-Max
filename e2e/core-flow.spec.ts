@@ -196,3 +196,21 @@ test('settings data centre protects IndexedDB data during cache maintenance', as
   const stored = await readIndexedDbJson<Array<{ id: string }>>(page, 'smartfinance_transactions');
   expect(stored).toEqual([{ id: 'cache-safe' }]);
 });
+
+test('PIN lock rejects an incorrect PIN and unlocks with the correct PIN', async ({ page }) => {
+  await resetAppData(page);
+  await page.goto('/#/settings');
+  const answers = ['2468', '2468'];
+  page.on('dialog', async dialog => dialog.accept(answers.shift() || ''));
+  await page.getByRole('button', { name: '設定 PIN' }).click();
+  await expect(page.getByRole('status')).toContainText('App PIN 鎖已開啟');
+
+  await page.reload();
+  await expect(page.getByRole('heading', { name: 'SmartFinance 已鎖定' })).toBeVisible();
+  await page.getByLabel('解鎖 PIN').fill('0000');
+  await page.getByRole('button', { name: '解鎖' }).click();
+  await expect(page.getByRole('alert')).toHaveText('PIN 不正確');
+  await page.getByLabel('解鎖 PIN').fill('2468');
+  await page.getByRole('button', { name: '解鎖' }).click();
+  await expect(page.getByRole('heading', { name: '設定與資料管理中心' })).toBeVisible();
+});

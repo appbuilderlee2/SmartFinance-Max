@@ -17,6 +17,7 @@ import {
 import { getStorageSnapshot, replaceStorageSnapshot } from '../utils/storage';
 import { ALL_CURRENCIES, loadPreferences, savePreferences, type AppPreferences } from '../utils/preferences';
 import { Currency } from '../types';
+import { createPinSecurity, disablePinSecurity, loadSecuritySettings, saveSecuritySettings, verifyPin, type SecuritySettings } from '../utils/security';
 
 type Notice = { tone: 'success' | 'warning' | 'info'; text: string } | null;
 
@@ -65,6 +66,8 @@ const Settings: React.FC = () => {
   const [versionTapCount, setVersionTapCount] = useState(0);
   const [rewardsUnlocked, setRewardsUnlocked] = useState(false);
   const [preferences, setPreferences] = useState<AppPreferences>(() => loadPreferences());
+  const [security, setSecurity] = useState<SecuritySettings>(() => loadSecuritySettings());
+  const [biometricStatus, setBiometricStatus] = useState('檢查中…');
 
   const updatePreferences = (updates: Partial<AppPreferences>) => {
     const next = { ...preferences, ...updates };
@@ -75,7 +78,41 @@ const Settings: React.FC = () => {
 
   useEffect(() => {
     try { setRewardsUnlocked(localStorage.getItem('sf_rewards_unlocked') === 'true'); } catch { /* ignore */ }
+    if (typeof PublicKeyCredential === 'undefined' || !PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable) {
+      setBiometricStatus('瀏覽器不支援');
+    } else {
+      void PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable().then(available => setBiometricStatus(available ? '裝置支援' : '裝置不支援')).catch(() => setBiometricStatus('無法檢查'));
+    }
   }, []);
+
+  const updateSecurity = (updates: Partial<SecuritySettings>) => {
+    const next = { ...security, ...updates };
+    setSecurity(next);
+    saveSecuritySettings(next);
+    setDiagnosticTick(value => value + 1);
+  };
+
+  const configurePin = async () => {
+    const pin = window.prompt('設定 4 至 8 位數字 PIN：');
+    if (pin === null) return;
+    const confirmation = window.prompt('再次輸入 PIN：');
+    if (pin !== confirmation) { setNotice({ tone: 'warning', text: '兩次 PIN 不相同，未有更改。' }); return; }
+    try {
+      const next = await createPinSecurity(pin, security);
+      setSecurity(next);
+      setNotice({ tone: 'success', text: 'App PIN 鎖已開啟。下次重新開啟 App 需要解鎖。' });
+    } catch (error) {
+      setNotice({ tone: 'warning', text: error instanceof Error ? error.message : 'PIN 設定失敗' });
+    }
+  };
+
+  const removePin = async () => {
+    const pin = window.prompt('輸入現有 PIN 以關閉 App 鎖：');
+    if (pin === null) return;
+    if (!await verifyPin(pin, security)) { setNotice({ tone: 'warning', text: 'PIN 不正確，App 鎖未有關閉。' }); return; }
+    setSecurity(disablePinSecurity());
+    setNotice({ tone: 'success', text: 'App PIN 鎖已關閉。' });
+  };
 
   useEffect(() => {
     if (!versionTapCount) return;
@@ -191,6 +228,7 @@ const Settings: React.FC = () => {
     preferences: matches('個人化', '貨幣', '主題', '外觀', '通知', '日期', '每週', '負數'),
     data: matches('資料', 'IndexedDB', '儲存', '備份', '匯出', '匯入', '還原', '完整性'),
     update: matches('離線', '更新', '快取', '重新載入', '版本'),
+    security: matches('安全', '私隱', 'PIN', '鎖定', 'Face ID', 'Touch ID', '生物認證', '切換器'),
     danger: matches('進階', '危險', '清除', '重置', '刪除'),
   };
 
@@ -357,6 +395,29 @@ const Settings: React.FC = () => {
             <button disabled={checkingUpdate} onClick={checkUpdate} className="w-full p-4 flex items-center justify-center gap-2 disabled:opacity-60"><RefreshCw size={17} className={checkingUpdate ? 'animate-spin' : ''} />{checkingUpdate ? '檢查中…' : '檢查更新'}</button>
             <button onClick={() => window.location.reload()} className="w-full p-4 flex items-center justify-center gap-2"><RefreshCw size={17} />重新載入 App</button>
             <button onClick={async () => { if (window.confirm('只會清除 App 快取，不會刪除 IndexedDB 財務資料。繼續嗎？')) await forceReloadPwa(); }} className="w-full p-4 flex items-center justify-center gap-2"><RefreshCw size={17} />清除快取並重新載入</button>
+          </div>
+        </section>
+      ) : null}
+
+      {sections.security ? (
+        <section>
+          <h2 className="text-gray-500 text-xs ml-3 mb-2 uppercase tracking-wider">安全與私隱</h2>
+          <div className="sf-panel divide-y sf-divider overflow-hidden">
+            <div className="p-4 flex items-center justify-between gap-3">
+              <div><div>App PIN 鎖</div><div className="text-xs text-gray-500 mt-1">PIN 經 PBKDF2 加密雜湊後儲存於本機</div></div>
+              <button onClick={security.lockEnabled ? removePin : configurePin} className={`rounded-lg px-3 py-2 text-sm ${security.lockEnabled ? 'bg-green-500/15 text-green-300' : 'bg-primary/15 text-primary'}`}>{security.lockEnabled ? '已開啟' : '設定 PIN'}</button>
+            </div>
+            {security.lockEnabled ? (
+              <label className="p-4 flex items-center justify-between">自動鎖定
+                <select aria-label="自動鎖定時間" value={security.autoLockMinutes} onChange={event => updateSecurity({ autoLockMinutes: Number(event.target.value) as SecuritySettings['autoLockMinutes'] })} className="bg-transparent text-gray-300 outline-none">
+                  <option value={0}>立即</option><option value={1}>1 分鐘</option><option value={5}>5 分鐘</option><option value={15}>15 分鐘</option><option value={30}>30 分鐘</option>
+                </select>
+              </label>
+            ) : null}
+            <div className="p-4 flex items-center justify-between"><div><div>Face ID／Touch ID 狀態</div><div className="text-xs text-gray-500 mt-1">PWA 只顯示裝置支援狀態；目前以 PIN 解鎖</div></div><span className="text-xs text-gray-400">{biometricStatus}</span></div>
+            <label className="p-4 flex items-center justify-between gap-3"><div><div>金額私隱模式</div><div className="text-xs text-gray-500 mt-1">將 App 金額顯示為 ••••</div></div><input aria-label="金額私隱模式" type="checkbox" checked={security.privacyMode} onChange={event => updateSecurity({ privacyMode: event.target.checked })} className="w-5 h-5" /></label>
+            <label className="p-4 flex items-center justify-between gap-3"><div><div>離開 App 時隱藏畫面</div><div className="text-xs text-gray-500 mt-1">切換 App 或鎖機時顯示私隱遮罩</div></div><input aria-label="App 切換器私隱遮罩" type="checkbox" checked={security.hideInAppSwitcher} onChange={event => updateSecurity({ hideInAppSwitcher: event.target.checked })} className="w-5 h-5" /></label>
+            <div className="p-4 text-xs text-amber-200 bg-amber-500/5">資料只儲存在此裝置。清除 Safari／瀏覽器網站資料會同時刪除 IndexedDB 財務資料；操作前請先匯出 JSON 備份。</div>
           </div>
         </section>
       ) : null}

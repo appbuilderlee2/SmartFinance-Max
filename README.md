@@ -6,6 +6,19 @@ Pages：https://appbuilderlee2.github.io/SmartFinance-Max/
 
 SmartFinance-Max 以 SmartFinance v1.1.25 為基線，係一個 local-first 記帳 PWA，包含記帳、訂閱自動入帳、預算、報表、信用卡及信用卡週期管理。v2.0 起主要資料儲存於瀏覽器 IndexedDB。
 
+## v2.3.0 更新
+
+- 新增 4 至 8 位 App PIN 鎖，PIN 以隨機 salt + PBKDF2-SHA-256 120,000 次衍生後保存，不儲存明文
+- 支援離開 App 後立即、1、5、15 或 30 分鐘自動鎖定
+- 錯誤 PIN 會拒絕解鎖；正確 PIN 先重新顯示本機財務資料
+- 新增金額私隱模式，全 App 統一金額 formatter 顯示為 `••••`
+- 切換 App／鎖機時可顯示全畫面私隱遮罩，降低 App switcher 預覽洩露資料風險
+- 顯示 Face ID／Touch ID 平台認證支援狀態；目前 PWA 以本機 PIN 作實際解鎖方式
+- 新增清除 Safari／瀏覽器網站資料會刪除 IndexedDB 嘅明確警告
+- 安全設定包含於現有 IndexedDB 及備份，舊資料自動使用關閉 PIN 嘅安全相容預設
+- 單元測試增至 39 個，手機／桌面 E2E 增至 14 個 case
+- Service Worker 升級至 v14；版本號及文件同步更新至 v2.3.0
+
 ## v2.2.0 更新
 
 - 新增常用貨幣管理，新增訂閱時只顯示已啟用貨幣，主貨幣會自動保留
