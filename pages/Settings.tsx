@@ -191,7 +191,7 @@ const Settings: React.FC = () => {
         <p className="text-xs text-gray-500 mt-1">SmartFinance v{__APP_VERSION__}</p>
       </header>
 
-      <label className="sf-panel flex items-center gap-3 px-4 py-3" aria-label="搜尋設定">
+      <label className="sf-panel flex items-center gap-3 px-4 py-3">
         <Search size={18} className="text-gray-500" />
         <input
           aria-label="搜尋設定"
