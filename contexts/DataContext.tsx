@@ -86,7 +86,7 @@ interface DataContextType {
   updateCreditCard: (id: string, updates: Partial<CreditCard>) => void;
   setCreditCards: (cards: CreditCard[]) => void;
   setThemeColor: (color: ThemeName) => void;
-  resetData: () => Promise<void>;
+  resetData: (confirmed?: boolean) => Promise<void>;
 }
 
 const DataContext = createContext<DataContextType>({} as DataContextType);
@@ -313,8 +313,8 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setCreditCards(prev => prev.map(c => c.id === id ? { ...c, ...updates } : c));
   };
 
-  const resetData = async () => {
-    if (!window.confirm("確定要重置所有資料？這將清除您的所有紀錄（包含交易/訂閱/信用卡等）。")) return;
+  const resetData = async (confirmed = false) => {
+    if (!confirmed && !window.confirm("確定要重置所有資料？這將清除您的所有紀錄（包含交易/訂閱/信用卡等）。")) return;
 
     try {
       await clearStorageData();

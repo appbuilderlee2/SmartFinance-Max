@@ -145,3 +145,45 @@ test('cached app opens immediately offline and reports reconnection', async ({ p
   await context.setOffline(false);
   await expect(page.getByRole('status').filter({ hasText: '網絡已恢復' })).toBeVisible();
 });
+
+test('settings data centre protects IndexedDB data during cache maintenance', async ({ page }) => {
+  await resetAppData(page);
+  await page.goto('/#/settings');
+
+  await expect(page.getByRole('heading', { name: '設定與資料管理中心' })).toBeVisible();
+  await expect(page.getByText('IndexedDB 正常')).toBeVisible();
+
+  const search = page.getByLabel('搜尋設定');
+  await search.fill('備份');
+  await expect(page.getByRole('heading', { name: '資料、備份與還原' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: '帳務管理' })).toBeHidden();
+  await page.getByRole('button', { name: '檢查資料完整性' }).click();
+  await expect(page.getByRole('status')).toContainText('資料檢查完成');
+
+  await search.fill('刪除');
+  await page.getByRole('button', { name: '刪除所有財務資料' }).click();
+  const deleteButton = page.getByRole('button', { name: '確認刪除' });
+  await expect(deleteButton).toBeDisabled();
+  await page.getByLabel('輸入「刪除」確認').fill('刪除');
+  await expect(deleteButton).toBeEnabled();
+  await page.getByRole('button', { name: '取消' }).click();
+
+  await page.evaluate(async () => new Promise<void>((resolve, reject) => {
+    const open = indexedDB.open('smartfinance-max', 1);
+    open.onerror = () => reject(open.error);
+    open.onsuccess = () => {
+      const database = open.result;
+      const transaction = database.transaction('app-data', 'readwrite');
+      transaction.objectStore('app-data').put(JSON.stringify([{ id: 'cache-safe' }]), 'smartfinance_transactions');
+      transaction.oncomplete = () => { database.close(); resolve(); };
+      transaction.onerror = () => reject(transaction.error);
+    };
+  }));
+
+  await search.fill('快取');
+  page.once('dialog', dialog => dialog.accept());
+  await page.getByRole('button', { name: '清除快取並重新載入' }).click();
+  await expect(page.getByRole('heading', { name: '設定與資料管理中心' })).toBeVisible();
+  const stored = await readIndexedDbJson<Array<{ id: string }>>(page, 'smartfinance_transactions');
+  expect(stored).toEqual([{ id: 'cache-safe' }]);
+});
