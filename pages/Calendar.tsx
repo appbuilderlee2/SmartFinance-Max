@@ -11,11 +11,14 @@ import { loadPreferences } from '../utils/preferences';
 const Calendar: React.FC = () => {
     const navigate = useNavigate();
     const { transactions, currency, getCategory } = useData();
-    const [currentDate, setCurrentDate] = useState(new Date());
+    const [visibleMonth, setVisibleMonth] = useState(() => {
+        const today = new Date();
+        return today.getFullYear() * 12 + today.getMonth();
+    });
     const [selectedDay, setSelectedDay] = useState<number | null>(null);
 
-    const year = currentDate.getFullYear();
-    const month = currentDate.getMonth();
+    const year = Math.floor(visibleMonth / 12);
+    const month = visibleMonth % 12;
     const yearsWindow = useMemo(() => {
         const base = new Date().getFullYear();
         return Array.from({ length: 50 }, (_, i) => base - 19 + i); // past 19 yrs + current + ~30 future yrs
@@ -93,12 +96,12 @@ const Calendar: React.FC = () => {
     // Display transactions based on selection
     const displayTransactions = selectedDay !== null ? selectedDayTransactions : monthlyTransactions;
     const prevMonth = () => {
-        setCurrentDate(previous => new Date(previous.getFullYear(), previous.getMonth() - 1, 1));
+        setVisibleMonth(previous => previous - 1);
         setSelectedDay(null);
     };
 
     const nextMonth = () => {
-        setCurrentDate(previous => new Date(previous.getFullYear(), previous.getMonth() + 1, 1));
+        setVisibleMonth(previous => previous + 1);
         setSelectedDay(null);
     };
 
@@ -169,7 +172,7 @@ const Calendar: React.FC = () => {
                 <div className="flex items-center gap-2 w-48">
                     <select
                         value={year}
-                        onChange={(e) => { setCurrentDate(new Date(Number(e.target.value), month, 1)); setSelectedDay(null); }}
+                        onChange={(e) => { setVisibleMonth(Number(e.target.value) * 12 + month); setSelectedDay(null); }}
                         className="sf-control text-white text-sm rounded-lg px-3 py-1 flex-1"
                     >
                         {yearsWindow.map(y => (
@@ -178,7 +181,7 @@ const Calendar: React.FC = () => {
                     </select>
                     <select
                         value={month}
-                        onChange={(e) => { setCurrentDate(new Date(year, Number(e.target.value), 1)); setSelectedDay(null); }}
+                        onChange={(e) => { setVisibleMonth(year * 12 + Number(e.target.value)); setSelectedDay(null); }}
                         className="sf-control text-white text-sm rounded-lg px-3 py-1 flex-1"
                     >
                         {monthsList.map(m => (
@@ -218,7 +221,13 @@ const Calendar: React.FC = () => {
                         本頁統計以 {currency} 計算，已排除其他幣別交易。
                     </div>
                 )}
-                <div className="sf-panel p-4" aria-live="polite" aria-atomic="true">
+                <div
+                    key={visibleMonth}
+                    data-month-key={`${year}-${String(month + 1).padStart(2, '0')}`}
+                    className="sf-panel p-4"
+                    aria-live="polite"
+                    aria-atomic="true"
+                >
                     <h3 className="text-sm text-gray-400 mb-3">{year}年{month + 1}月摘要</h3>
                     <div className="grid grid-cols-2 gap-4">
                         <div>

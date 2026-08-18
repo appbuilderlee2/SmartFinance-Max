@@ -124,6 +124,12 @@ test('calendar summary follows rapid month changes immediately', async ({ page }
   await page.getByRole('button', { name: '下個月' }).click();
   await expect(summary.getByRole('heading', { name: monthFixtures[2].heading })).toBeVisible();
   await expect(summary).toContainText(`HK$ ${monthFixtures[2].amount}`);
+
+  const monthSelect = page.getByRole('combobox').nth(1);
+  await monthSelect.selectOption(String(new Date().getMonth()));
+  await expect(summary.getByRole('heading', { name: monthFixtures[0].heading })).toBeVisible();
+  await expect(summary).toHaveAttribute('data-month-key', monthFixtures[0].heading.replace('年', '-').replace('月摘要', '').replace(/-(\d)$/, '-0$1'));
+  await expect(summary).toContainText(`HK$ ${monthFixtures[0].amount}`);
 });
 
 test('subscription keeps its own currency', async ({ page }) => {

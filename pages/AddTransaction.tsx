@@ -192,6 +192,7 @@ const AddTransaction: React.FC = () => {
               type="date"
               value={date}
               onChange={e => setDate(e.target.value)}
+              onInput={e => setDate(e.currentTarget.value)}
               className="w-full bg-transparent text-white focus:outline-none"
             />
           </div>
