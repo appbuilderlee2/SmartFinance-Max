@@ -73,6 +73,59 @@ test('transaction survives navigation and reload', async ({ page }) => {
   expect(stored[0].recurrence).toBe('monthly');
 });
 
+test('calendar summary follows rapid month changes immediately', async ({ page }) => {
+  await resetAppData(page);
+  const monthFixtures = await page.evaluate(async () => {
+    const start = new Date();
+    const fixtures = [0, 1, 2].map((offset, index) => {
+      const date = new Date(start.getFullYear(), start.getMonth() + offset, 15);
+      return {
+        id: `calendar-summary-${offset}`,
+        type: 'EXPENSE',
+        amount: (index + 1) * 111,
+        categoryId: 'food',
+        date: `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-15`,
+        note: `月曆摘要 ${offset}`,
+        currency: 'HKD',
+      };
+    });
+
+    await new Promise<void>((resolve, reject) => {
+      const open = indexedDB.open('smartfinance-max', 1);
+      open.onerror = () => reject(open.error);
+      open.onsuccess = () => {
+        const database = open.result;
+        const transaction = database.transaction('app-data', 'readwrite');
+        transaction.objectStore('app-data').put(JSON.stringify(fixtures), 'smartfinance_transactions');
+        transaction.oncomplete = () => { database.close(); resolve(); };
+        transaction.onerror = () => reject(transaction.error);
+      };
+    });
+
+    return fixtures.map(fixture => {
+      const date = new Date(`${fixture.date}T12:00:00`);
+      return {
+        heading: `${date.getFullYear()}年${date.getMonth() + 1}月摘要`,
+        amount: fixture.amount,
+      };
+    });
+  });
+
+  await page.reload();
+  await page.goto('/#/calendar');
+  const summary = page.locator('[aria-live="polite"]');
+  await expect(summary.getByRole('heading', { name: monthFixtures[0].heading })).toBeVisible();
+  await expect(summary).toContainText(`HK$ ${monthFixtures[0].amount}`);
+
+  await page.getByRole('button', { name: '下個月' }).click();
+  await expect(summary.getByRole('heading', { name: monthFixtures[1].heading })).toBeVisible();
+  await expect(summary).toContainText(`HK$ ${monthFixtures[1].amount}`);
+
+  await page.getByRole('button', { name: '下個月' }).click();
+  await expect(summary.getByRole('heading', { name: monthFixtures[2].heading })).toBeVisible();
+  await expect(summary).toContainText(`HK$ ${monthFixtures[2].amount}`);
+});
+
 test('subscription keeps its own currency', async ({ page }) => {
   await resetAppData(page);
   await page.goto('/#/subscriptions');

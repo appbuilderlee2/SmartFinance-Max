@@ -26,102 +26,79 @@ const Calendar: React.FC = () => {
     const firstDayOfMonth = new Date(year, month, 1).getDay();
     const daysInMonth = new Date(year, month + 1, 0).getDate();
 
-    // Calculate daily totals for the month
-    const dailyTotals = useMemo(() => {
-        const totals: { [day: number]: { income: number; expense: number } } = {};
+    // Build the selected month's calendar, summary and transaction list in one pass.
+    // Keeping these values in one snapshot prevents the summary from doing separate
+    // work after the calendar has already moved to a new month.
+    const monthView = useMemo(() => {
+        const dailyMinorTotals: { [day: number]: { income: number; expense: number } } = {};
+        const totalMinor = { income: 0, expense: 0 };
+        const monthTransactions = [] as typeof transactions;
+        let hasOtherCurrencies = false;
 
-        transactions.forEach(tx => {
+        for (const tx of transactions) {
             const txDate = new Date(tx.date);
-            const txCurrency = (tx.currency as Currency) || currency;
-            if (txCurrency !== currency) return;
-            if (txDate.getFullYear() === year && txDate.getMonth() === month) {
-                const day = txDate.getDate();
-                if (!totals[day]) {
-                    totals[day] = { income: 0, expense: 0 };
-                }
-                if (tx.type === TransactionType.EXPENSE) {
-                    totals[day].expense += toMinorUnits(tx.amount, currency);
-                } else {
-                    totals[day].income += toMinorUnits(tx.amount, currency);
-                }
-            }
-        });
+            if (txDate.getFullYear() !== year || txDate.getMonth() !== month) continue;
 
-        return Object.fromEntries(
-            Object.entries(totals).map(([day, value]) => [day, {
+            const txCurrency = (tx.currency as Currency) || currency;
+            if (txCurrency !== currency) {
+                hasOtherCurrencies = true;
+                continue;
+            }
+
+            monthTransactions.push(tx);
+            const day = txDate.getDate();
+            const dayTotal = dailyMinorTotals[day] ?? { income: 0, expense: 0 };
+            const amount = toMinorUnits(tx.amount, currency);
+            if (tx.type === TransactionType.EXPENSE) {
+                dayTotal.expense += amount;
+                totalMinor.expense += amount;
+            } else {
+                dayTotal.income += amount;
+                totalMinor.income += amount;
+            }
+            dailyMinorTotals[day] = dayTotal;
+        }
+
+        monthTransactions.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+        const dailyTotals = Object.fromEntries(
+            Object.entries(dailyMinorTotals).map(([day, value]) => [day, {
                 income: fromMinorUnits(value.income, currency),
                 expense: fromMinorUnits(value.expense, currency),
             }])
         );
-    }, [transactions, year, month, currency]);
 
-    // Monthly totals
-    const monthlyTotals = useMemo(() => {
-        const totals = transactions.reduce(
-            (acc, tx) => {
-                const txDate = new Date(tx.date);
-                const txCurrency = (tx.currency as Currency) || currency;
-                if (txCurrency !== currency) return acc;
-                if (txDate.getFullYear() === year && txDate.getMonth() === month) {
-                    if (tx.type === TransactionType.EXPENSE) {
-                        acc.expense += toMinorUnits(tx.amount, currency);
-                    } else {
-                        acc.income += toMinorUnits(tx.amount, currency);
-                    }
-                }
-                return acc;
-            },
-            { income: 0, expense: 0 }
-        );
         return {
-            income: fromMinorUnits(totals.income, currency),
-            expense: fromMinorUnits(totals.expense, currency),
+            dailyTotals,
+            monthlyTotals: {
+                income: fromMinorUnits(totalMinor.income, currency),
+                expense: fromMinorUnits(totalMinor.expense, currency),
+            },
+            monthlyTransactions: monthTransactions,
+            hasOtherCurrenciesThisMonth: hasOtherCurrencies,
         };
     }, [transactions, year, month, currency]);
 
-    // Monthly transactions (all transactions for the month)
-    const monthlyTransactions = useMemo(() => {
-        return transactions
-            .filter(tx => {
-                const txDate = new Date(tx.date);
-                const txCurrency = (tx.currency as Currency) || currency;
-                if (txCurrency !== currency) return false;
-                return txDate.getFullYear() === year && txDate.getMonth() === month;
-            })
-            .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-    }, [transactions, year, month, currency]);
+    const { dailyTotals, monthlyTotals, monthlyTransactions, hasOtherCurrenciesThisMonth } = monthView;
 
     // Transactions for selected day
     const selectedDayTransactions = useMemo(() => {
         if (selectedDay === null) return [];
-        return transactions.filter(tx => {
+        return monthlyTransactions.filter(tx => {
             const txDate = new Date(tx.date);
-            const txCurrency = (tx.currency as Currency) || currency;
-            if (txCurrency !== currency) return false;
-            return txDate.getFullYear() === year &&
-                txDate.getMonth() === month &&
-                txDate.getDate() === selectedDay;
+            return txDate.getDate() === selectedDay;
         });
-    }, [transactions, year, month, selectedDay, currency]);
+    }, [monthlyTransactions, selectedDay]);
 
     // Display transactions based on selection
     const displayTransactions = selectedDay !== null ? selectedDayTransactions : monthlyTransactions;
-    const hasOtherCurrenciesThisMonth = useMemo(() => {
-        return transactions.some(tx => {
-            const txDate = new Date(tx.date);
-            if (txDate.getFullYear() !== year || txDate.getMonth() !== month) return false;
-            const txCurrency = (tx.currency as Currency) || currency;
-            return txCurrency !== currency;
-        });
-    }, [transactions, year, month, currency]);
-
     const prevMonth = () => {
-        setCurrentDate(new Date(year, month - 1, 1));
+        setCurrentDate(previous => new Date(previous.getFullYear(), previous.getMonth() - 1, 1));
         setSelectedDay(null);
     };
 
     const nextMonth = () => {
-        setCurrentDate(new Date(year, month + 1, 1));
+        setCurrentDate(previous => new Date(previous.getFullYear(), previous.getMonth() + 1, 1));
         setSelectedDay(null);
     };
 
@@ -186,7 +163,7 @@ const Calendar: React.FC = () => {
         <div className="min-h-screen bg-background pb-24 pt-safe-top">
             {/* Header */}
             <div className="px-4 py-3 flex justify-between items-center sf-topbar sticky top-0 z-50">
-                <button onClick={prevMonth} className="p-2 text-primary">
+                <button onClick={prevMonth} aria-label="上個月" className="p-2 text-primary">
                     <ChevronLeft size={24} />
                 </button>
                 <div className="flex items-center gap-2 w-48">
@@ -209,7 +186,7 @@ const Calendar: React.FC = () => {
                         ))}
                     </select>
                 </div>
-                <button onClick={nextMonth} className="p-2 text-primary">
+                <button onClick={nextMonth} aria-label="下個月" className="p-2 text-primary">
                     <ChevronRight size={24} />
                 </button>
             </div>
@@ -241,8 +218,8 @@ const Calendar: React.FC = () => {
                         本頁統計以 {currency} 計算，已排除其他幣別交易。
                     </div>
                 )}
-                <div className="sf-panel p-4">
-                    <h3 className="text-sm text-gray-400 mb-3">本月摘要</h3>
+                <div className="sf-panel p-4" aria-live="polite" aria-atomic="true">
+                    <h3 className="text-sm text-gray-400 mb-3">{year}年{month + 1}月摘要</h3>
                     <div className="grid grid-cols-2 gap-4">
                         <div>
                             <p className="text-xs text-gray-500">收入</p>
