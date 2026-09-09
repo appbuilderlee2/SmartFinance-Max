@@ -55,6 +55,10 @@ const App: React.FC = () => {
     return () => window.removeEventListener('beforeunload', beforeUnload);
   }, []);
 
+  useEffect(() => subscribeStorage(() => {
+    if (getSaveStatus() === 'saved') setStorageError(false);
+  }), []);
+
   useEffect(() => {
     const onStorageError = () => setStorageError(true);
     window.addEventListener(STORAGE_ERROR_EVENT, onStorageError);

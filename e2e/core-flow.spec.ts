@@ -155,31 +155,14 @@ test('subscription keeps its own currency', async ({ page }) => {
 });
 
 test('legacy localStorage data migrates to IndexedDB', async ({ page }) => {
-  await page.goto('/');
-  await expect(page.getByRole('status').filter({ hasText: '已儲存' })).toBeVisible();
-  await page.evaluate(async () => {
-    localStorage.clear();
-    await new Promise<void>((resolve, reject) => {
-      const request = indexedDB.open('smartfinance-max');
-      request.onerror = () => reject(request.error);
-      request.onsuccess = () => {
-        const database = request.result;
-        const transaction = database.transaction(['app-data', 'meta', 'transactions'], 'readwrite');
-        transaction.objectStore('app-data').clear();
-        transaction.objectStore('meta').clear();
-        transaction.objectStore('transactions').clear();
-        transaction.oncomplete = () => { database.close(); resolve(); };
-        transaction.onerror = () => reject(transaction.error);
-      };
-    });
+  // Seed before the app ever hydrates, as on a genuine first upgrade.
+  await page.addInitScript(() => {
     localStorage.setItem('smartfinance_has_onboarded', 'true');
     localStorage.setItem('smartfinance_transactions', JSON.stringify([{
       id: 'legacy-e2e', type: 'EXPENSE', amount: 88, categoryId: 'food',
       date: new Date().toISOString(), note: '舊資料遷移', currency: 'HKD',
     }]));
   });
-  await page.reload();
-
   await page.goto('/#/records');
   await expect(page.getByText('舊資料遷移')).toBeVisible();
   const stored = await readIndexedDbJson<any[]>(page, 'smartfinance_transactions');
@@ -266,8 +249,8 @@ test('settings data centre protects IndexedDB data during cache maintenance', as
     open.onerror = () => reject(open.error);
     open.onsuccess = () => {
       const database = open.result;
-      const transaction = database.transaction('app-data', 'readwrite');
-      transaction.objectStore('app-data').put(JSON.stringify([{ id: 'cache-safe' }]), 'smartfinance_transactions');
+      const transaction = database.transaction('transactions', 'readwrite');
+      transaction.objectStore('transactions').put({ id: 'cache-safe', amount: 1, date: '2026-09-01', note: '', categoryId: 'food', type: 'EXPENSE' });
       transaction.oncomplete = () => { database.close(); resolve(); };
       transaction.onerror = () => reject(transaction.error);
     };
@@ -275,10 +258,10 @@ test('settings data centre protects IndexedDB data during cache maintenance', as
 
   await search.fill('快取');
   page.once('dialog', dialog => dialog.accept());
-  await page.getByRole('button', { name: '清除快取並重新載入' }).click();
+  await Promise.all([page.waitForEvent('load'), page.getByRole('button', { name: '清除快取並重新載入' }).click()]);
   await expect(page.getByRole('heading', { name: '設定與資料管理中心' })).toBeVisible();
   const stored = await readIndexedDbJson<Array<{ id: string }>>(page, 'smartfinance_transactions');
-  expect(stored).toEqual([{ id: 'cache-safe' }]);
+  expect(stored).toEqual([expect.objectContaining({ id: 'cache-safe', amount: 1 })]);
 });
 
 test('PIN lock rejects an incorrect PIN and unlocks with the correct PIN', async ({ page }) => {

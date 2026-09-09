@@ -120,7 +120,8 @@ export function initializeStorage(): Promise<StorageInitialization> {
       );
       replaceCache(snapshot);
       // Reconcile mirrors written by older app versions before hydration.
-      // New writes update the mirror only after the database commit.
+      // Theme is synchronously mirrored before yielding, so reload cannot
+      // reconcile a stale mirror over a newly committed setting.
       localStorage.setItem('sf_indexeddb_authoritative', 'true');
       backend = 'indexeddb';
       initialized = true;
@@ -181,10 +182,13 @@ export function writeText(key: string, value: string): Promise<boolean> {
   if (key === TRANSACTIONS_KEY) return writeCoreData(JSON.parse(value), {});
   if (cache.get(key) === value) return Promise.resolve(saveStatus === 'saved');
   cache.set(key, value);
+  if (key === THEME_KEY) {
+    try { localStorage.setItem(key, value); } catch { /* Retried by the queued job. */ }
+  }
   return enqueue(async () => {
+    if (key === THEME_KEY && cache.get(key) === value) localStorage.setItem(key, value);
     if (backend === 'indexeddb' && database) await writeDatabaseValue(database, key, value);
     else localStorage.setItem(key, value);
-    if (key === THEME_KEY) localStorage.setItem(key, value);
   });
 }
 

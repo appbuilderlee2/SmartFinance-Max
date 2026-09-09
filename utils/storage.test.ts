@@ -55,3 +55,15 @@ describe('durable storage queue', () => {
     database.close();
   });
 });
+
+it('mirrors theme synchronously even while another write is pending', async () => {
+  const storage = await setup();
+  const pending = storage.writeCoreData([row('first')], {});
+  const theme = storage.writeText('smartfinance_themecolor', 'applefluid-dark');
+  expect(localStorage.getItem('smartfinance_themecolor')).toBe('applefluid-dark');
+  await Promise.all([pending, theme]);
+  const { openSmartFinanceDatabase, readDatabaseSnapshot } = await import('./indexedDb');
+  const database = await openSmartFinanceDatabase();
+  expect((await readDatabaseSnapshot(database)).smartfinance_themecolor).toBe('applefluid-dark');
+  database.close();
+});

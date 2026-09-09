@@ -11,7 +11,7 @@
 
 Migration: existing v1 data moves in an atomic transaction. Close older tabs if they block the schema upgrade. Keep a JSON export before deploying; older app code cannot open the v2 database directly. Receipts remain attached to individual transaction records; full-ledger loading is still required at startup and for exports.
 
-Validation: typecheck, production build and 54 unit/regression tests passed locally, including a 5,000-row one-edit write-count check. Local rendered QA was blocked by the browser environment (ERR_BLOCKED_BY_CLIENT); CI browser tests remain the release gate. No iPhone physical-device claims are made.
+Validation: typecheck, production build and 55 unit/regression tests passed locally, including a 5,000-row one-edit write-count check. Local rendered QA was blocked by the browser environment (ERR_BLOCKED_BY_CLIENT); CI browser tests remain the release gate. No iPhone physical-device claims are made.
 
 # 更新日誌（Changelog）
 

@@ -470,8 +470,8 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     });
   }, [categories]);
 
-  const ledger = useMemo<LedgerData>(() => {
-    const categoryMap = new Map(sortedCategories.map(category => [category.id, category]));
+  const categoryMap = useMemo(() => new Map(sortedCategories.map(category => [category.id, category])), [sortedCategories]);
+  const byMonth = useMemo(() => {
     const byMonth = new Map<string, Transaction[]>();
     for (const tx of transactions) {
       const date = parseDate(tx.date);
@@ -480,8 +480,11 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const rows = byMonth.get(key) || [];
       rows.push(tx); byMonth.set(key, rows);
     }
-    return { transactions, categories: sortedCategories, budgets, currency, byMonth, getCategory: id => categoryMap.get(id) };
-  }, [transactions, sortedCategories, budgets, currency]);
+    return byMonth;
+  }, [transactions]);
+  const ledger = useMemo<LedgerData>(() => ({
+    transactions, categories: sortedCategories, budgets, currency, byMonth, getCategory: id => categoryMap.get(id),
+  }), [transactions, sortedCategories, budgets, currency, byMonth, categoryMap]);
 
   if (loadError) return <div role="alert" className="p-6">{loadError}<button className="block p-3" onClick={() => window.location.reload()}>重新載入</button></div>;
   if (!storageReady) {
