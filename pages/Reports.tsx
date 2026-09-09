@@ -1,7 +1,7 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import { ChevronLeft, BarChart2, Download, PieChart, BarChart3, LineChart } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { useData } from '../contexts/DataContext';
+import { useLedger } from '../contexts/DataContext';
 import { Currency, TransactionType } from '../types';
 import { getCurrencySymbol } from '../utils/currency';
 import { parseDate, toLocalYMD } from '../utils/date';
@@ -13,7 +13,7 @@ type RangePreset = 'this-month' | 'this-year' | 'all' | 'custom';
 
 const Reports: React.FC = () => {
   const navigate = useNavigate();
-  const { transactions, categories, currency, budgets } = useData();
+  const { transactions, categories, currency, budgets } = useLedger();
 
   const categoryById = useMemo(() => {
     return new Map(categories.map(c => [c.id, c] as const));

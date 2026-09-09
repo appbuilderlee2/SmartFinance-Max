@@ -2,16 +2,18 @@ import { expect, test } from '@playwright/test';
 
 const resetAppData = async (page: import('@playwright/test').Page) => {
   await page.goto('/');
+  await expect(page.getByRole('status').filter({ hasText: '已儲存' })).toBeVisible();
   await page.evaluate(async () => {
     localStorage.clear();
     await new Promise<void>((resolve, reject) => {
-      const request = indexedDB.open('smartfinance-max', 1);
+      const request = indexedDB.open('smartfinance-max');
       request.onerror = () => reject(request.error);
       request.onsuccess = () => {
         const database = request.result;
-        const transaction = database.transaction(['app-data', 'meta'], 'readwrite');
+        const transaction = database.transaction(['app-data', 'meta', 'transactions'], 'readwrite');
         transaction.objectStore('app-data').clear();
         transaction.objectStore('meta').clear();
+        transaction.objectStore('transactions').clear();
         transaction.oncomplete = () => { database.close(); resolve(); };
         transaction.onerror = () => reject(transaction.error);
       };
@@ -23,15 +25,17 @@ const resetAppData = async (page: import('@playwright/test').Page) => {
 
 const readIndexedDbJson = async <T,>(page: import('@playwright/test').Page, key: string): Promise<T> => {
   return page.evaluate(async (storageKey) => new Promise<T>((resolve, reject) => {
-    const open = indexedDB.open('smartfinance-max', 1);
+    const open = indexedDB.open('smartfinance-max');
     open.onerror = () => reject(open.error);
     open.onsuccess = () => {
       const database = open.result;
-      const request = database.transaction('app-data', 'readonly').objectStore('app-data').get(storageKey);
+      const request = storageKey === 'smartfinance_transactions'
+        ? database.transaction('transactions', 'readonly').objectStore('transactions').getAll()
+        : database.transaction('app-data', 'readonly').objectStore('app-data').get(storageKey);
       request.onerror = () => reject(request.error);
       request.onsuccess = () => {
         database.close();
-        resolve(JSON.parse(request.result || '[]') as T);
+        resolve((storageKey === 'smartfinance_transactions' ? request.result : JSON.parse(request.result || '[]')) as T);
       };
     };
   }), key);
@@ -91,7 +95,7 @@ test('calendar summary follows rapid month changes immediately', async ({ page }
     });
 
     await new Promise<void>((resolve, reject) => {
-      const open = indexedDB.open('smartfinance-max', 1);
+      const open = indexedDB.open('smartfinance-max');
       open.onerror = () => reject(open.error);
       open.onsuccess = () => {
         const database = open.result;
@@ -113,7 +117,7 @@ test('calendar summary follows rapid month changes immediately', async ({ page }
 
   await page.reload();
   await page.goto('/#/calendar');
-  const summary = page.locator('[aria-live="polite"]');
+  const summary = page.locator('[data-month-key]');
   await expect(summary.getByRole('heading', { name: monthFixtures[0].heading })).toBeVisible();
   await expect(summary).toContainText(`HK$ ${monthFixtures[0].amount}`);
 
@@ -152,16 +156,18 @@ test('subscription keeps its own currency', async ({ page }) => {
 
 test('legacy localStorage data migrates to IndexedDB', async ({ page }) => {
   await page.goto('/');
+  await expect(page.getByRole('status').filter({ hasText: '已儲存' })).toBeVisible();
   await page.evaluate(async () => {
     localStorage.clear();
     await new Promise<void>((resolve, reject) => {
-      const request = indexedDB.open('smartfinance-max', 1);
+      const request = indexedDB.open('smartfinance-max');
       request.onerror = () => reject(request.error);
       request.onsuccess = () => {
         const database = request.result;
-        const transaction = database.transaction(['app-data', 'meta'], 'readwrite');
+        const transaction = database.transaction(['app-data', 'meta', 'transactions'], 'readwrite');
         transaction.objectStore('app-data').clear();
         transaction.objectStore('meta').clear();
+        transaction.objectStore('transactions').clear();
         transaction.oncomplete = () => { database.close(); resolve(); };
         transaction.onerror = () => reject(transaction.error);
       };
@@ -245,7 +251,7 @@ test('settings data centre protects IndexedDB data during cache maintenance', as
   await expect(page.getByRole('heading', { name: '資料、備份與還原' })).toBeVisible();
   await expect(page.getByRole('heading', { name: '帳務管理' })).toBeHidden();
   await page.getByRole('button', { name: '檢查資料完整性' }).click();
-  await expect(page.getByRole('status')).toContainText('資料檢查完成');
+  await expect(page.getByRole('status').filter({ hasText: '資料檢查完成' })).toBeVisible();
 
   await search.fill('刪除');
   await page.getByRole('button', { name: '刪除所有財務資料' }).click();
@@ -256,7 +262,7 @@ test('settings data centre protects IndexedDB data during cache maintenance', as
   await page.getByRole('button', { name: '取消' }).click();
 
   await page.evaluate(async () => new Promise<void>((resolve, reject) => {
-    const open = indexedDB.open('smartfinance-max', 1);
+    const open = indexedDB.open('smartfinance-max');
     open.onerror = () => reject(open.error);
     open.onsuccess = () => {
       const database = open.result;
@@ -281,7 +287,7 @@ test('PIN lock rejects an incorrect PIN and unlocks with the correct PIN', async
   const answers = ['2468', '2468'];
   page.on('dialog', async dialog => dialog.accept(answers.shift() || ''));
   await page.getByRole('button', { name: '設定 PIN' }).click();
-  await expect(page.getByRole('status')).toContainText('App PIN 鎖已開啟');
+  await expect(page.getByRole('status').filter({ hasText: 'App PIN 鎖已開啟' })).toBeVisible();
 
   await page.reload();
   await expect(page.getByRole('heading', { name: 'SmartFinance 已鎖定' })).toBeVisible();

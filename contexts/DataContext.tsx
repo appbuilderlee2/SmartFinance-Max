@@ -1,3 +1,4 @@
+import { observeLocalDay } from '../utils/dayBoundary';
 
 import React, { createContext, useContext, useState, useEffect, useMemo, useRef } from 'react';
 import { Transaction, Category, Budget, Subscription, TransactionType, Currency } from '../types';
@@ -9,7 +10,7 @@ import {
   readText,
   reportStorageError,
   StorageBackend,
-  writeJson,
+  writeCoreData,
   writeText,
 } from '../utils/storage';
 import { makeId } from '../utils/id';
@@ -18,7 +19,7 @@ import { parseDate, isSameMonth, toLocalYMD } from '../utils/date';
 import { canUseReplacement, getCategoryUsage, reassignCategoryReferences } from '../utils/categoryIntegrity';
 import { processDueSubscriptions } from '../utils/subscriptionProcessing';
 import { fromMinorUnits, toMinorUnits } from '../utils/money';
-import { processDueRecurringTransactions } from '../utils/recurringTransactions';
+import { processDueRecurringTransactions, removeRecurringOccurrence } from '../utils/recurringTransactions';
 import { resetSecurityCache } from '../utils/security';
 
 export interface CreditCard {
@@ -90,11 +91,17 @@ interface DataContextType {
   resetData: (confirmed?: boolean) => Promise<void>;
 }
 
+type LedgerData = Pick<DataContextType, 'transactions' | 'categories' | 'budgets' | 'currency' | 'getCategory'> & { byMonth: Map<string, Transaction[]> };
+const LedgerContext = createContext<LedgerData>(null!);
+export const useLedger = () => useContext(LedgerContext);
+
 const DataContext = createContext<DataContextType>({} as DataContextType);
 
 export const useData = () => useContext(DataContext);
 
 export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const [today, setToday] = useState(() => toLocalYMD(new Date()));
+  useEffect(() => observeLocalDay(setToday), []);
   const DEFAULT_THEME: ThemeName = 'blue';
   const normalizeThemeName = (value: unknown): ThemeName => {
     if (typeof value !== 'string') return DEFAULT_THEME;
@@ -107,6 +114,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return trimmed;
   };
 
+  const [loadError, setLoadError] = useState('');
   const [storageReady, setStorageReady] = useState(false);
   const [storageBackend, setStorageBackend] = useState<StorageBackend>('indexeddb');
   const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -129,7 +137,9 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       } catch (error) {
         reportStorageError('schema-migration', error);
       }
-      const result = await initializeStorage();
+      let result;
+      try { result = await initializeStorage(); }
+      catch (error) { if (active) setLoadError(error instanceof Error ? error.message : '資料庫載入失敗'); return; }
       if (!active) return;
       setTransactions(readJson<Transaction[]>('smartfinance_transactions') ?? []);
       setCategories(normalizeCategories(readJson<Category[]>('smartfinance_categories') ?? CATEGORIES));
@@ -144,31 +154,17 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return () => { active = false; };
   }, []);
 
-  // Persistence Effects
+  // Related entity changes commit in one database transaction.
   useEffect(() => {
     if (!storageReady) return;
-    writeJson('smartfinance_transactions', transactions);
-  }, [storageReady, transactions]);
-
-  useEffect(() => {
-    if (!storageReady) return;
-    writeJson('smartfinance_categories', categories);
-  }, [storageReady, categories]);
-
-  useEffect(() => {
-    if (!storageReady) return;
-    writeJson('smartfinance_budgets', budgets);
-  }, [storageReady, budgets]);
-
-  useEffect(() => {
-    if (!storageReady) return;
-    writeJson('smartfinance_subscriptions', subscriptions);
-  }, [storageReady, subscriptions]);
-
-  useEffect(() => {
-    if (!storageReady) return;
-    writeText('smartfinance_currency', currency);
-  }, [storageReady, currency]);
+    void writeCoreData(transactions, {
+      smartfinance_categories: JSON.stringify(categories),
+      smartfinance_budgets: JSON.stringify(budgets),
+      smartfinance_subscriptions: JSON.stringify(subscriptions),
+      smartfinance_creditcards: JSON.stringify(creditCards),
+      smartfinance_currency: currency,
+    });
+  }, [storageReady, transactions, categories, budgets, subscriptions, creditCards, currency]);
 
   // Budget Spending Logic (recalculate spent whenever transactions/categories/currency change)
   // Improvement: avoid JSON.stringify object-wide compare and reduce repeated date parsing.
@@ -207,7 +203,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     });
 
     if (changed) setBudgets(nextBudgets);
-  }, [storageReady, transactions, categories, currency]);
+  }, [storageReady, transactions, categories, currency, today]);
 
   const addTransaction = (tx: Omit<Transaction, 'id'>) => {
     const newTx: Transaction = {
@@ -222,7 +218,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const deleteTransaction = (id: string) => {
-    setTransactions(prev => prev.filter(t => t.id !== id));
+    setTransactions(prev => removeRecurringOccurrence(prev, id));
   };
 
   const addSubscription = (sub: Omit<Subscription, 'id'>) => {
@@ -323,7 +319,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       await clearStorageData();
       resetSecurityCache();
     } catch {
-      // ignore
+      alert('資料未能重置，請先處理儲存錯誤。'); return;
     }
 
     // Also clear any app caches / stale service worker state (best-effort).
@@ -370,12 +366,6 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     alert("資料已重置");
   };
-
-  // Persistence for credit cards
-  useEffect(() => {
-    if (!storageReady) return;
-    writeJson('smartfinance_creditcards', creditCards);
-  }, [storageReady, creditCards]);
 
   // Persistence and application of theme (UI skin)
   useEffect(() => {
@@ -439,7 +429,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // Release guard on next tick.
       setTimeout(() => { isAutoPostingRef.current = false; }, 0);
     }
-  }, [storageReady, subscriptions, categories, transactions, currency]);
+  }, [storageReady, subscriptions, categories, transactions, currency, today]);
 
   // Generate due occurrences for transactions configured as weekly,
   // biweekly or monthly. The pure processor records source/date identity so
@@ -469,7 +459,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       });
       return missing.length ? [...missing, ...previous] : previous;
     });
-  }, [storageReady, transactions]);
+  }, [storageReady, transactions, today]);
 
   const sortedCategories = useMemo(() => {
     return [...categories].sort((a, b) => {
@@ -480,6 +470,20 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     });
   }, [categories]);
 
+  const ledger = useMemo<LedgerData>(() => {
+    const categoryMap = new Map(sortedCategories.map(category => [category.id, category]));
+    const byMonth = new Map<string, Transaction[]>();
+    for (const tx of transactions) {
+      const date = parseDate(tx.date);
+      if (!date) continue;
+      const key = `${date.getFullYear()}-${date.getMonth()}`;
+      const rows = byMonth.get(key) || [];
+      rows.push(tx); byMonth.set(key, rows);
+    }
+    return { transactions, categories: sortedCategories, budgets, currency, byMonth, getCategory: id => categoryMap.get(id) };
+  }, [transactions, sortedCategories, budgets, currency]);
+
+  if (loadError) return <div role="alert" className="p-6">{loadError}<button className="block p-3" onClick={() => window.location.reload()}>重新載入</button></div>;
   if (!storageReady) {
     return <div className="min-h-screen bg-slate-950 text-slate-200 flex items-center justify-center">正在載入本機資料庫…</div>;
   }
@@ -516,7 +520,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setCreditCards,
       setThemeColor: setThemeColorState
     }}>
-      {children}
+      <LedgerContext.Provider value={ledger}>{children}</LedgerContext.Provider>
     </DataContext.Provider>
   );
 };

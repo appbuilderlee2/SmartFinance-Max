@@ -1,8 +1,10 @@
+import { Transaction } from '../types';
 // utils/storage.ts
 // Synchronous cache facade backed by IndexedDB after app hydration.
 
 import {
   clearDatabaseData,
+  migrateTransactionRows, writeDatabaseBatch, TRANSACTIONS_KEY,
   collectLegacySnapshot,
   KeyValueSnapshot,
   migrateLegacyStorage,
@@ -33,6 +35,47 @@ export type StorageInitialization = {
   storedKeys: number;
 };
 
+export type SaveStatus = 'saved' | 'saving' | 'error';
+let saveStatus: SaveStatus = 'saved';
+const listeners = new Set<() => void>();
+export const subscribeStorage = (listener: () => void) => { listeners.add(listener); return () => { listeners.delete(listener); }; };
+export const getSaveStatus = () => saveStatus;
+function setStatus(status: SaveStatus) { saveStatus = status; listeners.forEach(listener => listener()); }
+type Job = { run: () => Promise<void>; resolve: (success: boolean) => void };
+const pending: Job[] = [];
+let running = false;
+async function drain(): Promise<void> {
+  if (running) return;
+  running = true;
+  setStatus('saving');
+  while (pending.length) {
+    const job = pending[0];
+    try { await job.run(); pending.shift(); job.resolve(true); }
+    catch (error) {
+      running = false; job.resolve(false); setStatus('error'); reportStorageError('write', error); return;
+    }
+  }
+  running = false; setStatus('saved');
+}
+function enqueue(run: () => Promise<void>): Promise<boolean> {
+  const result = new Promise<boolean>(resolve => pending.push({ run, resolve }));
+  if (saveStatus !== 'error') void drain();
+  return result;
+}
+export async function retryStorage(): Promise<void> { await drain(); }
+export function flushStorage(): Promise<void> {
+  if (!pending.length) return Promise.resolve();
+  if (saveStatus === 'error') return Promise.reject(new Error('資料未能儲存，請先重試或匯出備份'));
+  return new Promise((resolve, reject) => {
+    const unsubscribe = subscribeStorage(() => {
+      if (saveStatus === 'saving') return;
+      unsubscribe();
+      if (saveStatus === 'error') reject(new Error('資料未能儲存')); else resolve();
+    });
+  });
+}
+let transactionRows: Transaction[] = [];
+let durableRows = new Map<string, Transaction>();
 let cache = new Map<string, string>();
 let database: IDBDatabase | null = null;
 let backend: StorageBackend = 'localstorage';
@@ -53,7 +96,9 @@ export async function reconcileThemeMirror(
 }
 
 function replaceCache(snapshot: KeyValueSnapshot): void {
-  cache = new Map(Object.entries(snapshot));
+  transactionRows = JSON.parse(snapshot[TRANSACTIONS_KEY] || '[]');
+  durableRows = new Map(transactionRows.map(row => [row.id, row]));
+  cache = new Map(Object.entries(snapshot).filter(([key]) => key !== TRANSACTIONS_KEY));
 }
 
 function clearLegacyAppStorage(): void {
@@ -67,15 +112,16 @@ export function initializeStorage(): Promise<StorageInitialization> {
     try {
       database = await openSmartFinanceDatabase();
       const migration = await migrateLegacyStorage(database, localStorage);
+      await migrateTransactionRows(database);
       const snapshot = await reconcileThemeMirror(
         database,
         localStorage,
         await readDatabaseSnapshot(database),
       );
       replaceCache(snapshot);
-      // Theme changes are mirrored synchronously so an immediate reload cannot
-      // race the asynchronous IndexedDB write. Reconcile that durable mirror
-      // before consumers hydrate from the database snapshot.
+      // Reconcile mirrors written by older app versions before hydration.
+      // New writes update the mirror only after the database commit.
+      localStorage.setItem('sf_indexeddb_authoritative', 'true');
       backend = 'indexeddb';
       initialized = true;
       return {
@@ -87,6 +133,7 @@ export function initializeStorage(): Promise<StorageInitialization> {
     } catch (error) {
       database?.close();
       database = null;
+      if (typeof indexedDB !== 'undefined' || localStorage.getItem('sf_indexeddb_authoritative')) throw new Error('本機資料庫暫時無法開啟，請關閉其他分頁後重試。為保護資料，不會載入過期副本。');
       const snapshot = collectLegacySnapshot(localStorage);
       replaceCache(snapshot);
       backend = 'localstorage';
@@ -115,6 +162,7 @@ export function safeJsonParse<T>(raw: string): ParseResult<T> {
 
 export function readJson<T>(key: string): T | null {
   try {
+    if (initialized && key === TRANSACTIONS_KEY) return transactionRows as T;
     const raw = initialized ? cache.get(key) ?? null : localStorage.getItem(key);
     if (!raw) return null;
     const parsed = safeJsonParse<T>(raw);
@@ -124,85 +172,92 @@ export function readJson<T>(key: string): T | null {
   }
 }
 
-export function writeJson(key: string, value: unknown): boolean {
-  try {
-    return writeText(key, JSON.stringify(value));
-  } catch (error) {
-    reportStorageError(key, error);
-    return false;
-  }
+export function writeJson(key: string, value: unknown): Promise<boolean> {
+  try { return writeText(key, JSON.stringify(value)); }
+  catch (error) { reportStorageError(key, error); return Promise.resolve(false); }
 }
 
-export function writeText(key: string, value: string): boolean {
-  try {
-    if (!initialized) {
-      localStorage.setItem(key, value);
-      return true;
-    }
-    cache.set(key, value);
+export function writeText(key: string, value: string): Promise<boolean> {
+  if (key === TRANSACTIONS_KEY) return writeCoreData(JSON.parse(value), {});
+  if (cache.get(key) === value) return Promise.resolve(saveStatus === 'saved');
+  cache.set(key, value);
+  return enqueue(async () => {
+    if (backend === 'indexeddb' && database) await writeDatabaseValue(database, key, value);
+    else localStorage.setItem(key, value);
     if (key === THEME_KEY) localStorage.setItem(key, value);
-    if (backend === 'indexeddb' && database) {
-      void writeDatabaseValue(database, key, value).catch(error => reportStorageError(key, error));
-    } else {
-      localStorage.setItem(key, value);
+  });
+}
+
+// Rows are compared by reference: a one-row edit writes only that row.
+// Serialisation of the entire ledger is reserved for backup/fallback storage.
+export function writeCoreData(rows: Transaction[], values: KeyValueSnapshot): Promise<boolean> {
+  const changes = Object.fromEntries(Object.entries(values).filter(([key, value]) => cache.get(key) !== value));
+  if (rows === transactionRows && !Object.keys(changes).length) return Promise.resolve(saveStatus === 'saved');
+  transactionRows = rows;
+  Object.entries(changes).forEach(([key, value]) => cache.set(key, value));
+  return enqueue(async () => {
+    const next = new Map(rows.map(row => [row.id, row]));
+    const changed = rows.filter(row => durableRows.get(row.id) !== row);
+    const deleted = [...durableRows.keys()].filter(id => !next.has(id));
+    if (backend === 'indexeddb' && database) await writeDatabaseBatch(database, changes, changed, deleted);
+    else {
+      const previous = collectLegacySnapshot(localStorage);
+      try {
+        Object.entries(changes).forEach(([key, value]) => localStorage.setItem(key, value));
+        localStorage.setItem(TRANSACTIONS_KEY, JSON.stringify(rows));
+      } catch (error) {
+        clearLegacyAppStorage(); Object.entries(previous).forEach(([key, value]) => localStorage.setItem(key, value)); throw error;
+      }
     }
-    return true;
-  } catch (error) {
-    reportStorageError(key, error);
-    return false;
-  }
+    durableRows = next;
+  });
 }
 
 export function removeKey(key: string): void {
-  try {
-    if (!initialized) {
-      localStorage.removeItem(key);
-      return;
-    }
-    cache.delete(key);
+  cache.delete(key);
+  void enqueue(async () => {
+    if (backend === 'indexeddb' && database) await removeDatabaseValue(database, key);
+    else localStorage.removeItem(key);
     if (key === THEME_KEY) localStorage.removeItem(key);
-    if (backend === 'indexeddb' && database) {
-      void removeDatabaseValue(database, key).catch(error => reportStorageError(key, error));
-    } else {
-      localStorage.removeItem(key);
-    }
-  } catch {
-    // ignore
-  }
+  });
 }
 
 export function readText(key: string): string | null {
   try {
-    return initialized ? cache.get(key) ?? null : localStorage.getItem(key);
+    return initialized ? (key === TRANSACTIONS_KEY ? JSON.stringify(transactionRows) : cache.get(key) ?? null) : localStorage.getItem(key);
   } catch {
     return null;
   }
 }
 
 export function getStorageSnapshot(): KeyValueSnapshot {
-  if (initialized) return Object.fromEntries(cache);
+  if (initialized) return { ...Object.fromEntries(cache), [TRANSACTIONS_KEY]: JSON.stringify(transactionRows) };
   return collectLegacySnapshot(localStorage);
 }
 
 export async function replaceStorageSnapshot(snapshot: KeyValueSnapshot): Promise<void> {
+  await flushStorage();
   const filtered = Object.fromEntries(
     Object.entries(snapshot).filter((entry): entry is [string, string] => isAppDataKey(entry[0]) && typeof entry[1] === 'string'),
   );
   if (backend === 'indexeddb' && database) {
     await replaceDatabaseSnapshot(database, filtered);
   } else {
-    clearLegacyAppStorage();
-    Object.entries(filtered).forEach(([key, value]) => localStorage.setItem(key, value));
+    const previous = collectLegacySnapshot(localStorage);
+    try { clearLegacyAppStorage(); Object.entries(filtered).forEach(([key, value]) => localStorage.setItem(key, value)); }
+    catch (error) { clearLegacyAppStorage(); Object.entries(previous).forEach(([key, value]) => localStorage.setItem(key, value)); throw error; }
   }
   replaceCache(filtered);
   const theme = filtered[THEME_KEY];
-  if (theme) localStorage.setItem(THEME_KEY, theme);
+  if (theme) localStorage.setItem(THEME_KEY, theme); else localStorage.removeItem(THEME_KEY);
 }
 
 export async function clearStorageData(): Promise<void> {
+  await flushStorage();
   if (backend === 'indexeddb' && database) await clearDatabaseData(database);
   clearLegacyAppStorage();
-  cache.clear();
+  cache.clear(); transactionRows = []; durableRows.clear();
+  if (backend === 'indexeddb') localStorage.setItem('sf_indexeddb_authoritative', 'true');
 }
 
 export function getStorageBackend(): StorageBackend {

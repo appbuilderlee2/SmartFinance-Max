@@ -1,8 +1,9 @@
 
+import { parseDate } from '../utils/date';
 import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ChevronLeft, ChevronRight, X } from 'lucide-react';
-import { useData } from '../contexts/DataContext';
+import { useLedger } from '../contexts/DataContext';
 import { Currency, TransactionType } from '../types';
 import { Icon } from '../components/Icon';
 import { formatMoney, formatMoneyNumber, fromMinorUnits, toMinorUnits } from '../utils/money';
@@ -10,7 +11,7 @@ import { loadPreferences } from '../utils/preferences';
 
 const Calendar: React.FC = () => {
     const navigate = useNavigate();
-    const { transactions, currency, getCategory } = useData();
+    const { transactions, currency, getCategory, byMonth } = useLedger();
     const [visibleMonth, setVisibleMonth] = useState(() => {
         const today = new Date();
         return today.getFullYear() * 12 + today.getMonth();
@@ -38,9 +39,9 @@ const Calendar: React.FC = () => {
         const monthTransactions = [] as typeof transactions;
         let hasOtherCurrencies = false;
 
-        for (const tx of transactions) {
-            const txDate = new Date(tx.date);
-            if (txDate.getFullYear() !== year || txDate.getMonth() !== month) continue;
+        for (const tx of byMonth.get(`${year}-${month}`) || []) {
+            const txDate = parseDate(tx.date)!;
+            if (!txDate || txDate.getFullYear() !== year || txDate.getMonth() !== month) continue;
 
             const txCurrency = (tx.currency as Currency) || currency;
             if (txCurrency !== currency) {
@@ -62,7 +63,7 @@ const Calendar: React.FC = () => {
             dailyMinorTotals[day] = dayTotal;
         }
 
-        monthTransactions.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+        monthTransactions.sort((a, b) => (parseDate(b.date)?.getTime() || 0) - (parseDate(a.date)?.getTime() || 0));
 
         const dailyTotals = Object.fromEntries(
             Object.entries(dailyMinorTotals).map(([day, value]) => [day, {
@@ -80,7 +81,7 @@ const Calendar: React.FC = () => {
             monthlyTransactions: monthTransactions,
             hasOtherCurrenciesThisMonth: hasOtherCurrencies,
         };
-    }, [transactions, year, month, currency]);
+    }, [transactions, byMonth, year, month, currency]);
 
     const { dailyTotals, monthlyTotals, monthlyTransactions, hasOtherCurrenciesThisMonth } = monthView;
 
@@ -88,7 +89,7 @@ const Calendar: React.FC = () => {
     const selectedDayTransactions = useMemo(() => {
         if (selectedDay === null) return [];
         return monthlyTransactions.filter(tx => {
-            const txDate = new Date(tx.date);
+            const txDate = parseDate(tx.date)!;
             return txDate.getDate() === selectedDay;
         });
     }, [monthlyTransactions, selectedDay]);
@@ -276,7 +277,7 @@ const Calendar: React.FC = () => {
                                         <div className="flex items-center gap-2">
                                             {selectedDay === null && (
                                                 <span className="text-xs text-gray-500 w-8">
-                                                    {new Date(tx.date).getDate()}日
+                                                    {parseDate(tx.date)!.getDate()}日
                                                 </span>
                                             )}
                                             {category && (

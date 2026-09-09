@@ -11,7 +11,7 @@ import { RECURRENCE_LABELS } from '../utils/recurringTransactions';
 const TransactionView: React.FC = () => {
   const navigate = useNavigate();
   const { id } = useParams();
-  const { transactions, categories, deleteTransaction, currency } = useData();
+  const { transactions, categories, deleteTransaction, updateTransaction, currency } = useData();
 
   const categoryById = useMemo(() => {
     return new Map(categories.map(c => [c.id, c] as const));
@@ -42,7 +42,7 @@ const TransactionView: React.FC = () => {
   });
 
   const handleDelete = () => {
-    if (window.confirm('確定要刪除這筆帳目嗎？')) {
+    if (window.confirm(transaction.recurrenceSourceId ? '刪除今次帳目並略過這一期？往後週期會保留。' : transaction.recurrence ? '刪除這筆帳目並停止往後重複？已產生的歷史帳目會保留。' : '確定要刪除這筆帳目嗎？')) {
       deleteTransaction(transaction.id);
       navigate(-1);
     }
@@ -92,6 +92,9 @@ const TransactionView: React.FC = () => {
               <div className="flex justify-between p-4">
                 <span className="text-white">週期</span>
                 <span className="text-gray-400">
+                  <button className="mr-3 text-red-400" onClick={() => {
+                    if (window.confirm('停止往後自動記帳？已有帳目會保留。')) updateTransaction(recurrenceSource?.id || transaction.id, { recurrence: undefined });
+                  }}>停止重複</button>
                   {RECURRENCE_LABELS[recurrence]}{transaction.recurrenceSourceId ? '（自動建立）' : ''}
                 </span>
               </div>

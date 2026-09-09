@@ -1,8 +1,21 @@
+import { createHash } from 'node:crypto'
+import { readFileSync, writeFileSync } from 'node:fs'
+import { resolve } from 'node:path'
 import { defineConfig, type Plugin } from 'vite'
 import react from '@vitejs/plugin-react'
 
 const precacheManifestPlugin: Plugin = {
   name: 'smartfinance-precache-manifest',
+  writeBundle(options, bundle) {
+    const directory = options.dir || 'dist';
+    const files = [...new Set([...Object.keys(bundle).filter(name => name !== 'precache-manifest.json' && !name.endsWith('.map')),
+      'index.html', 'manifest.json', 'icon-192.png', 'icon-512.png'])].sort();
+    const assets = files.map(path => ({ path: `./${path}`, sha256: createHash('sha256').update(readFileSync(resolve(directory, path))).digest('hex') }));
+    const source = readFileSync('public/service-worker.js', 'utf8');
+    const buildId = createHash('sha256').update(JSON.stringify(assets)).update(source).digest('hex').slice(0, 20);
+    writeFileSync(resolve(directory, 'precache-manifest.json'), JSON.stringify({ buildId, assets }));
+    writeFileSync(resolve(directory, 'service-worker.js'), source.replace('__SF_BUILD_ID__', buildId));
+  },
   generateBundle(_options, bundle) {
     const files = Object.keys(bundle)
       .filter((fileName) => !fileName.endsWith('.map'))

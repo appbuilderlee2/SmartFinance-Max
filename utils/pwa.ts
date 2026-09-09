@@ -1,28 +1,20 @@
-// utils/pwa.ts
+import { flushStorage } from './storage';
 
-/**
- * Force-refresh PWA caches + unregister service workers, then reload.
- *
- * Use sparingly (Settings "清除快取並重新載入").
- */
 export async function forceReloadPwa(): Promise<void> {
-  try {
-    // Unregister all service workers for this origin.
-    if ('serviceWorker' in navigator) {
-      const regs = await navigator.serviceWorker.getRegistrations();
-      await Promise.all(regs.map(r => r.unregister().catch(() => false)));
-    }
-
-    // Clear Cache Storage (if supported)
-    if ('caches' in window) {
-      const keys = await caches.keys();
-      await Promise.all(keys.map(k => caches.delete(k).catch(() => false)));
-    }
-
-    // Best-effort: clear storage (keep it conservative; DO NOT wipe user data here)
-    // We intentionally do NOT clear localStorage/IndexedDB.
-  } finally {
-    // Hard reload without cache.
-    window.location.reload();
+  await flushStorage();
+  if (!navigator.onLine) { alert('請連接網絡後再修復快取，避免失去離線啟動能力。'); return; }
+  const scope = new URL('.', window.location.href).href;
+  // Verify the shell is reachable before discarding the installed copy.
+  const response = await fetch(new URL('index.html', scope), { cache: 'no-store' });
+  if (!response.ok) throw new Error('無法下載 App，已保留原有快取');
+  if ('serviceWorker' in navigator) {
+    const registrations = await navigator.serviceWorker.getRegistrations();
+    await Promise.all(registrations.filter(registration => registration.scope === scope).map(registration => registration.unregister()));
   }
+  if ('caches' in window) {
+    const prefix = `smartfinance-${encodeURIComponent(new URL(scope).pathname)}-`;
+    const keys = await caches.keys();
+    await Promise.all(keys.filter(key => key.startsWith(prefix)).map(key => caches.delete(key)));
+  }
+  window.location.reload();
 }
