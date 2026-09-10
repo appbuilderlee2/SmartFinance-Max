@@ -8,7 +8,7 @@ async function seed(page: import('@playwright/test').Page) {
       open.onsuccess = () => {
         const db = open.result, tx = db.transaction(['transactions','app-data'], 'readwrite');
         const store = tx.objectStore('transactions'); store.clear();
-        tx.objectStore('app-data').put(JSON.stringify('AUD'), 'smartfinance_currency');
+        tx.objectStore('app-data').put('AUD', 'smartfinance_currency');
         tx.objectStore('app-data').put(JSON.stringify([{ id:'food', name:'餐飲', icon:'Utensils', color:'#ff7777', type:'EXPENSE' }]), 'smartfinance_categories');
         const date = new Date(); date.setDate(10); date.setHours(12);
         store.put({ id:'report-1', amount:120, date:date.toISOString(), note:'午餐測試', tags:['假期','旅行'], categoryId:'food', type:'EXPENSE', currency:'AUD' });
@@ -22,6 +22,7 @@ async function seed(page: import('@playwright/test').Page) {
 test('reports drill down, cancel or apply filters, and handle empty months', async ({ page }) => {
   await seed(page); await page.goto('/#/reports');
   await expect(page.getByRole('heading', {name:'報告統計'})).toBeVisible();
+  await expect(page.getByRole('combobox', {name:'報告幣別'})).toHaveValue('AUD');
   await page.getByRole('button', {name:'查看全部 ›', exact:true}).click();
   await page.getByRole('button', {name:/餐飲/}).click();
   await expect(page.getByText('午餐測試')).toBeVisible();
