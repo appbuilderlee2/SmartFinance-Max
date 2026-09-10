@@ -1,5 +1,5 @@
 import React, { useMemo, useState, useEffect } from 'react';
-import { ChevronLeft, BarChart2, Download, PieChart, BarChart3, LineChart } from 'lucide-react';
+import { ChevronLeft, BarChart2, Download, PieChart, BarChart3 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useLedger } from '../contexts/DataContext';
 import { Currency, TransactionType } from '../types';
@@ -8,7 +8,6 @@ import { parseDate, toLocalYMD } from '../utils/date';
 import { addMoney, formatMoney, fromMinorUnits, roundMoney, sumMoney, toMinorUnits } from '../utils/money';
 
 type CategoryChartMode = 'pie' | 'bar';
-type TrendChartMode = 'bar' | 'line';
 type RangePreset = 'this-month' | 'this-year' | 'all' | 'custom';
 
 const Reports: React.FC = () => {
@@ -35,7 +34,6 @@ const Reports: React.FC = () => {
     end: ''
   });
   const [categoryChartMode, setCategoryChartMode] = useState<CategoryChartMode>('bar');
-  const [trendChartMode, setTrendChartMode] = useState<TrendChartMode>('bar');
   const [preset, setPreset] = useState<RangePreset>('this-month');
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
@@ -224,7 +222,6 @@ const Reports: React.FC = () => {
   const expenseTop5 = reportAgg.expenseTop5;
   const monthsCount = reportAgg.monthsCount;
   const thisMonthExpense = reportAgg.thisMonthExpense;
-  const thisMonthIncome = reportAgg.thisMonthIncome;
   const lastMonthExpense = reportAgg.lastMonthExpense;
   const thisYearExpense = reportAgg.thisYearExpense;
   const lastYearExpense = reportAgg.lastYearExpense;
@@ -321,7 +318,7 @@ const Reports: React.FC = () => {
         <div className="w-12" />
       </div>
 
-      <div className="p-4 space-y-4">
+      <div className="max-w-3xl mx-auto p-4 space-y-4">
         {hasOtherCurrencies && (
           <div className="sf-panel p-3 text-xs text-gray-300">
             本頁報表以 {selectedCurrency} 計算，已排除其他幣別交易。
@@ -357,9 +354,42 @@ const Reports: React.FC = () => {
           </select>
         </div>
 
+              {preset === 'custom' && (
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-gray-300">開始日期</span>
+                    <input
+                      type="date"
+                      value={range.start}
+                      onChange={(e) => setRange(prev => ({ ...prev, start: e.target.value }))}
+                      className="sf-control text-white rounded-lg px-3 py-2 text-sm"
+                    />
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-gray-300">結束日期</span>
+                    <input
+                      type="date"
+                      value={range.end}
+                      onChange={(e) => setRange(prev => ({ ...prev, end: e.target.value }))}
+                      className="sf-control text-white rounded-lg px-3 py-2 text-sm"
+                    />
+                  </div>
+                </div>
+              )}
+
+        {(keyword || minAmount || maxAmount || selectedCategories.length > 0 || selectedTags.length > 0) && (
+          <div className="flex items-center justify-between gap-3 text-sm">
+            <span className="text-gray-400">已套用篩選 · {filteredTransactions.length} 筆交易</span>
+            <button className="text-primary min-h-11" onClick={() => {
+              setKeyword(''); setMinAmount(''); setMaxAmount('');
+              setSelectedCategories([]); setSelectedTags([]);
+            }}>清除篩選</button>
+          </div>
+        )}
+
         {/* Summary / KPI */}
         <div className="sf-panel p-4 space-y-3">
-          <h3 className="text-sm text-gray-400">總覽</h3>
+          <h3 className="text-sm text-gray-400">{preset === 'this-month' ? '本月' : preset === 'this-year' ? '今年' : preset === 'all' ? '全部期間' : '自訂期間'}收支 · {selectedCurrency}</h3>
           <div className="grid grid-cols-2 gap-3">
             <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30">
               <p className="text-xs text-gray-300">收入</p>
@@ -371,25 +401,25 @@ const Reports: React.FC = () => {
             </div>
           </div>
           <div className="grid grid-cols-2 gap-3">
-            <div className="p-3 rounded-xl bg-primary/10 border border-primary/30">
-              <p className="text-xs text-gray-300">淨額</p>
+            <div className="col-span-2 p-3 rounded-xl bg-primary/10 border border-primary/30">
+              <p className="text-xs text-gray-300">結餘（收入 − 支出）</p>
               <p className={`text-xl font-bold ${net >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
                 {net >= 0 ? '+' : '-'}{formatMoney(Math.abs(net), selectedCurrency)}
               </p>
               <p className="text-[11px] text-gray-400 mt-1">月平均支出：{formatMoney(monthlyAvg, selectedCurrency)}</p>
             </div>
-            <div className="p-3 rounded-xl bg-purple-500/10 border border-purple-500/30">
-              <p className="text-xs text-gray-300">同比 / 環比</p>
+            {showAdvanced && <div className="p-3 rounded-xl bg-purple-500/10 border border-purple-500/30">
+              <p className="text-xs text-gray-300">支出比較（曆月／曆年）</p>
               <p className="text-sm text-gray-200">
-                MoM: {mom === null ? 'N/A' : `${mom >= 0 ? '+' : ''}${mom.toFixed(1)}%`}
+                本月較上月：{mom === null ? '無比較資料' : `${mom >= 0 ? '+' : ''}${mom.toFixed(1)}%`}
               </p>
               <p className="text-sm text-gray-200">
-                YoY: {yoy === null ? 'N/A' : `${yoy >= 0 ? '+' : ''}${yoy.toFixed(1)}%`}
+                今年較去年：{yoy === null ? '無比較資料' : `${yoy >= 0 ? '+' : ''}${yoy.toFixed(1)}%`}
               </p>
-            </div>
+            </div>}
           </div>
-          <div className="p-3 rounded-xl bg-yellow-500/10 border border-yellow-500/30">
-            <p className="text-xs text-gray-300">月預算完成度</p>
+          {preset === 'this-month' && canCompareBudget && <div className="p-3 rounded-xl bg-yellow-500/10 border border-yellow-500/30">
+            <p className="text-xs text-gray-300">本月預算使用</p>
             <div className="flex items-center justify-between">
               <span className="text-sm text-gray-200">
                 {canCompareBudget
@@ -397,7 +427,7 @@ const Reports: React.FC = () => {
                   : `預算只適用主貨幣 ${currency}`}
               </span>
               <span className={`text-sm font-semibold ${budgetProgress >= 100 ? 'text-red-400' : 'text-emerald-400'}`}>
-                {canCompareBudget ? `${budgetProgress.toFixed(0)}%` : 'N/A'}
+                {canCompareBudget ? `${budgetProgress.toFixed(0)}%` : '無比較資料'}
               </span>
             </div>
             <div className="w-full h-2 bg-gray-800 rounded-full overflow-hidden mt-2">
@@ -407,54 +437,51 @@ const Reports: React.FC = () => {
               />
             </div>
             {canCompareBudget && budgetProgress >= 100 && <p className="text-xs text-red-400 mt-1">已超過預算，請留意開支</p>}
-          </div>
+          </div>}
           <button
+            aria-expanded={showAdvanced}
             onClick={() => setShowAdvanced(v => !v)}
             className="w-full mt-2 sf-control rounded-lg py-2 text-sm flex items-center justify-center gap-2 hover:bg-background/80 transition-colors"
           >
-            {showAdvanced ? '收起進階報告' : '展開進階報告'}
+            {showAdvanced ? '收起詳細分析' : '詳細分析與篩選'}
           </button>
         </div>
 
-        {/* KPI Cards */}
-        <div className="grid grid-cols-2 gap-3">
-          <div className="p-4 rounded-2xl sf-panel">
-            <p className="text-xs text-gray-400">本月收入</p>
-            <p className="text-xl font-bold text-emerald-400 mt-1">{formatMoney(thisMonthIncome, selectedCurrency)}</p>
-          </div>
-          <div className="p-4 rounded-2xl sf-panel">
-            <p className="text-xs text-gray-400">本月支出</p>
-            <p className="text-xl font-bold text-red-400 mt-1">{formatMoney(thisMonthExpense, selectedCurrency)}</p>
-          </div>
-          <div className="p-4 rounded-2xl sf-panel col-span-2">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs text-gray-400">本月淨額</p>
-                <p className={`text-xl font-bold ${addMoney(thisMonthIncome, -thisMonthExpense, selectedCurrency) >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-                  {addMoney(thisMonthIncome, -thisMonthExpense, selectedCurrency) >= 0 ? '+' : '-'}{formatMoney(Math.abs(addMoney(thisMonthIncome, -thisMonthExpense, selectedCurrency)), selectedCurrency)}
-                </p>
-              </div>
-              <div className="text-right">
-                <p className="text-xs text-gray-400">月預算進度</p>
-                <p className={`text-sm font-semibold ${budgetProgress >= 100 ? 'text-red-400' : 'text-emerald-400'}`}>{canCompareBudget ? `${budgetProgress.toFixed(0)}%` : 'N/A'}</p>
-              </div>
+        {/* Top 5 */}
+        <div className="sf-panel p-4 space-y-3">
+          <h3 className="text-sm text-gray-400">主要支出 · 前 5 項</h3>
+          {expenseTop5.length === 0 && <div className="text-center text-gray-500 text-sm py-6">尚無資料</div>}
+          {expenseTop5.length > 0 && (
+            <div className="space-y-2">
+              {expenseTop5.map(([name, value], idx) => {
+                const maxVal = expenseTop5[0][1] || 1;
+                const scale = Math.min(100, (value / maxVal) * 100);
+                return (
+                  <div key={name} className="space-y-1">
+                    <div className="flex items-center justify-between text-sm">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs text-gray-500">#{idx + 1}</span>
+                        <span>{name}</span>
+                      </div>
+                      <span className="font-semibold text-red-300">{formatMoney(value, selectedCurrency)}</span>
+                    </div>
+                    <div className="w-full h-2 rounded-full bg-gray-800 overflow-hidden">
+                      <div className="h-full bg-red-500" style={{ width: `${scale}%` }} />
+                    </div>
+                  </div>
+                );
+              })}
             </div>
-            <div className="w-full h-2 bg-gray-800 rounded-full overflow-hidden mt-2">
-              <div className={`h-full ${budgetProgress >= 100 ? 'bg-red-500' : 'bg-emerald-400'}`} style={{ width: `${Math.min(150, budgetProgress)}%` }} />
-            </div>
-            <p className="text-[11px] text-gray-400 mt-1">
-              {canCompareBudget
-                ? `${formatMoney(thisMonthExpense, selectedCurrency)} / ${formatMoney(budgetTotal, currency)}`
-                : `預算只適用主貨幣 ${currency}`}
-            </p>
-          </div>
+          )}
         </div>
 
+        {showAdvanced && (
+          <>
         {/* Category breakdown */}
         <div className="sf-panel p-4 space-y-3">
           <div className="flex items-center justify-between">
             <h3 className="text-sm text-gray-400">分類彙總</h3>
-            <div className="flex gap-2 text-xs">
+            <div className="flex flex-wrap gap-2 text-xs">
               <button
                 onClick={() => setCategoryChartMode('bar')}
                 className={`px-3 py-1 rounded-full border ${categoryChartMode === 'bar' ? 'bg-primary text-white border-primary' : 'border-gray-700 text-gray-200'}`}
@@ -498,7 +525,7 @@ const Reports: React.FC = () => {
               <div className="space-y-4">
                 {pieData.length === 0 && <div className="text-center text-gray-500 text-sm py-4">無資料可顯示</div>}
                 {pieData.length > 0 && (
-                  <div className="flex items-center gap-6">
+                  <div className="flex flex-col sm:flex-row items-center gap-6">
                     <div
                       className="w-40 h-40 rounded-full border border-gray-800 shadow-inner"
                       style={{ background: `conic-gradient(${pieGradient})` }}
@@ -521,32 +548,31 @@ const Reports: React.FC = () => {
           </div>
         </div>
 
-        {showAdvanced && (
-          <>
+
             <div className="sf-panel p-4 space-y-3">
               <h3 className="text-sm text-gray-400">篩選</h3>
               <div className="space-y-2">
-                <div className="flex gap-2">
+                <div className="grid grid-cols-2 gap-2">
                   <input
                     type="text"
                     value={keyword}
                     onChange={(e) => setKeyword(e.target.value)}
                     placeholder="關鍵字（備註/標籤）"
-                    className="flex-1 sf-control text-white rounded-lg px-3 py-2 text-sm focus:outline-none"
+                    className="col-span-2 min-w-0 sf-control text-white rounded-lg px-3 py-2 text-sm focus:outline-none"
                   />
                   <input
                     type="number"
                     value={minAmount}
                     onChange={(e) => setMinAmount(e.target.value)}
                     placeholder="最小金額"
-                    className="w-28 sf-control text-white rounded-lg px-3 py-2 text-sm focus:outline-none"
+                    className="w-full min-w-0 sf-control text-white rounded-lg px-3 py-2 text-sm focus:outline-none"
                   />
                   <input
                     type="number"
                     value={maxAmount}
                     onChange={(e) => setMaxAmount(e.target.value)}
                     placeholder="最大金額"
-                    className="w-28 sf-control text-white rounded-lg px-3 py-2 text-sm focus:outline-none"
+                    className="w-full min-w-0 sf-control text-white rounded-lg px-3 py-2 text-sm focus:outline-none"
                   />
                 </div>
 
@@ -583,34 +609,13 @@ const Reports: React.FC = () => {
                 )}
               </div>
 
-              {preset === 'custom' && (
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-gray-300">開始日期</span>
-                    <input
-                      type="date"
-                      value={range.start}
-                      onChange={(e) => setRange(prev => ({ ...prev, start: e.target.value }))}
-                      className="sf-control text-white rounded-lg px-3 py-2 text-sm"
-                    />
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-gray-300">結束日期</span>
-                    <input
-                      type="date"
-                      value={range.end}
-                      onChange={(e) => setRange(prev => ({ ...prev, end: e.target.value }))}
-                      className="sf-control text-white rounded-lg px-3 py-2 text-sm"
-                    />
-                  </div>
-                </div>
-              )}
+
             </div>
 
             <div className="sf-panel p-4 space-y-3">
               <div className="flex items-center justify-between">
                 <h3 className="text-sm text-gray-400">趨勢</h3>
-                <div className="flex gap-2 text-xs">
+                <div className="flex flex-wrap gap-2 text-xs">
                   {(['month', 'quarter', 'year'] as const).map(p => (
                     <button
                       key={p}
@@ -620,18 +625,7 @@ const Reports: React.FC = () => {
                       {p === 'month' ? '月' : p === 'quarter' ? '季' : '年'}
                     </button>
                   ))}
-                  <button
-                    onClick={() => setTrendChartMode('bar')}
-                    className={`px-3 py-1 rounded-full border ${trendChartMode === 'bar' ? 'bg-primary text-white border-primary' : 'border-gray-700 text-gray-200'}`}
-                  >
-                    <BarChart3 size={14} className="inline-block mr-1" /> 長條
-                  </button>
-                  <button
-                    onClick={() => setTrendChartMode('line')}
-                    className={`px-3 py-1 rounded-full border ${trendChartMode === 'line' ? 'bg-primary text-white border-primary' : 'border-gray-700 text-gray-200'}`}
-                  >
-                    <LineChart size={14} className="inline-block mr-1" /> 折線
-                  </button>
+
                 </div>
               </div>
               {seriesByPeriod.length === 0 && <div className="text-center text-gray-500 text-sm py-6">尚無資料</div>}
@@ -677,33 +671,7 @@ const Reports: React.FC = () => {
           </>
         )}
 
-        {/* Top 5 */}
-        <div className="sf-panel p-4 space-y-3">
-          <h3 className="text-sm text-gray-400">支出 Top 5 分類</h3>
-          {expenseTop5.length === 0 && <div className="text-center text-gray-500 text-sm py-6">尚無資料</div>}
-          {expenseTop5.length > 0 && (
-            <div className="space-y-2">
-              {expenseTop5.map(([name, value], idx) => {
-                const maxVal = expenseTop5[0][1] || 1;
-                const scale = Math.min(100, (value / maxVal) * 100);
-                return (
-                  <div key={name} className="space-y-1">
-                    <div className="flex items-center justify-between text-sm">
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs text-gray-500">#{idx + 1}</span>
-                        <span>{name}</span>
-                      </div>
-                      <span className="font-semibold text-red-300">{formatMoney(value, selectedCurrency)}</span>
-                    </div>
-                    <div className="w-full h-2 rounded-full bg-gray-800 overflow-hidden">
-                      <div className="h-full bg-red-500" style={{ width: `${scale}%` }} />
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </div>
+
 
       </div>
     </div>
