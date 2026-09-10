@@ -8,13 +8,13 @@ import { useData } from '../contexts/DataContext';
 import { toLocalYMD } from '../utils/date';
 import { forceReloadPwa } from '../utils/pwa';
 import {
-  backupToCsv,
+  backupToCsv, mergeBackupSnapshots, validateBackupSnapshot,
   createBackupFromSnapshot,
   parseBackupCsv,
   parseBackupJson,
   SmartFinanceBackup,
 } from '../utils/backup';
-import { getStorageSnapshot, replaceStorageSnapshot } from '../utils/storage';
+import { getStorageSnapshot, replaceStorageSnapshot, flushStorage } from '../utils/storage';
 import { ALL_CURRENCIES, loadPreferences, savePreferences, type AppPreferences } from '../utils/preferences';
 import { Currency } from '../types';
 import { createPinSecurity, disablePinSecurity, loadSecuritySettings, saveSecuritySettings, verifyPin, type SecuritySettings } from '../utils/security';
@@ -176,8 +176,9 @@ const Settings: React.FC = () => {
     // Always give the user a recovery file before any destructive replacement.
     exportBackup('json', 'smartfinance_還原前自動備份');
     const next = mode === '合併'
-      ? { ...getStorageSnapshot(), ...backup.storage }
+      ? mergeBackupSnapshots(getStorageSnapshot(), backup.storage)
       : backup.storage;
+    validateBackupSnapshot(next);
     await replaceStorageSnapshot(next);
     window.alert(`${mode}完成，App 將重新載入。`);
     window.location.reload();
@@ -395,7 +396,7 @@ const Settings: React.FC = () => {
             ><span>目前版本</span><span className="text-gray-400">v{__APP_VERSION__}</span></button>
             <div className="p-4 flex justify-between"><span>網絡狀態</span><span className={navigator.onLine ? 'text-green-400' : 'text-amber-300'}>{navigator.onLine ? '已連線' : '離線模式'}</span></div>
             <button disabled={checkingUpdate} onClick={checkUpdate} className="w-full p-4 flex items-center justify-center gap-2 disabled:opacity-60"><RefreshCw size={17} className={checkingUpdate ? 'animate-spin' : ''} />{checkingUpdate ? '檢查中…' : '檢查更新'}</button>
-            <button onClick={() => window.location.reload()} className="w-full p-4 flex items-center justify-center gap-2"><RefreshCw size={17} />重新載入 App</button>
+            <button onClick={async () => { try { await flushStorage(); window.location.reload(); } catch { setNotice({ tone: 'warning', text: '資料尚未儲存，請先重試或匯出備份。' }); } }} className="w-full p-4 flex items-center justify-center gap-2"><RefreshCw size={17} />重新載入 App</button>
             <button onClick={async () => { if (window.confirm('只會清除 App 快取，不會刪除 IndexedDB 財務資料。繼續嗎？')) await forceReloadPwa(); }} className="w-full p-4 flex items-center justify-center gap-2"><RefreshCw size={17} />清除快取並重新載入</button>
           </div>
         </section>

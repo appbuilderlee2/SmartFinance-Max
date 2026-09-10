@@ -2,7 +2,7 @@
 import React, { useMemo, useState } from 'react';
 import { PieChart, Pie, Cell, ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip } from 'recharts';
 import { AlertTriangle, TrendingDown, TrendingUp } from 'lucide-react';
-import { useData } from '../contexts/DataContext';
+import { useLedger } from '../contexts/DataContext';
 import { Currency, TransactionType } from '../types';
 import { getCurrencySymbol } from '../utils/currency';
 import { formatMoney, fromMinorUnits, sumMoney, toMinorUnits } from '../utils/money';
@@ -10,7 +10,7 @@ import { formatMoney, fromMinorUnits, sumMoney, toMinorUnits } from '../utils/mo
 type PeriodMode = 'month' | 'year';
 
 const Dashboard: React.FC = () => {
-  const { transactions, categories, budgets, currency } = useData();
+  const { transactions, categories, budgets, currency } = useLedger();
 
   const categoryById = useMemo(() => {
     return new Map(categories.map(c => [c.id, c] as const));

@@ -1,17 +1,17 @@
 
-import React, { useMemo, useRef, useState } from 'react';
+import React, { useMemo, useRef, useState, useEffect, useDeferredValue } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Search, Filter, Plus, Repeat2 } from 'lucide-react';
-import { useData } from '../contexts/DataContext';
+import { useLedger } from '../contexts/DataContext';
 import { Icon } from '../components/Icon';
 import { Currency, TransactionType } from '../types';
-import { parseLocalYMD, toLocalYMD } from '../utils/date';
+import { parseDate, toLocalYMD } from '../utils/date';
 import { formatMoney } from '../utils/money';
 import { RECURRENCE_LABELS } from '../utils/recurringTransactions';
 
 const Records: React.FC = () => {
   const navigate = useNavigate();
-  const { transactions, categories, currency } = useData();
+  const { transactions, categories, currency } = useLedger();
 
   const categoryById = useMemo(() => {
     return new Map(categories.map(c => [c.id, c] as const));
@@ -23,6 +23,10 @@ const Records: React.FC = () => {
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [minAmount, setMinAmount] = useState<string>('');
   const [maxAmount, setMaxAmount] = useState<string>('');
+
+  const deferredSearch = useDeferredValue(searchTerm);
+  const [visibleCount, setVisibleCount] = useState(100);
+  useEffect(() => setVisibleCount(100), [deferredSearch, selectedCategories, minAmount, maxAmount]);
 
   const toggleCategory = (id: string) => {
     setSelectedCategories(prev =>
@@ -41,8 +45,8 @@ const Records: React.FC = () => {
       if (maxAmount && amt > Number(maxAmount)) return false;
 
       // Keyword (note + tags)
-      if (searchTerm.trim()) {
-        const keyword = searchTerm.trim().toLowerCase();
+      if (deferredSearch.trim()) {
+        const keyword = deferredSearch.trim().toLowerCase();
         const noteMatch = tx.note?.toLowerCase().includes(keyword);
         const tagMatch = tx.tags?.some(tag => tag.toLowerCase().includes(keyword));
         if (!noteMatch && !tagMatch) return false;
@@ -50,23 +54,18 @@ const Records: React.FC = () => {
 
       return true;
     });
-  }, [transactions, selectedCategories, minAmount, maxAmount, searchTerm]);
+  }, [transactions, selectedCategories, minAmount, maxAmount, deferredSearch]);
 
-  // Group transactions by date
-  const grouped = filteredTransactions.reduce((acc, tx) => {
-    // IMPORTANT: tx.date is stored as ISO (UTC). Use local date for grouping.
-    const dateStr = toLocalYMD(new Date(tx.date));
-    if (!acc[dateStr]) acc[dateStr] = [];
-    acc[dateStr].push(tx);
+  const ordered = useMemo(() => filteredTransactions
+    .map(tx => ({ tx, date: parseDate(tx.date)?.getTime() || 0 }))
+    .sort((a, b) => b.date - a.date).map(item => item.tx), [filteredTransactions]);
+  const grouped = useMemo(() => ordered.slice(0, visibleCount).reduce((acc, tx) => {
+    const date = parseDate(tx.date);
+    const key = date ? toLocalYMD(date) : '日期不詳';
+    (acc[key] ||= []).push(tx);
     return acc;
-  }, {} as Record<string, typeof filteredTransactions>);
-
-  // Sort dates descending (treat YYYY-MM-DD as local date to avoid timezone day shifts)
-  const sortedDates = Object.keys(grouped).sort((a, b) => {
-    const da = parseLocalYMD(a)?.getTime() ?? 0;
-    const db = parseLocalYMD(b)?.getTime() ?? 0;
-    return db - da;
-  });
+  }, {} as Record<string, typeof filteredTransactions>), [ordered, visibleCount]);
+  const sortedDates = Object.keys(grouped);
 
   return (
     <div className="min-h-screen bg-background pt-safe-top pb-24 px-4">
@@ -239,6 +238,7 @@ const Records: React.FC = () => {
         )}
       </div>
 
+      {visibleCount < ordered.length && <button className="w-full p-4 text-primary" onClick={() => setVisibleCount(count => count + 100)}>載入更多（已顯示 {Math.min(visibleCount, ordered.length)}／{ordered.length} 筆）</button>}
       {/* FAB */}
       <button
         onClick={() => navigate('/add')}

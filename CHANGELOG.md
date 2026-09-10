@@ -1,3 +1,18 @@
+## v2.6.0 — Reliability and transaction storage
+
+- Deliberately deleted recurring occurrences are skipped permanently; history can be retained while stopping future recurrence.
+- Storage reports saving/saved/error based on IndexedDB completion, queues failed writes for retry and commits related entity changes atomically.
+- IndexedDB v2 migrates the legacy transaction array into individual indexed records; ordinary edits write only changed rows. Failed migrations stop safely instead of opening stale localStorage data.
+- Backups validate record fields, duplicate IDs, category relationships and supported versions. Merge mode merges records by ID instead of replacing entire collections.
+- A local-day observer refreshes recurring posting and budgets at midnight and when the app returns to the foreground.
+- Offline releases carry build IDs and SHA-256 asset checksums. Partial/corrupt downloads cannot replace the active release. Old caches remain available to already-open tabs.
+- Read-only ledger context is isolated from theme/card changes; calendar uses a month index; records use deferred search and 100-row incremental rendering.
+- PR workflow creates a build artifact without deploying over production Pages.
+
+Migration: existing v1 data moves in an atomic transaction. Close older tabs if they block the schema upgrade. Keep a JSON export before deploying; older app code cannot open the v2 database directly. Receipts remain attached to individual transaction records; full-ledger loading is still required at startup and for exports.
+
+Validation: typecheck, production build and 55 unit/regression tests passed locally, including a 5,000-row one-edit write-count check. Local rendered QA was blocked by the browser environment (ERR_BLOCKED_BY_CLIENT); CI browser tests remain the release gate. No iPhone physical-device claims are made.
+
 # 更新日誌（Changelog）
 
 ## v2.5.2 (2026-08-19)

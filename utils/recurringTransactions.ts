@@ -68,13 +68,14 @@ export function processDueRecurringTransactions(input: ProcessInput): ProcessRes
     while (toLocalYMD(occurrence) <= todayYmd && steps < MAX_STEPS_PER_SOURCE) {
       const dueYmd = toLocalYMD(occurrence);
       const key = `${source.id}:${dueYmd}`;
-      if (!existingOccurrences.has(key)) {
+      if (!existingOccurrences.has(key) && !source.skippedDates?.includes(dueYmd)) {
         generated.push({
           ...source,
           id: input.makeTransactionId(),
           date: dueYmd,
           isRecurring: true,
           recurrence: undefined,
+          skippedDates: undefined,
           recurrenceSourceId: source.id,
           receiptUrl: undefined,
           subscriptionId: undefined,
@@ -87,4 +88,13 @@ export function processDueRecurringTransactions(input: ProcessInput): ProcessRes
   });
 
   return { transactions: generated, changed: generated.length > 0 };
+}
+
+export function removeRecurringOccurrence(transactions: Transaction[], id: string): Transaction[] {
+  const removed = transactions.find(tx => tx.id === id);
+  const date = removed && transactionYmd(removed);
+  return transactions.filter(tx => tx.id !== id).map(tx => {
+    if (!date || tx.id !== removed?.recurrenceSourceId) return tx;
+    return { ...tx, skippedDates: [...new Set([...(tx.skippedDates || []), date])] };
+  });
 }

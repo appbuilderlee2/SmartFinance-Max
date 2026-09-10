@@ -1,3 +1,4 @@
+import { parseDate, parseLocalYMD } from './date';
 export const BACKUP_FORMAT = 'smartfinance-backup';
 export const BACKUP_VERSION = 2;
 
@@ -30,6 +31,43 @@ function validateStoredValue(key: string, value: string): void {
   if (ARRAY_KEYS.has(key)) {
     const parsed = JSON.parse(value) as unknown;
     if (!Array.isArray(parsed)) throw new Error(`${key} 必須係陣列`);
+    const ids = new Set<string>();
+    parsed.forEach((row, index) => {
+      const fail = (field: string): never => { throw new Error(`${key} 第 ${index + 1} 筆：${field} 不正確`); };
+      if (!row || typeof row !== 'object' || Array.isArray(row)) fail('資料');
+      const id = key === 'smartfinance_budgets' ? row.categoryId : row.id;
+      if (typeof id !== 'string' || !id.trim() || ids.has(id)) fail('ID（空白或重複）');
+      ids.add(id);
+      const string = (field: string, required = true) => { if ((required || row[field] !== undefined) && typeof row[field] !== 'string') fail(field); };
+      const number = (field: string, required = true) => { if ((required || row[field] !== undefined) && (typeof row[field] !== 'number' || !Number.isFinite(row[field]) || row[field] < 0)) fail(field); };
+      const date = (field: string, required = true) => { if ((required || row[field] !== undefined) && (!row[field] || !parseDate(row[field]))) fail(field); };
+      if (row.currency !== undefined && !CURRENCIES.has(row.currency)) fail('currency');
+      if (key === 'smartfinance_transactions') {
+        number('amount'); date('date'); string('note'); string('categoryId');
+        if (!['INCOME', 'EXPENSE'].includes(row.type)) fail('type');
+        if (row.recurrence !== undefined && !['weekly', 'biweekly', 'monthly'].includes(row.recurrence)) fail('recurrence');
+        string('recurrenceSourceId', false); string('subscriptionId', false); string('receiptUrl', false);
+        if (row.tags !== undefined && (!Array.isArray(row.tags) || row.tags.some((tag: unknown) => typeof tag !== 'string'))) fail('tags');
+        if (row.skippedDates !== undefined && (!Array.isArray(row.skippedDates) || row.skippedDates.some((day: unknown) => typeof day !== 'string' || !parseLocalYMD(day)))) fail('skippedDates');
+      } else if (key === 'smartfinance_categories') {
+        ['name', 'icon', 'color'].forEach(field => string(field));
+        if (!['INCOME', 'EXPENSE'].includes(row.type)) fail('type');
+      } else if (key === 'smartfinance_budgets') {
+        number('limit'); number('spent');
+      } else if (key === 'smartfinance_subscriptions') {
+        string('name'); number('amount');
+        if (!['Monthly', 'Yearly', 'Weekly', 'BiWeekly'].includes(row.billingCycle)) fail('billingCycle');
+        if (!(row.autoRenewal === false && row.nextBillingDate === '')) date('nextBillingDate');
+        if (row.nextBillingDate && !parseLocalYMD(row.nextBillingDate)) fail('nextBillingDate');
+        string('categoryId', false);
+      } else if (key === 'smartfinance_creditcards') {
+        string('name'); number('annualFee'); string('cashbackType'); string('expiryDate');
+        ['statementDay', 'dueDay'].forEach(field => { if (row[field] !== undefined && (!Number.isInteger(row[field]) || row[field] < 1 || row[field] > 31)) fail(field); });
+      } else if (key === 'smartfinance_creditcard_cycles') {
+        string('cardId'); string('yearMonth'); number('year'); number('month0'); number('amountDue', false);
+        if (!Number.isInteger(row.month0) || row.month0 > 11 || !['open', 'closed'].includes(row.status)) fail('帳單週期');
+      }
+    });
   }
 
   if (key === 'smartfinance_currency' && !CURRENCIES.has(value)) {
@@ -90,6 +128,8 @@ export function parseBackupJson(text: string): SmartFinanceBackup {
     throw new Error('備份檔案格式不正確');
   }
   const data = parsed as Record<string, unknown>;
+  if (data.format !== undefined && data.format !== BACKUP_FORMAT) throw new Error('不支援嘅備份格式');
+  if (data.backupVersion !== undefined && (!Number.isInteger(data.backupVersion) || Number(data.backupVersion) < 1 || Number(data.backupVersion) > BACKUP_VERSION)) throw new Error('不支援嘅備份版本，請先更新 App');
   const storage = data.format === BACKUP_FORMAT && data.storage && typeof data.storage === 'object'
     ? data.storage as Record<string, unknown>
     : legacyBackupToStorage(data);
@@ -100,6 +140,7 @@ export function parseBackupJson(text: string): SmartFinanceBackup {
     validateStoredValue(key, value);
     normalized[key] = value;
   }
+  validateBackupSnapshot(normalized);
   if (!Object.keys(normalized).length) throw new Error('備份內搵唔到 SmartFinance 資料');
 
   return {
@@ -112,7 +153,7 @@ export function parseBackupJson(text: string): SmartFinanceBackup {
 }
 
 export function restoreBackup(backup: SmartFinanceBackup, storage: StorageLike): void {
-  for (const [key, value] of Object.entries(backup.storage)) validateStoredValue(key, value);
+  validateBackupSnapshot(backup.storage);
   const previous = collectAppStorage(storage);
   try {
     clearAppStorage(storage);
@@ -200,6 +241,7 @@ export function parseBackupCsv(text: string): SmartFinanceBackup {
     validateStoredValue(key, value ?? '');
     storage[key] = value ?? '';
   });
+  validateBackupSnapshot(storage);
   if (!Object.keys(storage).length) throw new Error('CSV 內冇可還原資料');
   return {
     format: BACKUP_FORMAT,
@@ -208,4 +250,34 @@ export function parseBackupCsv(text: string): SmartFinanceBackup {
     exportedAt: '',
     storage,
   };
+}
+
+export function validateBackupSnapshot(storage: Record<string, string>): void {
+  Object.entries(storage).forEach(([key, value]) => validateStoredValue(key, value));
+  const categories = storage.smartfinance_categories ? JSON.parse(storage.smartfinance_categories) : null;
+  if (categories) {
+    const byId = new Map<string, { type: string }>(categories.map((row: { id: string; type: string }) => [row.id, row]));
+    for (const key of ['smartfinance_transactions', 'smartfinance_subscriptions', 'smartfinance_budgets']) {
+      const rows = JSON.parse(storage[key] || '[]');
+      for (const row of rows) {
+        if (key === 'smartfinance_subscriptions' && !row.categoryId) continue;
+        const category = byId.get(row.categoryId);
+        if (!category) throw new Error(`${key}：分類 ${row.categoryId} 不存在`);
+        if (row.type && row.type !== category.type) throw new Error(`${key}：分類收入／支出類型不符`);
+      }
+    }
+  }
+}
+
+export function mergeBackupSnapshots(current: Record<string, string>, incoming: Record<string, string>): Record<string, string> {
+  const result = { ...current, ...incoming };
+  ARRAY_KEYS.forEach(key => {
+    if (!current[key] || !incoming[key]) return;
+    const idKey = key === 'smartfinance_budgets' ? 'categoryId' : 'id';
+    const rows = new Map(JSON.parse(current[key]).map((row: Record<string, unknown>) => [row[idKey], row]));
+    JSON.parse(incoming[key]).forEach((row: Record<string, unknown>) => rows.set(row[idKey], row));
+    result[key] = JSON.stringify([...rows.values()]);
+  });
+  validateBackupSnapshot(result);
+  return result;
 }

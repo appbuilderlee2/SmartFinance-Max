@@ -24,6 +24,7 @@ export interface Transaction {
   isRecurring?: boolean;
   recurrence?: RecurrenceFrequency;
   recurrenceSourceId?: string;
+  skippedDates?: string[]; // Deliberately deleted occurrences, retained on the source
   receiptUrl?: string;
   tags?: string[];
   currency?: Currency; // Optional per-transaction currency; defaults to app currency

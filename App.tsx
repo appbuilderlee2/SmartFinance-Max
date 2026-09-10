@@ -1,4 +1,4 @@
-import React, { Suspense, lazy, useEffect, useState } from 'react';
+import React, { Suspense, lazy, useEffect, useState, useSyncExternalStore } from 'react';
 import { HashRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { DataProvider } from './contexts/DataContext';
 import { routeModules } from './routeModules';
@@ -26,11 +26,19 @@ const CreditCard2SwipeWhich = lazy(routeModules.creditCard2SwipeWhich);
 // Layout
 import Layout from './components/Layout';
 import { hasOnboarded } from './utils/firstRun';
-import { STORAGE_ERROR_EVENT } from './utils/storage';
+import { STORAGE_ERROR_EVENT, subscribeStorage, getSaveStatus, retryStorage, flushStorage } from './utils/storage';
 import SecurityGate from './components/SecurityGate';
 
 const Loading: React.FC = () => <div className="p-4 text-gray-400">載入中…</div>;
 
+
+const StorageStatus = () => {
+  const saveStatus = useSyncExternalStore(subscribeStorage, getSaveStatus);
+  return (<div role="status" aria-live="polite" className="fixed bottom-20 right-3 z-[60] rounded-lg bg-background border sf-divider px-2 py-1 text-xs">
+          {saveStatus === 'saving' ? '儲存中…' : saveStatus === 'error' ? '尚未儲存' : '已儲存'}
+          {saveStatus === 'error' && <button className="ml-2 text-primary" onClick={() => void retryStorage()}>重試</button>}
+        </div>);
+};
 
 const App: React.FC = () => {
   const [swUpdate, setSwUpdate] = useState<ServiceWorkerRegistration | null>(null);
@@ -40,6 +48,16 @@ const App: React.FC = () => {
     typeof navigator !== 'undefined' && !navigator.onLine ? 'offline' : null,
   );
 
+
+  useEffect(() => {
+    const beforeUnload = (event: BeforeUnloadEvent) => { if (getSaveStatus() !== 'saved') { event.preventDefault(); event.returnValue = ''; } };
+    window.addEventListener('beforeunload', beforeUnload);
+    return () => window.removeEventListener('beforeunload', beforeUnload);
+  }, []);
+
+  useEffect(() => subscribeStorage(() => {
+    if (getSaveStatus() === 'saved') setStorageError(false);
+  }), []);
 
   useEffect(() => {
     const onStorageError = () => setStorageError(true);
@@ -84,7 +102,8 @@ const App: React.FC = () => {
 
   useEffect(() => {
     if (!swUpdate || refreshing) return;
-    const onControllerChange = () => {
+    const onControllerChange = async () => {
+      try { await flushStorage(); } catch { setStorageError(true); return; }
       if (refreshing) return;
       setRefreshing(true);
       window.location.reload();
@@ -93,7 +112,8 @@ const App: React.FC = () => {
     return () => navigator.serviceWorker?.removeEventListener('controllerchange', onControllerChange);
   }, [swUpdate, refreshing]);
 
-  const handleReload = () => {
+  const handleReload = async () => {
+    try { await flushStorage(); } catch { setStorageError(true); return; }
     if (!swUpdate) return;
     if (swUpdate.waiting) {
       swUpdate.waiting.postMessage({ type: 'SKIP_WAITING' });
@@ -138,6 +158,7 @@ const App: React.FC = () => {
             </div>
           </div>
         )}
+        <StorageStatus />
         <Routes>
           {/* Public but local-only: keep Welcome as landing (1B) */}
           <Route path="/welcome" element={<Suspense fallback={<Loading />}><Welcome /></Suspense>} />

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { RecurrenceFrequency, Transaction, TransactionType } from '../types';
-import { processDueRecurringTransactions } from './recurringTransactions';
+import { processDueRecurringTransactions, removeRecurringOccurrence } from './recurringTransactions';
 
 const source = (date: string, recurrence: RecurrenceFrequency = 'monthly'): Transaction => ({
   id: 'source-1',
@@ -66,4 +66,14 @@ describe('recurring transaction processing', () => {
     expect(result.transactions).toHaveLength(0);
     expect(result.changed).toBe(false);
   });
+});
+
+it('deleting an occurrence survives reload without regenerating it', () => {
+  const root = source('2026-01-31');
+  const first = processDueRecurringTransactions({ transactions: [root], today: new Date(2026, 1, 28), makeTransactionId: () => 'feb' });
+  const deleted = removeRecurringOccurrence([root, ...first.transactions], 'feb');
+  const restored = JSON.parse(JSON.stringify(deleted));
+  const result = processDueRecurringTransactions({ transactions: restored, today: new Date(2026, 2, 31), makeTransactionId: () => 'mar' });
+  expect(result.transactions.map(tx => tx.date)).toEqual(['2026-03-31']);
+  expect(restored[0].skippedDates).toEqual(['2026-02-28']);
 });

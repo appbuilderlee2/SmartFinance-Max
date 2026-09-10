@@ -7,8 +7,10 @@ import {
   parseBackupJson,
   restoreBackup,
   stringifyCsv,
-  parseCsv,
+  parseCsv, mergeBackupSnapshots,
 } from './backup';
+
+const tx = { amount: 12, date: '2026-09-01', categoryId: 'food', type: 'EXPENSE', note: '' };
 
 class MemoryStorage implements Storage {
   private values = new Map<string, string>();
@@ -38,8 +40,8 @@ describe('CSV codec', () => {
 describe('SmartFinance backup', () => {
   it('includes credit-card cycles and restores a JSON round trip', () => {
     const source = new MemoryStorage();
-    source.setItem('smartfinance_transactions', JSON.stringify([{ id: 'tx1', note: '午餐,朋友' }]));
-    source.setItem('smartfinance_creditcard_cycles', JSON.stringify([{ id: 'cycle1', status: 'closed' }]));
+    source.setItem('smartfinance_transactions', JSON.stringify([{ ...tx, id: 'tx1', note: '午餐,朋友' }]));
+    source.setItem('smartfinance_creditcard_cycles', JSON.stringify([{ id: 'cycle1', cardId: 'card1', year: 2026, month0: 8, yearMonth: '2026-09', status: 'closed' }]));
     source.setItem('sf.tagHistory.v1', JSON.stringify({ mru: ['朋友'] }));
     source.setItem('unrelated_key', 'keep-private');
 
@@ -57,7 +59,7 @@ describe('SmartFinance backup', () => {
 
   it('round-trips the complete storage backup through CSV', () => {
     const source = new MemoryStorage();
-    source.setItem('smartfinance_transactions', JSON.stringify([{ id: 'tx1', note: 'a,b\n"c"' }]));
+    source.setItem('smartfinance_transactions', JSON.stringify([{ ...tx, id: 'tx1', note: 'a,b\n"c"' }]));
     source.setItem('smartfinance_currency', 'AUD');
     const backup = createBackup(source, '1.2.0');
     expect(parseBackupCsv(backupToCsv(backup)).storage).toEqual(backup.storage);
@@ -88,12 +90,31 @@ describe('SmartFinance backup', () => {
       format: 'smartfinance-backup',
       backupVersion: 2,
       storage: {
-        smartfinance_transactions: JSON.stringify([{ id: 'new' }]),
+        smartfinance_transactions: JSON.stringify([{ ...tx, id: 'new' }]),
         smartfinance_creditcards: '[]',
       },
     }));
     storage.failOnKey = 'smartfinance_creditcards';
     expect(() => restoreBackup(backup, storage)).toThrow('quota exceeded');
     expect(storage.getItem('smartfinance_transactions')).toContain('old');
+  });
+});
+
+describe('backup integrity', () => {
+  const backup = (rows: unknown[], extra = {}) => JSON.stringify({ format: 'smartfinance-backup', backupVersion: 2, storage: { smartfinance_transactions: JSON.stringify(rows), ...extra } });
+  it.each([{ ...tx, id: 'bad', amount: '12' }, { ...tx, id: 'bad', date: '2026-02-31' }, { ...tx, id: 'bad', type: 'INVALID' }, null])('rejects malformed rows %j', row => {
+    expect(() => parseBackupJson(backup([row]))).toThrow();
+  });
+  it('rejects duplicate IDs, missing categories and future versions', () => {
+    expect(() => parseBackupJson(backup([{ ...tx, id: 'a' }, { ...tx, id: 'a' }]))).toThrow('ID');
+    expect(() => parseBackupJson(backup([{ ...tx, id: 'a' }], { smartfinance_categories: '[]' }))).toThrow('不存在');
+    expect(() => parseBackupJson(JSON.stringify({ format: 'smartfinance-backup', backupVersion: 999, storage: { smartfinance_transactions: '[]' } }))).toThrow('版本');
+  });
+  it('merges independent rows without erasing current records', () => {
+    const current = { smartfinance_transactions: JSON.stringify([{ ...tx, id: 'a' }, { ...tx, id: 'b' }]) };
+    const incoming = { smartfinance_transactions: JSON.stringify([{ ...tx, id: 'b', amount: 30 }, { ...tx, id: 'c' }]) };
+    const rows = JSON.parse(mergeBackupSnapshots(current, incoming).smartfinance_transactions);
+    expect(rows.map((row: { id: string }) => row.id)).toEqual(['a', 'b', 'c']);
+    expect(rows[1].amount).toBe(30);
   });
 });
