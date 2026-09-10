@@ -94,7 +94,7 @@ export function processDueSubscriptions(input: ProcessInput): ProcessResult {
             isRecurring: true,
             subscriptionId: subscription.id,
             currency: subscriptionCurrency,
-            tags: ['subscription'],
+            tags: [],
           });
         }
         processed = true;

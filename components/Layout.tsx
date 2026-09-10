@@ -44,7 +44,7 @@ const Layout: React.FC<LayoutProps> = ({ children, hideNav }) => {
         <div className="sf-tabbar fixed bottom-0 left-0 right-0 sf-surface border-t sf-divider pb-safe-bottom pt-2 px-4 z-50">
           <div className="flex justify-between items-end max-w-md mx-auto">
             {navItems.map((item) => {
-              const isActive = location.pathname === item.path;
+              const isActive = location.pathname === item.path || (item.path === '/settings' && location.pathname === '/reports');
               const IconComp = item.icon;
 
               const prefetch = navRoutePreloads[item.path];
