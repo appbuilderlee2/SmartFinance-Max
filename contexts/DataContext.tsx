@@ -1,3 +1,6 @@
+import { writeJson } from '../utils/storage';
+import { renameTransactionTags, tagKey, normalizeTag, uniqueTags } from '../utils/tags';
+import { loadTagHistory } from '../utils/tagHistory';
 import { observeLocalDay } from '../utils/dayBoundary';
 
 import React, { createContext, useContext, useState, useEffect, useMemo, useRef } from 'react';
@@ -71,6 +74,7 @@ interface DataContextType {
   addTransaction: (tx: Omit<Transaction, 'id'>) => void;
   updateTransaction: (id: string, tx: Partial<Transaction>) => void;
   deleteTransaction: (id: string) => void;
+  renameTag: (source: string, target: string) => void;
   addSubscription: (sub: Omit<Subscription, 'id'>) => void;
   updateSubscription: (id: string, updates: Partial<Subscription>) => void;
   deleteSubscription: (id: string) => void;
@@ -211,6 +215,13 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       id: makeId('tx'),
     };
     setTransactions(prev => [newTx, ...prev]);
+  };
+
+  const renameTag = (source: string, target: string) => {
+    const name = normalizeTag(target);
+    if (!name) return;
+    setTransactions(previous => renameTransactionTags(previous, source, name));
+    writeJson('sf.tagHistory.v1', { mru: uniqueTags(loadTagHistory().map(tag => tagKey(tag) === tagKey(source) ? name : tag)) });
   };
 
   const updateTransaction = (id: string, updatedFields: Partial<Transaction>) => {
@@ -504,6 +515,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       addTransaction,
       deleteTransaction,
       updateTransaction,
+      renameTag,
       getCategory,
       addCategory,
       deleteCategory,

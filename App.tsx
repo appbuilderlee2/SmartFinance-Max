@@ -18,6 +18,7 @@ const NotificationSettings = lazy(routeModules.notificationSettings);
 const CreditCardManager = lazy(routeModules.creditCardManager);
 const CreditCardCycles = lazy(routeModules.creditCardCycles);
 const AddSubscriptionPage = lazy(routeModules.addSubscription);
+const TagManager = lazy(() => import('./pages/TagManager'));
 const Reports = lazy(routeModules.reports);
 const CreditCard2 = lazy(routeModules.creditCard2);
 const CreditCard2Match = lazy(routeModules.creditCard2Match);
@@ -160,6 +161,7 @@ const App: React.FC = () => {
         )}
         <StorageStatus />
         <Routes>
+          <Route path="/settings/tags" element={<Suspense fallback={<Loading />}><Layout hideNav><TagManager /></Layout></Suspense>} />
           {/* Public but local-only: keep Welcome as landing (1B) */}
           <Route path="/welcome" element={<Suspense fallback={<Loading />}><Welcome /></Suspense>} />
 

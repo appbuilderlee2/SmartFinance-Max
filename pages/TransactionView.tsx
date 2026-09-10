@@ -1,3 +1,4 @@
+import { userTags } from '../utils/tags';
 
 import React, { useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
@@ -86,6 +87,7 @@ const TransactionView: React.FC = () => {
             <div className="p-4">
               <span className="text-white block mb-1">備註</span>
               <span className="text-gray-400">{transaction.note || '無備註'}</span>
+              {transaction.subscriptionId && <span className="text-xs text-gray-400">來源：訂閱自動入帳</span>}
             </div>
 
             {recurrence && (
@@ -103,8 +105,8 @@ const TransactionView: React.FC = () => {
             <div className="flex justify-between items-center p-4">
               <span className="text-white">標籤</span>
               <div className="flex gap-2">
-                {transaction.tags && transaction.tags.length > 0 ? (
-                  transaction.tags.map(tag => (
+                {userTags(transaction).length > 0 ? (
+                  userTags(transaction).map(tag => (
                     <span key={tag} className="px-3 py-1 text-xs rounded-full bg-primary/15 text-primary border border-primary/30">
                       {tag}
                     </span>

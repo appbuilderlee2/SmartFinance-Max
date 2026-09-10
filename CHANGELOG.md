@@ -1,3 +1,11 @@
+## v2.7.0 — Reports and tag workflows
+
+- Rebuilt reports with overview/category/trend tabs, month navigation, currency-scoped totals, category drill-down and transaction navigation.
+- Added a modal filter sheet with explicit apply/cancel, separate note/tag filters, validated dates and amounts, and a single actionable empty state.
+- Added a shared searchable tag picker and tag management with affected-record previews, rename/merge and tag report links.
+- Preserved legacy subscription metadata while keeping generated subscription sources separate from manual tags.
+- Added report precision/date/filter and tag merge regression tests, plus mobile/desktop workflow coverage.
+
 ## v2.6.0 — Reliability and transaction storage
 
 - Deliberately deleted recurring occurrences are skipped permanently; history can be retained while stopping future recurrence.

@@ -268,7 +268,7 @@ const Settings: React.FC = () => {
           <div className="sf-panel divide-y sf-divider overflow-hidden">
             {[
               ['信用卡管理', '/settings/creditcards'], ['信用卡週期', '/settings/creditcard-cycles'],
-              ['訂閱服務', '/subscriptions'], ['分類管理', '/categories'], ['月預算設定', '/budget'], ['報告統計', '/reports'],
+              ['訂閱服務', '/subscriptions'], ['分類管理', '/categories'], ['月預算設定', '/budget'], ['報告統計', '/reports'], ['標籤管理', '/settings/tags'],
               ...(rewardsUnlocked ? [['回贈助手', '/settings/creditcards2']] : []),
             ].map(([label, path]) => (
               <button key={path} onClick={() => navigate(path, path === '/subscriptions' ? { state: { from: '/settings' } } : undefined)} className="w-full p-4 flex items-center justify-between text-white hover:bg-surface/80">

@@ -1,13 +1,14 @@
 import React, { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Camera, X, Tag, CircleDollarSign, CalendarDays, BarChart3, List, Settings, ChevronDown, ChevronUp, Pencil } from 'lucide-react';
+import { Plus, Camera, X, CircleDollarSign, CalendarDays, BarChart3, List, Settings, ChevronDown, ChevronUp } from 'lucide-react';
 import { useData } from '../contexts/DataContext';
 import { Icon } from '../components/Icon';
 import NumPad from '../components/NumPad';
 import { getCurrencySymbol } from '../utils/currency';
 import { Currency, RecurrenceFrequency, TransactionType } from '../types';
 import { triggerHaptic, HapticPatterns } from '../utils/haptics';
-import { clearTagHistory, deleteTagFromHistory, loadTagHistory, rememberTags } from '../utils/tagHistory';
+import { rememberTags } from '../utils/tagHistory';
+import TagPicker from '../components/TagPicker';
 import { localYMDToStoredISOString, toLocalYMD } from '../utils/date';
 import { parseMoneyInput } from '../utils/money';
 
@@ -29,12 +30,9 @@ const AddTransaction: React.FC = () => {
   const [recurrence, setRecurrence] = useState<RecurrenceFrequency | 'none'>('none');
   const [receiptPreview, setReceiptPreview] = useState<string | null>(null);
   const [tags, setTags] = useState<string[]>([]);
-  const [tagInput, setTagInput] = useState('');
-  const [tagHistory, setTagHistory] = useState<string[]>(() => loadTagHistory());
   const [transactionType, setTransactionType] = useState<TransactionType>(TransactionType.EXPENSE);
   const [txCurrency, setTxCurrency] = useState<Currency>(currency);
   const [showDetails, setShowDetails] = useState(false);
-  const [editTagHistory, setEditTagHistory] = useState(false);
 
   const handleSave = () => {
     const amountValue = parseMoneyInput(amount, txCurrency);
@@ -59,7 +57,6 @@ const AddTransaction: React.FC = () => {
     // Persist tags MRU on save as well (covers cases where user typed but didn't blur/add)
     if (tags.length > 0) {
       rememberTags(tags);
-      setTagHistory(loadTagHistory());
     }
 
     addTransaction({
@@ -92,21 +89,6 @@ const AddTransaction: React.FC = () => {
 
   const triggerFileInput = () => {
     fileInputRef.current?.click();
-  };
-
-  const addTag = () => {
-    const t = tagInput.trim();
-    if (t && !tags.includes(t)) {
-      setTags([...tags, t]);
-      setTagInput('');
-
-      rememberTags([t]);
-      setTagHistory(loadTagHistory());
-    }
-  };
-
-  const removeTag = (tagToRemove: string) => {
-    setTags(tags.filter(t => t !== tagToRemove));
   };
 
   return (
@@ -233,6 +215,7 @@ const AddTransaction: React.FC = () => {
                 </select>
               </div>
 
+              <label className="block">備註 <span className="text-xs text-gray-400">描述呢筆交易，可留空</span>
               <input
                 type="text"
                 placeholder="輸入備註..."
@@ -241,102 +224,8 @@ const AddTransaction: React.FC = () => {
                 className="w-full sf-control rounded-xl p-4 text-white placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-primary transition-all"
               />
 
-              {/* Tags Input */}
-              <div className="w-full sf-control rounded-xl p-3 flex flex-wrap items-center gap-2 min-h-[56px]">
-                <Tag size={18} className="text-gray-500 mr-1" />
-                {tags.map(tag => (
-                  <span key={tag} className="bg-primary/15 text-primary text-xs px-2 py-1 rounded-full flex items-center gap-1 border border-primary/25">
-                    {tag}
-                    <button onClick={() => removeTag(tag)} className="hover:text-white"><X size={12} /></button>
-                  </span>
-                ))}
-                <input
-                  type="text"
-                  placeholder={tags.length === 0 ? "新增標籤..." : ""}
-                  value={tagInput}
-                  onChange={e => setTagInput(e.target.value)}
-                  onKeyDown={e => { if (e.key === 'Enter') addTag(); }}
-                  onBlur={addTag}
-                  className="bg-transparent text-white text-sm focus:outline-none flex-1 min-w-[80px]"
-                />
-              </div>
-
-              {/* 常用標籤（最近使用 MRU） */}
-              {tagHistory.length > 0 && (
-                <div className="mt-2">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-xs text-gray-500">常用標籤</span>
-
-                    <div className="flex items-center gap-3">
-                      <button
-                        type="button"
-                        onClick={() => setEditTagHistory(v => !v)}
-                        className={`text-xs underline ${editTagHistory ? 'text-white' : 'text-gray-400 hover:text-white'}`}
-                        title="編輯常用標籤"
-                      >
-                        <span className="inline-flex items-center gap-1">
-                          <Pencil size={12} />
-                          {editTagHistory ? '完成' : '編輯'}
-                        </span>
-                      </button>
-
-                      {editTagHistory && (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            if (!window.confirm('清空所有常用標籤？')) return;
-                            clearTagHistory();
-                            setTagHistory(loadTagHistory());
-                            setEditTagHistory(false);
-                          }}
-                          className="text-xs text-gray-400 hover:text-white underline"
-                        >
-                          清空
-                        </button>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="flex flex-wrap gap-2">
-                    {tagHistory.slice(0, 12).map(t => {
-                      const active = tags.includes(t);
-                      return (
-                        <div key={t} className="flex items-center gap-1">
-                          <button
-                            type="button"
-                            onClick={() => {
-                              if (!active) setTags(prev => [...prev, t]);
-                              rememberTags([t]);
-                              setTagHistory(loadTagHistory());
-                            }}
-                            className={`text-xs px-3 py-1 rounded-full border transition-colors ${active
-                              ? 'bg-primary/20 text-primary border-primary/30'
-                              : 'bg-white/5 text-gray-300 border-white/10 hover:bg-white/10'
-                            }`}
-                          >
-                            {t}
-                          </button>
-
-                          {editTagHistory && (
-                            <button
-                              type="button"
-                              aria-label={`刪除常用標籤 ${t}`}
-                              onClick={() => {
-                                deleteTagFromHistory(t);
-                                setTagHistory(loadTagHistory());
-                              }}
-                              className="text-gray-500 hover:text-white"
-                              title="刪除"
-                            >
-                              <X size={14} />
-                            </button>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
+              </label>
+              <TagPicker value={tags} onChange={setTags} />
 
               <input
                 type="file"
