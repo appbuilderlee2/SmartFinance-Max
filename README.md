@@ -1,10 +1,15 @@
 # SmartFinance-Max (PWA)
 
-目前版本：**v2.7.0**
+目前版本：**v2.7.1**
 
 Pages：https://appbuilderlee2.github.io/SmartFinance-Max/
 
 SmartFinance-Max 以 SmartFinance v1.1.25 為基線，係一個 local-first 記帳 PWA，包含記帳、訂閱自動入帳、預算、報表、信用卡及信用卡週期管理。資料主要儲存於目前瀏覽器嘅 IndexedDB；v2.6.0 起，交易會以獨立記錄逐筆保存及建立索引。
+
+## v2.7.1 返回報告及儲存提示
+
+- 查看交易後返回報告，保留期間、幣別、篩選、分類及已載入明細位置
+- 移除常駐「已儲存」浮動提示；儲存中及失敗時仍會提示
 
 ## v2.7.0 報告與標籤新介面
 

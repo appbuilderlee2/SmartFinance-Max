@@ -26,6 +26,12 @@ test('reports drill down, cancel or apply filters, and handle empty months', asy
   await page.getByRole('button', {name:'查看全部 ›', exact:true}).click();
   await page.getByRole('button', {name:/餐飲/}).click();
   await expect(page.getByText('午餐測試')).toBeVisible();
+  await page.getByRole('button', {name:/午餐測試/}).click();
+  await expect(page.getByRole('heading', {name:'帳目明細'})).toBeVisible();
+  await page.getByRole('button', {name:'返回報告',exact:true}).click();
+  await expect(page.getByRole('heading', {name:'交易明細'})).toBeVisible();
+  await expect(page.getByText('午餐測試')).toBeVisible();
+  await expect(page.getByRole('combobox', {name:'報告幣別'})).toHaveValue('AUD');
   await page.getByRole('button', {name:'篩選報告',exact:true}).click();
   await page.getByPlaceholder('只搜尋備註文字').fill('不匹配');
   await page.getByRole('button', {name:'關閉面板'}).click();
@@ -34,6 +40,13 @@ test('reports drill down, cancel or apply filters, and handle empty months', asy
   await page.getByPlaceholder('只搜尋備註文字').fill('咖啡');
   await page.getByRole('button', {name:'套用篩選'}).click();
   await expect(page.getByText(/已篩選 · 1 筆/)).toBeVisible();
+  await page.getByRole('button', {name:/餐飲/}).click();
+  await page.getByRole('button', {name:/咖啡測試/}).click();
+  await page.getByRole('button', {name:'返回報告',exact:true}).click();
+  await expect(page.getByText(/已篩選 · 1 筆/)).toBeVisible();
+  await expect(page.getByText('咖啡測試')).toBeVisible();
+  await expect(page.getByText('午餐測試')).toHaveCount(0);
+  await expect(page.getByRole('status').filter({hasText:'已儲存'})).toHaveClass('sr-only');
   await page.getByRole('button', {name:'清除篩選'}).click();
   await page.getByRole('button', {name:'上一個月'}).click();
   await expect(page.getByRole('heading', {name:'呢段期間未有交易'})).toBeVisible();
