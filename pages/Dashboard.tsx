@@ -1,3 +1,4 @@
+import { useNavigate } from 'react-router-dom';
 
 import React, { useMemo, useState } from 'react';
 import { PieChart, Pie, Cell, ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip } from 'recharts';
@@ -10,6 +11,7 @@ import { formatMoney, fromMinorUnits, sumMoney, toMinorUnits } from '../utils/mo
 type PeriodMode = 'month' | 'year';
 
 const Dashboard: React.FC = () => {
+  const navigate = useNavigate();
   const { transactions, categories, budgets, currency } = useLedger();
 
   const categoryById = useMemo(() => {
@@ -190,9 +192,7 @@ const Dashboard: React.FC = () => {
       <header className="flex flex-col gap-3 mb-2">
         <div className="flex justify-between items-center">
           <h1 className="text-2xl font-bold">統計總覽</h1>
-          <div className="h-8 w-8 sf-control rounded-full overflow-hidden">
-            <div className="w-full h-full flex items-center justify-center text-xs text-gray-300">User</div>
-          </div>
+          <button className="sf-control rounded-xl px-4 py-2 text-primary" onClick={() => navigate('/subscriptions', { state: { from: '/' } })}>訂閱服務</button>
         </div>
         <div className="flex gap-2 flex-wrap">
           <div className="flex sf-control rounded-lg p-1">

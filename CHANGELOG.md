@@ -1,3 +1,11 @@
+## v2.8.1 — Settings navigation
+
+- Split settings into six category views with URL-backed search and selection.
+- Collapse secondary theme, CSV, diagnostics and destructive controls.
+- Move the subscription entry to the dashboard; remove duplicate subscription/card settings links.
+- Preserve existing settings actions and update regression selectors for the new hierarchy.
+- Mobile visual QA remains unverified in this environment.
+
 ## v2.8.0 — Credit card center
 
 - Added a sixth navigation entry and unified overview, billing cycles, card details and management.
