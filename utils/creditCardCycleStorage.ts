@@ -21,6 +21,26 @@ export function upsertCycle(cycles: CreditCardCycle[], cycle: CreditCardCycle): 
   return [...cycles, cycle];
 }
 
+export function migrateCreditCardCurrencies<T extends { id: string; currency?: string }>(
+  cards: T[],
+  cycles: CreditCardCycle[],
+  mainCurrency: string
+): { cards: T[]; cycles: CreditCardCycle[]; changed: boolean } {
+  let changed = false;
+  const migratedCards = cards.map(card => {
+    if (card.currency) return card;
+    changed = true;
+    return { ...card, currency: mainCurrency };
+  }) as T[];
+  const currencyByCard = new Map(migratedCards.map(card => [card.id, card.currency || mainCurrency]));
+  const migratedCycles = cycles.map(cycle => {
+    if (cycle.currency) return cycle;
+    changed = true;
+    return { ...cycle, currency: currencyByCard.get(cycle.cardId) || mainCurrency };
+  });
+  return { cards: migratedCards, cycles: migratedCycles, changed };
+}
+
 export function getOrCreateCurrentCycle(card: any, cycles: CreditCardCycle[], now = new Date()): { cycle: CreditCardCycle; cycles: CreditCardCycle[] } {
   const { year, month0, yearMonth } = getCurrentYearMonth(now);
 

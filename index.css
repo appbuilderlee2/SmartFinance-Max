@@ -630,6 +630,13 @@ html.theme-applefluid-light .sf-sheet { background: #f6f7fa; color: #172033; }
 .sf-credit-actions span { flex:1; }
 .sf-credit-actions select { max-width:145px; background:transparent; font-size:12px; }
 .sf-credit-note { text-align:center; font-size:11px; color:rgb(var(--sf-text-primary)/.6); margin:12px 0 20px; line-height:1.6; }
+.sf-credit-alerts { display:flex; justify-content:flex-end; flex-wrap:wrap; gap:4px; margin-bottom:5px; }
+.sf-credit-alert { display:inline-block; border:1px solid rgb(var(--sf-text-primary)/.16); border-radius:999px; padding:2px 7px; color:rgb(var(--sf-text-primary)/.72) !important; white-space:nowrap; }
+.sf-credit-alert-overdue { color:#fb7185 !important; border-color:#fb718566; background:#fb718514; }
+.sf-credit-alert-upcoming { color:#fbbf24 !important; border-color:#fbbf2466; background:#fbbf2414; }
+.sf-credit-alert-missing { color:#7dd3fc !important; border-color:#38bdf866; background:#38bdf814; }
+.sf-credit-alert-summary { display:grid; grid-template-columns:repeat(3,1fr); gap:6px; margin-top:14px; }
+.sf-credit-alert-summary span { border-radius:9px; padding:8px 5px; background:rgb(var(--sf-text-primary)/.05); font-size:11px; text-align:center; }
 .sf-credit-month { display:flex; align-items:center; justify-content:space-around; margin-bottom:18px; }
 .sf-credit-month button { padding:8px; }
 .sf-credit-timeline { border-left:1px solid rgb(var(--sf-text-primary)/.25); margin-left:8px; padding-left:16px; }

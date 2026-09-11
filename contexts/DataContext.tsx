@@ -24,6 +24,7 @@ import { processDueSubscriptions } from '../utils/subscriptionProcessing';
 import { fromMinorUnits, toMinorUnits } from '../utils/money';
 import { processDueRecurringTransactions, removeRecurringOccurrence } from '../utils/recurringTransactions';
 import { resetSecurityCache } from '../utils/security';
+import { loadCycles, migrateCreditCardCurrencies, saveCycles } from '../utils/creditCardCycleStorage';
 
 export interface CreditCard {
   id: string;
@@ -36,6 +37,7 @@ export interface CreditCard {
   creditLimit?: number;
   imageUrl?: string;
   rewardCategories?: string[];
+  currency?: Currency; // Independent card currency; legacy cards are migrated to the then-current main currency.
 
   // Billing cycle dates (day of month, 1-31). Optional.
   statementDay?: number; // 截數日
@@ -149,8 +151,11 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setCategories(normalizeCategories(readJson<Category[]>('smartfinance_categories') ?? CATEGORIES));
       setBudgets(readJson<Budget[]>('smartfinance_budgets') ?? []);
       setSubscriptions(readJson<Subscription[]>('smartfinance_subscriptions') ?? []);
-      setCurrencyState((readText('smartfinance_currency') as Currency) || Currency.HKD);
-      setCreditCards(readJson<CreditCard[]>('smartfinance_creditcards') ?? []);
+      const loadedCurrency = (readText('smartfinance_currency') as Currency) || Currency.HKD;
+      const migration = migrateCreditCardCurrencies(readJson<CreditCard[]>('smartfinance_creditcards') ?? [], loadCycles(), loadedCurrency);
+      setCurrencyState(loadedCurrency);
+      setCreditCards(migration.cards);
+      if (migration.changed) saveCycles(migration.cycles);
       setThemeColorState(normalizeThemeName(readText('smartfinance_themecolor')));
       setStorageBackend(result.backend);
       setStorageReady(true);

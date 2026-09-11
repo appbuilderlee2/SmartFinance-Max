@@ -7,6 +7,7 @@ import { CardCatalogItem, fetchCardCatalog } from '../services/cardCatalog';
 import { makeId } from '../utils/id';
 import { getCurrentYearMonth, createOpenCycle } from '../utils/creditCardCycles';
 import { loadCycles, saveCycles, upsertCycle } from '../utils/creditCardCycleStorage';
+import { Currency } from '../types';
 
 interface CreditCardType {
     id: string;
@@ -19,6 +20,7 @@ interface CreditCardType {
     creditLimit?: number;
     imageUrl?: string;
     rewardCategories?: string[];
+    currency?: Currency;
 
     statementDay?: number; // 1-31 截數日
     dueDay?: number; // 1-31 繳費日
@@ -29,7 +31,7 @@ interface CreditCardType {
 
 const CreditCardManager: React.FC<{ embedded?: boolean; editId?: string; adding?: boolean; onDone?: () => void }> = ({ embedded, editId, adding, onDone }) => {
     const navigate = useNavigate();
-    const { creditCards, addCreditCard, updateCreditCard, deleteCreditCard, setCreditCards } = useData();
+    const { creditCards, addCreditCard, updateCreditCard, deleteCreditCard, setCreditCards, currency } = useData();
 
     const [showModal, setShowModal] = useState(false);
     const [editingId, setEditingId] = useState<string | null>(null);
@@ -47,6 +49,7 @@ const CreditCardManager: React.FC<{ embedded?: boolean; editId?: string; adding?
         creditLimit: undefined,
         imageUrl: undefined,
         rewardCategories: [],
+        currency,
         statementDay: undefined,
         dueDay: undefined,
         dueInNextMonth: true,
@@ -56,7 +59,7 @@ const CreditCardManager: React.FC<{ embedded?: boolean; editId?: string; adding?
 
     const openAddModal = () => {
         setEditingId(null);
-        setFormData({ name: '', lastFourDigits: '', annualFee: 0, feeMonth: undefined, cashbackType: '', expiryDate: '', creditLimit: undefined, imageUrl: undefined, rewardCategories: [], statementDay: undefined, dueDay: undefined, dueInNextMonth: true, remindStatement: true, remindDue: true });
+        setFormData({ name: '', lastFourDigits: '', annualFee: 0, feeMonth: undefined, cashbackType: '', expiryDate: '', creditLimit: undefined, imageUrl: undefined, rewardCategories: [], currency, statementDay: undefined, dueDay: undefined, dueInNextMonth: true, remindStatement: true, remindDue: true });
         setCatalogQuery('');
         setCatalogError(null);
         setShowModal(true);
@@ -64,7 +67,7 @@ const CreditCardManager: React.FC<{ embedded?: boolean; editId?: string; adding?
 
     const openEditModal = (card: CreditCardType) => {
         setEditingId(card.id);
-        setFormData({ ...card });
+        setFormData({ ...card, currency: card.currency || currency });
         setCatalogQuery('');
         setCatalogError(null);
         setShowModal(true);
@@ -186,7 +189,7 @@ const CreditCardManager: React.FC<{ embedded?: boolean; editId?: string; adding?
                                     <div>
                                         <h3 className="text-white font-medium">{card.name}</h3>
                                         <p className="text-gray-500 text-sm">
-                                            {card.lastFourDigits ? `**** ${card.lastFourDigits}` : '末四碼未設定'}
+                                            {card.lastFourDigits ? `**** ${card.lastFourDigits}` : '末四碼未設定'} · {card.currency || currency}
                                         </p>
                                     </div>
                                 </div>
@@ -229,7 +232,7 @@ const CreditCardManager: React.FC<{ embedded?: boolean; editId?: string; adding?
                             <div className="grid grid-cols-2 gap-3 text-sm">
                                 <div>
                                     <p className="text-gray-500">年費</p>
-                                    <p className="text-white">${card.annualFee.toLocaleString()}</p>
+                                    <p className="text-white">{new Intl.NumberFormat('en-AU', { style: 'currency', currency: card.currency || currency }).format(card.annualFee)}</p>
                                 </div>
                                 <div>
                                     <p className="text-gray-500">收費月份</p>
@@ -237,7 +240,7 @@ const CreditCardManager: React.FC<{ embedded?: boolean; editId?: string; adding?
                                 </div>
                                 <div>
                                     <p className="text-gray-500">信用額度</p>
-                                    <p className="text-white">{card.creditLimit ? `$${card.creditLimit.toLocaleString()}` : '未設定'}</p>
+                                    <p className="text-white">{card.creditLimit ? new Intl.NumberFormat('en-AU', { style: 'currency', currency: card.currency || currency }).format(card.creditLimit) : '未設定'}</p>
                                 </div>
                                 <div className="col-span-2">
                                     <p className="text-gray-500">回贈優惠</p>
@@ -382,6 +385,14 @@ const CreditCardManager: React.FC<{ embedded?: boolean; editId?: string; adding?
                                     onChange={e => setFormData({ ...formData, name: e.target.value })}
                                     className="w-full sf-control rounded-xl p-3 text-white"
                                 />
+                            </div>
+
+                            <div>
+                                <label className="text-gray-400 text-sm mb-1 block">卡片幣別</label>
+                                <select aria-label="卡片幣別" value={formData.currency || currency} onChange={e => setFormData({ ...formData, currency: e.target.value as Currency })} className="w-full sf-control rounded-xl p-3 text-white">
+                                    {Object.values(Currency).map(code => <option key={code} value={code}>{code}</option>)}
+                                </select>
+                                <div className="text-xs text-gray-500 mt-1">新帳單會沿用此幣別；已建立帳單保留原有幣別。</div>
                             </div>
 
                             <div>
