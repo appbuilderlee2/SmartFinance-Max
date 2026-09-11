@@ -1,3 +1,10 @@
+## v2.8.0 — Credit card center
+
+- Added a sixth navigation entry and unified overview, billing cycles, card details and management.
+- Currency-scoped pending totals distinguish missing amounts; bill filters use due month and payment status.
+- Reused existing card/cycle storage; creating an existing next cycle never overwrites it.
+- Local typecheck and existing 60 unit tests passed. New mobile visual/interaction QA remains unverified because Browser returned ERR_BLOCKED_BY_CLIENT. User requested direct merge with that limitation disclosed.
+
 ## v2.7.1
 
 - Preserve report state and scroll position when returning from transaction details.

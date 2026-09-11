@@ -16,6 +16,7 @@ const BudgetSettings = lazy(routeModules.budgetSettings);
 const Subscriptions = lazy(routeModules.subscriptions);
 const NotificationSettings = lazy(routeModules.notificationSettings);
 const CreditCardManager = lazy(routeModules.creditCardManager);
+const CreditCardCenter = lazy(routeModules.creditCardCenter);
 const CreditCardCycles = lazy(routeModules.creditCardCycles);
 const AddSubscriptionPage = lazy(routeModules.addSubscription);
 const TagManager = lazy(() => import('./pages/TagManager'));
@@ -239,6 +240,10 @@ const App: React.FC = () => {
                 <Layout hideNav><NotificationSettings /></Layout>
               </Suspense>
             }
+          />
+          <Route
+            path="/cards/*"
+            element={<Suspense fallback={<Layout><Loading /></Layout>}><Layout><CreditCardCenter /></Layout></Suspense>}
           />
           <Route
             path="/settings/creditcards"

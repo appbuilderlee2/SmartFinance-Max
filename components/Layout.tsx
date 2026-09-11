@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { BarChart3, CalendarDays, Settings, CircleDollarSign, List } from 'lucide-react';
+import { BarChart3, CalendarDays, Settings, CircleDollarSign, List, CreditCard } from 'lucide-react';
 
 import { triggerHaptic, HapticPatterns } from '../utils/haptics';
 import { navRoutePreloads } from '../routeModules';
@@ -26,6 +26,7 @@ const Layout: React.FC<LayoutProps> = ({ children, hideNav }) => {
     { icon: CalendarDays, label: '月曆', path: '/calendar' },
     { icon: BarChart3, label: '統計', path: '/' },
     { icon: List, label: '記錄', path: '/records' },
+    { icon: CreditCard, label: '信用卡', path: '/cards' },
     { icon: Settings, label: '設定', path: '/settings' },
   ];
 
@@ -44,7 +45,7 @@ const Layout: React.FC<LayoutProps> = ({ children, hideNav }) => {
         <div className="sf-tabbar fixed bottom-0 left-0 right-0 sf-surface border-t sf-divider pb-safe-bottom pt-2 px-4 z-50">
           <div className="flex justify-between items-end max-w-md mx-auto">
             {navItems.map((item) => {
-              const isActive = location.pathname === item.path || (item.path === '/settings' && location.pathname === '/reports');
+              const isActive = location.pathname === item.path || (item.path === '/cards' && location.pathname.startsWith('/cards/')) || (item.path === '/settings' && location.pathname === '/reports');
               const IconComp = item.icon;
 
               const prefetch = navRoutePreloads[item.path];
@@ -52,11 +53,12 @@ const Layout: React.FC<LayoutProps> = ({ children, hideNav }) => {
               return (
                 <button
                   key={item.path}
+                  aria-current={isActive ? 'page' : undefined}
                   onClick={() => handleNavClick(item.path)}
                   onPointerEnter={() => prefetch?.().catch(() => undefined)}
                   onFocus={() => prefetch?.().catch(() => undefined)}
                   onTouchStart={() => prefetch?.().catch(() => undefined)}
-                  className={`flex flex-col items-center gap-1 w-16 py-1 transition-colors active:scale-95 duration-200 ${isActive ? 'text-primary' : 'text-gray-500'
+                  className={`flex flex-col items-center gap-1 flex-1 min-w-0 py-1 transition-colors active:scale-95 duration-200 ${isActive ? 'text-primary' : 'text-gray-500'
                     }`}
                 >
                   <IconComp size={24} strokeWidth={isActive ? 2.5 : 2} />

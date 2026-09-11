@@ -267,7 +267,7 @@ const Settings: React.FC = () => {
           <h2 className="text-gray-500 text-xs ml-3 mb-2 uppercase tracking-wider">帳務管理</h2>
           <div className="sf-panel divide-y sf-divider overflow-hidden">
             {[
-              ['信用卡管理', '/settings/creditcards'], ['信用卡週期', '/settings/creditcard-cycles'],
+              ['信用卡中心', '/cards'],
               ['訂閱服務', '/subscriptions'], ['分類管理', '/categories'], ['月預算設定', '/budget'], ['報告統計', '/reports'], ['標籤管理', '/settings/tags'],
               ...(rewardsUnlocked ? [['回贈助手', '/settings/creditcards2']] : []),
             ].map(([label, path]) => (

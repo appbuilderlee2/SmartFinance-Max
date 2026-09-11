@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ChevronLeft, Plus, CreditCard, Trash2, X, Pencil, ArrowUp, ArrowDown, Cloud, Search } from 'lucide-react';
 import { useData } from '../contexts/DataContext';
@@ -27,7 +27,7 @@ interface CreditCardType {
     remindDue?: boolean;
 }
 
-const CreditCardManager: React.FC = () => {
+const CreditCardManager: React.FC<{ embedded?: boolean; editId?: string; adding?: boolean; onDone?: () => void }> = ({ embedded, editId, adding, onDone }) => {
     const navigate = useNavigate();
     const { creditCards, addCreditCard, updateCreditCard, deleteCreditCard, setCreditCards } = useData();
 
@@ -83,6 +83,14 @@ const CreditCardManager: React.FC = () => {
         }
     };
 
+    useEffect(() => {
+        if (adding) openAddModal();
+        else if (editId) {
+            const card = creditCards.find(c => c.id === editId);
+            if (card) openEditModal(card);
+        }
+    }, [editId, adding]);
+
     const applyCatalogItem = (item: CardCatalogItem) => {
         const points = item.sellingPoints?.filter(Boolean) || item.tags?.filter(Boolean) || [];
         setFormData((prev) => ({
@@ -122,6 +130,7 @@ const CreditCardManager: React.FC = () => {
         }
 
         setShowModal(false);
+        onDone?.();
     };
 
     const moveCard = (index: number, direction: 'up' | 'down') => {
@@ -138,9 +147,9 @@ const CreditCardManager: React.FC = () => {
     const months = Array.from({ length: 12 }, (_, i) => i + 1);
 
     return (
-        <div className="min-h-screen bg-background pb-20 pt-safe-top">
+        <div className={embedded ? 'sf-card-manager' : 'min-h-screen bg-background pb-20 pt-safe-top'}>
             {/* Header */}
-            <div className="px-4 py-3 flex justify-between items-center sf-topbar sticky top-0 z-50">
+            <div className={embedded ? 'hidden' : 'px-4 py-3 flex justify-between items-center sf-topbar sticky top-0 z-50'}>
                 <button onClick={() => navigate(-1)} className="flex items-center text-primary">
                     <ChevronLeft size={24} />
                 </button>
@@ -150,7 +159,7 @@ const CreditCardManager: React.FC = () => {
                 </button>
             </div>
 
-            <div className="p-4 space-y-4">
+            <div className={embedded && (editId || adding) ? 'hidden' : 'p-4 space-y-4'}>
                 {creditCards.length === 0 ? (
                     <div className="text-center py-12 text-gray-500">
                         <CreditCard size={48} className="mx-auto mb-4 opacity-50" />
@@ -263,11 +272,11 @@ const CreditCardManager: React.FC = () => {
 
             {/* Add/Edit Modal */}
             {showModal && (
-                <div className="fixed inset-0 bg-black/70 z-50 flex items-end">
-                    <div className="sf-panel w-full rounded-t-3xl p-6 pb-safe-bottom animate-slide-up max-h-[90vh] overflow-y-auto">
+                <div className={embedded && (editId || adding) ? '' : 'fixed inset-0 bg-black/70 z-50 flex items-end'}>
+                    <div className={embedded && (editId || adding) ? 'space-y-4' : 'sf-panel w-full rounded-t-3xl p-6 pb-safe-bottom animate-slide-up max-h-[90vh] overflow-y-auto'}>
                         <div className="flex justify-between items-center mb-6">
                             <h3 className="text-lg font-semibold text-white">{editingId ? '編輯信用卡' : '新增信用卡'}</h3>
-                            <button onClick={() => setShowModal(false)} className="text-gray-400">
+                            <button aria-label="取消卡片編輯" onClick={() => { setShowModal(false); if (editId || adding) onDone?.(); }} className="text-gray-400">
                                 <X size={24} />
                             </button>
                         </div>
