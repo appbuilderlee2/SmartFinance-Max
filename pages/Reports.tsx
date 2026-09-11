@@ -1,5 +1,5 @@
-import { useMemo, useState } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useMemo, useState, useLayoutEffect } from 'react';
+import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import { ChevronLeft, ChevronRight, SlidersHorizontal, Download } from 'lucide-react';
 import { useLedger } from '../contexts/DataContext';
 import { Currency, TransactionType } from '../types';
@@ -9,23 +9,37 @@ import { monthRange, reportTotals, selectReportRows, ReportFilter } from '../uti
 import { userTags } from '../utils/tags';
 import BottomSheet from '../components/BottomSheet';
 
+interface ReportViewState {
+  month: number; preset: string; filter: ReportFilter;
+  tab: 'overview' | 'categories' | 'trend'; kind: TransactionType;
+  detail: string | null; visible: number; scrollY: number;
+}
+
 export default function Reports() {
   const navigate = useNavigate();
   const [params] = useSearchParams();
+  const location = useLocation();
+  const saved = (location.state as { reportView?: ReportViewState } | null)?.reportView;
   const { transactions, categories, currency, budgets } = useLedger();
   const now = new Date(), thisMonth = now.getFullYear() * 12 + now.getMonth();
-  const [month, setMonth] = useState(thisMonth);
-  const [preset, setPreset] = useState('month');
+  const [month, setMonth] = useState(saved?.month ?? thisMonth);
+  const [preset, setPreset] = useState(saved?.preset ?? 'month');
   const initialTag = params.get('tag');
-  const [filter, setFilter] = useState<ReportFilter>(() => ({ ...monthRange(thisMonth), currency, note: '', tags: initialTag ? [initialTag] : [], categories: [], min: '', max: '' }));
+  const [filter, setFilter] = useState<ReportFilter>(() => saved?.filter ?? ({ ...monthRange(thisMonth), currency, note: '', tags: initialTag ? [initialTag] : [], categories: [], min: '', max: '' }));
   const [draft, setDraft] = useState(filter);
   const [draftPreset, setDraftPreset] = useState(preset);
   const [sheet, setSheet] = useState(false);
   const [error, setError] = useState('');
-  const [tab, setTab] = useState<'overview' | 'categories' | 'trend'>('overview');
-  const [kind, setKind] = useState(TransactionType.EXPENSE);
-  const [detail, setDetail] = useState<string | null>(null);
-  const [visible, setVisible] = useState(50);
+  const [tab, setTab] = useState<'overview' | 'categories' | 'trend'>(saved?.tab ?? 'overview');
+  const [kind, setKind] = useState(saved?.kind ?? TransactionType.EXPENSE);
+  const [detail, setDetail] = useState<string | null>(saved?.detail ?? null);
+  const [visible, setVisible] = useState(saved?.visible ?? 50);
+  useLayoutEffect(() => { if (saved) window.scrollTo(0, saved.scrollY); }, []);
+  const leaveReport = (path: string) => {
+    const reportView: ReportViewState = { month, preset, filter, tab, kind, detail, visible, scrollY: window.scrollY };
+    navigate(location.pathname + location.search, { replace: true, state: { reportView } });
+    navigate(path, { state: { fromReport: true } });
+  };
   const names = useMemo(() => new Map(categories.map(c => [c.id, c.name])), [categories]);
   const currencies = useMemo(() => Array.from(new Set([currency, ...transactions.map(t => t.currency || currency)])), [transactions, currency]);
   const tags = useMemo(() => Array.from(new Set(transactions.flatMap(userTags))).sort(), [transactions]);
@@ -64,20 +78,20 @@ export default function Reports() {
     {tab === 'trend' && <div>{trend.map(p => <div className="sf-report-row text-sm" key={p.label}><span className="flex-1">{p.label}</span><span className="text-emerald-400">{money(p.income)}</span><span>{money(p.expense)}</span></div>)}</div>}
   </div>;
   return <main className="sf-report">
-    <header className="flex items-center justify-between py-2 gap-3"><button className="text-primary flex items-center" onClick={() => detail ? setDetail(null) : navigate('/settings')}><ChevronLeft size={20} />{detail ? '報告' : '設定'}</button><h1 className="font-semibold">報告統計</h1><button aria-label="匯出報告 CSV" onClick={exportCSV}><Download size={20} /></button></header>
+    <header className="flex items-center justify-between py-2 gap-3"><button className="text-primary flex items-center" onClick={() => detail ? setDetail(null) : navigate('/settings')}><ChevronLeft size={20} />{detail ? '返回報告' : '返回設定'}</button><h1 className="font-semibold">報告統計</h1><button aria-label="匯出報告 CSV" onClick={exportCSV}><Download size={20} /></button></header>
     <div className="flex items-center gap-2 py-3"><div className="flex items-center justify-between flex-1 sf-control rounded-xl"><button aria-label="上一個月" onClick={() => moveMonth(month - 1)}><ChevronLeft size={18} /></button><span className="text-sm">{title}</span><button aria-label="下一個月" onClick={() => moveMonth(month + 1)}><ChevronRight size={18} /></button></div><select aria-label="報告幣別" value={filter.currency} onChange={e => setFilter(f => ({ ...f, currency: e.target.value as Currency }))} className="sf-control rounded-xl px-2 h-11 max-w-[100px]">{currencies.map(c => <option key={c}>{c}</option>)}</select><button aria-label="篩選報告" className="p-2 sf-control rounded-xl" onClick={() => { setDraft(filter); setDraftPreset(preset); setError(''); setSheet(true); }}><SlidersHorizontal size={20} /></button></div>
     <p className="text-xs text-gray-400 mb-3">{filter.start || '最早記錄'} — {filter.end || '最新記錄'} · 僅計算 {filter.currency}</p>
     {extras && <div className="flex items-center gap-2 text-xs mb-3"><span className="flex-1 break-words">已篩選 · {rows.length} 筆{filter.tags.length ? ` · ${filter.tags.join('、')}` : ''}</span><button className="text-primary" onClick={() => setFilter(f => ({ ...f, note: '', tags: [], categories: [], min: '', max: '' }))}>清除篩選</button></div>}
     {!detail && <nav aria-label="報告檢視" className="flex sf-control rounded-xl p-1 mb-5">{([['overview','總覽'],['categories','分類'],['trend','趨勢']] as const).map(([value, label]) => <button aria-pressed={tab === value} key={value} className={`flex-1 rounded-lg ${tab === value ? 'bg-primary text-white' : 'text-gray-400'}`} onClick={() => { setTab(value); setKind(TransactionType.EXPENSE); }}>{label}</button>)}</nav>}
     {!rows.length ? <section className="sf-report-surface text-center py-10"><h2 className="font-semibold">呢段期間未有交易</h2><p className="text-sm text-gray-400 my-3">試下查看其他期間，或清除篩選。</p><div className="flex justify-center gap-4"><button className="text-primary" onClick={() => moveMonth(month - 1)}>查看上月</button><button className="text-primary" onClick={() => { setPreset('all'); setFilter(f => ({ ...f, start: '', end: '' })); }}>全部期間</button></div></section> : detail ? <section>
       <h2 className="text-xl font-semibold mt-4">{names.get(detail) || '未分類'}</h2><div className="text-4xl font-semibold sf-report-value mt-3">{money(sumMoney(detailRows.map(t => t.amount), filter.currency))}</div><p className="text-sm text-gray-400 mt-2 mb-6">{kind === TransactionType.EXPENSE ? '支出' : '收入'} · {detailRows.length} 筆交易</p>
-      <h3 className="font-semibold">交易明細</h3>{detailRows.slice(0, visible).map(tx => <button className="sf-report-row" key={tx.id} onClick={() => navigate(`/view/${tx.id}`)}><div className="flex-1 min-w-0"><div className="truncate">{tx.note || names.get(tx.categoryId)}</div><div className="text-xs text-gray-400 mt-1">{toLocalYMD(parseDate(tx.date)!)}{tx.subscriptionId ? ' · 訂閱' : tx.recurrenceSourceId || tx.isRecurring ? ' · 週期記帳' : ''}</div><div className="text-xs text-primary break-words">{userTags(tx).join(' · ')}</div></div><span>{money(tx.amount)}</span><ChevronRight size={16} /></button>)}{detailRows.length > visible && <button className="w-full text-primary" onClick={() => setVisible(v => v + 50)}>載入更多交易</button>}
+      <h3 className="font-semibold">交易明細</h3>{detailRows.slice(0, visible).map(tx => <button className="sf-report-row" key={tx.id} onClick={() => leaveReport(`/view/${tx.id}`)}><div className="flex-1 min-w-0"><div className="truncate">{tx.note || names.get(tx.categoryId)}</div><div className="text-xs text-gray-400 mt-1">{toLocalYMD(parseDate(tx.date)!)}{tx.subscriptionId ? ' · 訂閱' : tx.recurrenceSourceId || tx.isRecurring ? ' · 週期記帳' : ''}</div><div className="text-xs text-primary break-words">{userTags(tx).join(' · ')}</div></div><span>{money(tx.amount)}</span><ChevronRight size={16} /></button>)}{detailRows.length > visible && <button className="w-full text-primary" onClick={() => setVisible(v => v + 50)}>載入更多交易</button>}
     </section> : <div className="space-y-6">
       {tab === 'overview' && <><section><p className="text-gray-400">{title}支出</p><div className="text-4xl sm:text-5xl font-semibold text-red-400 sf-report-value mt-2">{money(totals.expense)}</div><div className="sf-report-surface grid grid-cols-2 gap-4 mt-5"><div><p className="text-xs text-gray-400">收入</p><strong className="text-emerald-400 sf-report-value">{money(totals.income)}</strong></div><div><p className="text-xs text-gray-400">結餘</p><strong className="sf-report-value">{money(addMoney(totals.income, -totals.expense, filter.currency))}</strong></div></div></section>{chart}
       {preset === 'month' && month === thisMonth && filter.currency === currency && !extras && budget > 0 && <div className="sf-report-surface"><div className="flex justify-between text-sm"><span>{totals.expense > budget ? '預算超出' : '預算剩餘'}</span><strong>{money(Math.abs(addMoney(budget, -totals.expense, currency)))}</strong></div><progress aria-label="預算使用" className="w-full mt-3 accent-blue-500" max={budget} value={Math.min(budget, totals.expense)} /><p className="text-xs text-gray-400">已使用 {Math.round(totals.expense / budget * 100)}%</p></div>}</>}
       {tab === 'trend' ? chart : <section><div className="flex items-center justify-between"><h2 className="font-semibold">{tab === 'overview' ? '錢花在哪裡' : '分類分佈'}</h2>{tab === 'overview' ? <button className="text-primary text-sm" onClick={() => setTab('categories')}>查看全部 ›</button> : <select aria-label="分類收支類型" className="sf-control p-2 rounded-lg" value={kind} onChange={e => setKind(e.target.value as TransactionType)}><option value={TransactionType.EXPENSE}>支出</option><option value={TransactionType.INCOME}>收入</option></select>}</div>
       {!groups.length && <p className="text-gray-400 py-5">此期間沒有{kind === TransactionType.EXPENSE ? '支出' : '收入'}。</p>}{groups.slice(0, tab === 'overview' ? 5 : undefined).map(group => <button className="sf-report-row" key={group.id} onClick={() => { setDetail(group.id); setVisible(50); }}><div className="flex-1 min-w-0"><span className="block truncate">{names.get(group.id) || '未分類'}</span><div className="h-1.5 bg-gray-500/15 rounded mt-2"><div className="bg-primary h-full rounded" style={{ width: `${amountTotal ? group.total / amountTotal * 100 : 0}%` }} /></div></div><div className="text-right"><strong className="text-sm">{money(group.total)}</strong><div className="text-xs text-gray-400">{amountTotal ? Math.round(group.total / amountTotal * 100) : 0}%</div></div><ChevronRight size={16} /></button>)}</section>}
-      <button className="text-primary text-sm" onClick={() => navigate('/settings/tags')}>查看標籤統計與管理 ›</button>
+      <button className="text-primary text-sm" onClick={() => leaveReport('/settings/tags')}>查看標籤統計與管理 ›</button>
     </div>}
     {sheet && <BottomSheet title="篩選報告" onClose={() => setSheet(false)}><div className="space-y-4"><div className="flex flex-wrap gap-2">{[['month','本月'],['last','上月'],['year','今年'],['all','全部'],['custom','自訂']].map(([value,label]) => <button key={value} className={`sf-tag ${draftPreset === value ? 'bg-primary text-white' : ''}`} onClick={() => { setDraftPreset(value); const range = value === 'month' || value === 'last' ? monthRange(thisMonth - (value === 'last' ? 1 : 0)) : value === 'year' ? { start: `${now.getFullYear()}-01-01`, end: `${now.getFullYear()}-12-31` } : { start: '', end: '' }; setDraft(d => ({ ...d, ...range })); }}>{label}</button>)}</div>
     {draftPreset === 'custom' && <div className="grid grid-cols-2 gap-3"><label className="text-sm">開始日期<input type="date" className="sf-field" value={draft.start} onChange={e => setDraft(d => ({ ...d, start: e.target.value }))} /></label><label className="text-sm">結束日期<input type="date" className="sf-field" value={draft.end} onChange={e => setDraft(d => ({ ...d, end: e.target.value }))} /></label></div>}

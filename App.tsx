@@ -35,7 +35,7 @@ const Loading: React.FC = () => <div className="p-4 text-gray-400">載入中…<
 
 const StorageStatus = () => {
   const saveStatus = useSyncExternalStore(subscribeStorage, getSaveStatus);
-  return (<div role="status" aria-live="polite" className="fixed bottom-20 right-3 z-[60] rounded-lg bg-background border sf-divider px-2 py-1 text-xs">
+  return (<div role="status" aria-live="polite" className={saveStatus === 'saved' ? 'sr-only' : 'fixed bottom-20 right-3 z-[60] rounded-lg bg-background border sf-divider px-2 py-1 text-xs'}>
           {saveStatus === 'saving' ? '儲存中…' : saveStatus === 'error' ? '尚未儲存' : '已儲存'}
           {saveStatus === 'error' && <button className="ml-2 text-primary" onClick={() => void retryStorage()}>重試</button>}
         </div>);

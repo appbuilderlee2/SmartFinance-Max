@@ -1,3 +1,8 @@
+## v2.7.1
+
+- Preserve report state and scroll position when returning from transaction details.
+- Hide the saved badge visually, retaining accessible status updates and pending/error indicators.
+
 ## v2.7.0 — Reports and tag workflows
 
 - Rebuilt reports with overview/category/trend tabs, month navigation, currency-scoped totals, category drill-down and transaction navigation.

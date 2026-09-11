@@ -1,7 +1,7 @@
 import { userTags } from '../utils/tags';
 
 import React, { useMemo } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { ChevronLeft, Trash2, Edit2 } from 'lucide-react';
 import { Icon } from '../components/Icon';
 import { useData } from '../contexts/DataContext';
@@ -11,6 +11,8 @@ import { RECURRENCE_LABELS } from '../utils/recurringTransactions';
 
 const TransactionView: React.FC = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const fromReport = Boolean(location.state?.fromReport);
   const { id } = useParams();
   const { transactions, categories, deleteTransaction, updateTransaction, currency } = useData();
 
@@ -55,7 +57,7 @@ const TransactionView: React.FC = () => {
       <div className="pt-safe-top px-4 py-3 flex justify-between items-center sf-topbar sticky top-0 z-50 transition-all">
         <button onClick={() => navigate(-1)} className="flex items-center text-primary text-base active:opacity-70 transition-opacity">
           <ChevronLeft size={24} />
-          <span>返回</span>
+          <span>{fromReport ? '返回報告' : '返回'}</span>
         </button>
         <h2 className="text-lg font-semibold text-white">帳目明細</h2>
         <div className="w-16"></div> {/* Spacer for alignment */}
