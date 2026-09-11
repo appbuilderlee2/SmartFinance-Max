@@ -17,7 +17,7 @@ const Subscriptions: React.FC = () => {
    }, [categories]);
    const [filterCategory, setFilterCategory] = useState<string>('all');
    const [selectedCurrency, setSelectedCurrency] = useState<Currency>(currency);
-   const fromPath = (location.state as any)?.from || '/settings';
+   const fromPath = (location.state as any)?.from || '/';
 
    const getSubIcon = (name: string) => {
       const lower = name.toLowerCase();

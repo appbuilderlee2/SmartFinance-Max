@@ -198,7 +198,9 @@ test('settings data centre protects IndexedDB data during cache maintenance', as
   await resetAppData(page);
   await page.goto('/#/settings');
 
-  await expect(page.getByRole('heading', { name: '設定與資料管理中心' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: '設定', exact: true })).toBeVisible();
+  await expect(page.getByRole('navigation', { name: '設定分類' })).toBeVisible();
+  await page.getByLabel('搜尋設定').fill('IndexedDB');
   await expect(page.getByText('IndexedDB 正常')).toBeVisible();
 
   const search = page.getByLabel('搜尋設定');
@@ -212,17 +214,17 @@ test('settings data centre protects IndexedDB data during cache maintenance', as
   await expect(page.getByLabel('每週開始日')).toHaveValue('0');
 
   await search.fill('主題');
-  await page.getByRole('button', { name: 'Fluid 深色' }).click();
+  await page.getByRole('button', { name: '深色', exact: true }).click();
   await expect(page.locator('html')).toHaveAttribute('data-sf-theme', 'applefluid-dark');
   await page.reload();
   await expect(page.locator('html')).toHaveClass(/theme-applefluid-dark/);
 
-  await page.getByRole('button', { name: 'Fluid 淺色' }).click();
+  await page.getByRole('button', { name: '淺色', exact: true }).click();
   await expect(page.locator('html')).toHaveClass(/theme-applefluid-light/);
   await expect(page.locator('html')).not.toHaveClass(/\bdark\b/);
 
   await page.emulateMedia({ colorScheme: 'dark' });
-  await page.getByRole('button', { name: 'Fluid 跟隨系統' }).click();
+  await page.getByRole('button', { name: '跟隨系統', exact: true }).click();
   await expect(page.locator('html')).toHaveAttribute('data-sf-theme', 'applefluid-system');
   await expect(page.locator('html')).toHaveAttribute('data-sf-resolved-theme', 'applefluid-dark');
   await page.emulateMedia({ colorScheme: 'light' });
@@ -259,7 +261,7 @@ test('settings data centre protects IndexedDB data during cache maintenance', as
   await search.fill('快取');
   page.once('dialog', dialog => dialog.accept());
   await Promise.all([page.waitForEvent('load'), page.getByRole('button', { name: '清除快取並重新載入' }).click()]);
-  await expect(page.getByRole('heading', { name: '設定與資料管理中心' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: '設定', exact: true })).toBeVisible();
   const stored = await readIndexedDbJson<Array<{ id: string }>>(page, 'smartfinance_transactions');
   expect(stored).toEqual([expect.objectContaining({ id: 'cache-safe', amount: 1 })]);
 });
@@ -267,6 +269,7 @@ test('settings data centre protects IndexedDB data during cache maintenance', as
 test('PIN lock rejects an incorrect PIN and unlocks with the correct PIN', async ({ page }) => {
   await resetAppData(page);
   await page.goto('/#/settings');
+  await page.getByLabel('搜尋設定').fill('PIN');
   const answers = ['2468', '2468'];
   page.on('dialog', async dialog => dialog.accept(answers.shift() || ''));
   await page.getByRole('button', { name: '設定 PIN' }).click();
@@ -279,5 +282,5 @@ test('PIN lock rejects an incorrect PIN and unlocks with the correct PIN', async
   await expect(page.getByRole('alert')).toHaveText('PIN 不正確');
   await page.getByLabel('解鎖 PIN').fill('2468');
   await page.getByRole('button', { name: '解鎖' }).click();
-  await expect(page.getByRole('heading', { name: '設定與資料管理中心' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: '設定', exact: true })).toBeVisible();
 });

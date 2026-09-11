@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
-  AlertTriangle, Bell, ChevronRight, CloudOff, Database, FileDown,
+  AlertTriangle, ChevronRight, CloudOff, Database, FileDown,
   Info, Palette, RefreshCw, Search, ShieldCheck, Upload, X,
 } from 'lucide-react';
 import { useData } from '../contexts/DataContext';
@@ -52,12 +52,25 @@ const formatBytes = (bytes: number) => {
 
 const Settings: React.FC = () => {
   const navigate = useNavigate();
+  const [params, setParams] = useSearchParams();
+  const section = params.get('section') || '';
+  const query = params.get('q') || '';
+  const setQuery = (value: string) => setParams(value ? { q: value } : {}, { replace: true });
+  const groups = [
+    ['finance', '帳務管理', '分類、預算、報告、標籤與提醒'],
+    ['appearance', '外觀與顯示', '主題與顯示模式'],
+    ['preferences', '貨幣與格式', '主貨幣、日期與數字'],
+    ['data', '資料與備份', '匯出、還原與資料檢查'],
+    ['security', '安全與私隱', 'PIN、金額隱藏與私隱遮罩'],
+    ['update', '關於與更新', '版本、離線與更新'],
+  ];
+  const show = (id: string, ...keywords: string[]) => query.trim() ? matches(...keywords) : section === id;
+
   const {
     resetData, currency, setCurrency, themeColor, setThemeColor, storageBackend,
   } = useData();
   const jsonInputRef = useRef<HTMLInputElement>(null);
   const csvInputRef = useRef<HTMLInputElement>(null);
-  const [query, setQuery] = useState('');
   const [notice, setNotice] = useState<Notice>(null);
   const [dangerOpen, setDangerOpen] = useState(false);
   const [dangerText, setDangerText] = useState('');
@@ -225,18 +238,20 @@ const Settings: React.FC = () => {
   };
 
   const sections = {
-    finance: matches('帳務', '信用卡', '訂閱', '分類', '預算', '報表'),
-    preferences: matches('個人化', '貨幣', '主題', '外觀', '通知', '日期', '每週', '負數'),
-    data: matches('資料', 'IndexedDB', '儲存', '備份', '匯出', '匯入', '還原', '完整性'),
-    update: matches('離線', '更新', '快取', '重新載入', '版本'),
-    security: matches('安全', '私隱', 'PIN', '鎖定', 'Face ID', 'Touch ID', '生物認證', '切換器'),
-    danger: matches('進階', '危險', '清除', '重置', '刪除'),
+    finance: show('finance', '帳務', '分類', '預算', '報告', '報表', '標籤', '通知', '提醒'),
+    preferences: show('preferences', '個人化', '貨幣', '格式', '日期', '每週', '負數', '符號'),
+    appearance: show('appearance', '外觀', '顯示', '主題', 'Fluid', '深色', '淺色', '系統'),
+    data: show('data', '資料', 'IndexedDB', '儲存', '備份', '匯出', '匯入', '還原', '完整性', 'CSV', 'JSON', '進階', '刪除'),
+    update: show('update', '離線', '更新', '快取', '重新載入', '版本'),
+    security: show('security', '安全', '私隱', 'PIN', '鎖定', 'Face ID', 'Touch ID', '生物認證', '切換器'),
+    danger: show('data', '進階', '危險', '清除', '重置', '刪除'),
   };
 
   return (
     <div className="p-4 pt-safe-top mt-4 space-y-6 pb-28">
-      <header className="text-center">
-        <h1 className="text-lg font-bold">設定與資料管理中心</h1>
+      <header>
+        {(section || query) && <button className="text-primary mb-3" onClick={() => setParams({})}>‹ 返回設定</button>}
+        <h1 className="text-lg font-bold">{groups.find(g => g[0] === section)?.[1] || '設定'}</h1>
         <p className="text-xs text-gray-500 mt-1">SmartFinance v{__APP_VERSION__}</p>
       </header>
 
@@ -258,7 +273,11 @@ const Settings: React.FC = () => {
         </div>
       ) : null}
 
-      {!Object.values(sections).some(Boolean) ? (
+      {!section && !query && <nav aria-label="設定分類" className="space-y-2">
+        {groups.map(([id, title, subtitle]) => <button key={id} className="sf-panel w-full p-4 flex items-center gap-3 text-left" onClick={() => setParams({ section: id })}><div className="flex-1"><span className="font-medium">{title}</span><p className="text-xs text-gray-500 mt-1">{id === 'preferences' ? `${currency} · ${subtitle}` : subtitle}</p></div><ChevronRight size={18} /></button>)}
+        <button disabled={checkingUpdate} onClick={checkUpdate} className="sf-panel w-full p-4 text-primary">{checkingUpdate ? '檢查中…' : '檢查更新'}</button>
+      </nav>}
+      {(section || query) && !Object.values(sections).some(Boolean) ? (
         <div className="sf-panel p-8 text-center text-gray-400">搵唔到「{query}」相關設定</div>
       ) : null}
 
@@ -267,8 +286,7 @@ const Settings: React.FC = () => {
           <h2 className="text-gray-500 text-xs ml-3 mb-2 uppercase tracking-wider">帳務管理</h2>
           <div className="sf-panel divide-y sf-divider overflow-hidden">
             {[
-              ['信用卡中心', '/cards'],
-              ['訂閱服務', '/subscriptions'], ['分類管理', '/categories'], ['月預算設定', '/budget'], ['報告統計', '/reports'], ['標籤管理', '/settings/tags'],
+              ['分類管理', '/categories'], ['月預算設定', '/budget'], ['報告統計', '/reports'], ['標籤管理', '/settings/tags'], ['通知與提醒', '/settings/notifications'],
               ...(rewardsUnlocked ? [['回贈助手', '/settings/creditcards2']] : []),
             ].map(([label, path]) => (
               <button key={path} onClick={() => navigate(path, path === '/subscriptions' ? { state: { from: '/settings' } } : undefined)} className="w-full p-4 flex items-center justify-between text-white hover:bg-surface/80">
@@ -325,31 +343,32 @@ const Settings: React.FC = () => {
                 </select>
               </label>
             </div>
-            <button onClick={() => navigate('/settings/notifications')} className="w-full p-4 flex items-center justify-between">
-              <span className="flex items-center gap-2"><Bell size={17} />通知與提醒</span><ChevronRight size={18} className="text-gray-500" />
-            </button>
-            <div className="p-4">
-              <div className="flex items-center gap-2 mb-3"><Palette size={17} /><span>主題</span></div>
-              <div className="grid grid-cols-4 gap-2">
-                {[
-                  ['blue', '藍色'], ['red', '紅色'], ['green', '綠色'], ['purple', '紫色'], ['orange', '橙色'],
-                  ['pink', '粉紅'], ['ios26', '玻璃'], ['blackgold', '黑金'], ['tech', '科技'], ['light', '淺色'],
-                  ['applefluid-dark', 'Fluid 深色'], ['applefluid-light', 'Fluid 淺色'],
-                  ['applefluid-system', 'Fluid 跟隨系統'],
-                ].map(([value, label]) => (
-                  <button key={value} onClick={() => setThemeColor(value)} className={`rounded-lg border px-2 py-3 text-xs ${themeColor === value ? 'border-primary text-primary bg-primary/10' : 'sf-divider text-gray-400'}`}>{label}</button>
-                ))}
-              </div>
-            </div>
+
           </div>
         </section>
       ) : null}
+
+      {sections.appearance && <section><h2 className="text-sm text-gray-500 mb-3">外觀與顯示</h2><div className="sf-panel">
+            <div className="p-4">
+              <div className="flex items-center gap-2 mb-3"><Palette size={17} /><span>主題</span></div>
+              <div className="flex flex-wrap gap-2 mb-4">{[['applefluid-system','跟隨系統'],['applefluid-light','淺色'],['applefluid-dark','深色']].map(([value,label]) => <button aria-pressed={themeColor === value} key={value} onClick={() => setThemeColor(value)} className={`sf-control rounded-lg p-3 ${themeColor === value ? 'text-primary' : ''}`}>{label}</button>)}</div>
+              <details open={query ? true : undefined}><summary className="cursor-pointer py-3">其他主題</summary>
+              <div className="grid grid-cols-4 gap-2">
+                {[
+                  ['blue', '藍色'], ['red', '紅色'], ['green', '綠色'], ['purple', '紫色'], ['orange', '橙色'],
+                  ['pink', '粉紅'], ['ios26', '玻璃'], ['blackgold', '黑金'], ['tech', '科技'], ['light', '經典淺色'],
+                ].map(([value, label]) => (
+                  <button key={value} onClick={() => setThemeColor(value)} className={`rounded-lg border px-2 py-3 text-xs ${themeColor === value ? 'border-primary text-primary bg-primary/10' : 'sf-divider text-gray-400'}`}>{label}</button>
+                ))}
+              </div></details>
+            </div>
+      </div></section>}
 
       {sections.data ? (
         <section>
           <h2 className="text-gray-500 text-xs ml-3 mb-2 uppercase tracking-wider">資料、備份與還原</h2>
           <div className="sf-panel divide-y sf-divider overflow-hidden">
-            <div className="p-4 space-y-3">
+            <details open={query ? true : undefined}><summary className="p-4 cursor-pointer">資料庫狀態與檢查</summary><div className="p-4 space-y-3">
               <div className="flex items-center justify-between">
                 <span className="flex items-center gap-2"><Database size={18} />資料庫狀態</span>
                 <span className="text-xs text-green-400">{storageBackend === 'indexeddb' ? 'IndexedDB 正常' : 'localStorage 後備'}</span>
@@ -361,15 +380,15 @@ const Settings: React.FC = () => {
               </div>
               <div className="flex justify-between text-xs text-gray-500"><span>{diagnostics.keys} 個資料項目</span><span>約 {formatBytes(diagnostics.bytes)}</span></div>
               <button onClick={runIntegrityCheck} className="w-full rounded-lg border sf-divider py-2 text-sm flex items-center justify-center gap-2"><ShieldCheck size={16} />檢查資料完整性</button>
-            </div>
+            </div></details>
             <div className="grid grid-cols-2 divide-x sf-divider">
               <button onClick={() => exportBackup('json')} className="p-4 flex items-center justify-center gap-2"><FileDown size={16} />匯出 JSON</button>
               <button onClick={() => jsonInputRef.current?.click()} className="p-4 flex items-center justify-center gap-2"><Upload size={16} />還原 JSON</button>
             </div>
-            <div className="grid grid-cols-2 divide-x sf-divider">
+            <details open={query ? true : undefined}><summary className="p-4 cursor-pointer">CSV 匯入／匯出</summary><div className="grid grid-cols-2 divide-x sf-divider">
               <button onClick={() => exportBackup('csv')} className="p-4 flex items-center justify-center gap-2"><FileDown size={16} />匯出 CSV</button>
               <button onClick={() => csvInputRef.current?.click()} className="p-4 flex items-center justify-center gap-2"><Upload size={16} />還原 CSV</button>
-            </div>
+            </div></details>
             <div className="p-4 text-xs text-gray-400 flex gap-2"><CloudOff size={16} className="shrink-0" />資料只儲存於此裝置。還原可選擇合併或取代；操作前會自動匯出復原備份。</div>
           </div>
           <input ref={jsonInputRef} type="file" accept="application/json,.json" className="hidden" onChange={importBackup('json')} />
@@ -426,12 +445,11 @@ const Settings: React.FC = () => {
       ) : null}
 
       {sections.danger ? (
-        <section>
-          <h2 className="text-red-400/80 text-xs ml-3 mb-2 uppercase tracking-wider">進階及危險操作</h2>
+        <details open={query ? true : undefined} className="sf-panel"><summary className="p-4 cursor-pointer">進階操作</summary>
           <div className="rounded-xl border border-red-500/30 bg-red-500/5 overflow-hidden">
             <button onClick={() => setDangerOpen(true)} className="w-full p-4 text-red-300 flex items-center justify-center gap-2"><AlertTriangle size={17} />刪除所有財務資料</button>
           </div>
-        </section>
+        </details>
       ) : null}
 
       <div className="text-center text-xs text-gray-600 flex items-center justify-center gap-1"><Info size={13} />SmartFinance-Max · 本機優先 PWA</div>
