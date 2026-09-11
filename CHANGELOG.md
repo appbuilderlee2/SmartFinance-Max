@@ -1,3 +1,9 @@
+## v2.8.2 — Shared navigation
+
+- Replace AddTransaction's duplicated five-item bar with the same BottomNavigation used by Layout.
+- Position the save action above measured navigation bounds; keep keypad behavior unchanged.
+- Add navigation labels, card route, active state and non-overlap regression coverage.
+
 ## v2.8.1 — Settings navigation
 
 - Split settings into six category views with URL-backed search and selection.
