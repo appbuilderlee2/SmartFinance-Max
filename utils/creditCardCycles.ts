@@ -23,6 +23,12 @@ export type CreditCardCycle = {
   status: 'open' | 'closed';
 };
 
+export type CreditCardCycleAlerts = {
+  overdue: boolean;
+  upcoming: boolean;
+  missingAmount: boolean;
+};
+
 export const CYCLES_KEY = 'smartfinance_creditcard_cycles';
 
 export function ym(year: number, month0: number): string {
@@ -60,7 +66,20 @@ export function createOpenCycle(card: any, year: number, month0: number): Credit
     yearMonth,
     statementDate,
     dueDate,
+    currency: card.currency,
     status: 'open',
+  };
+}
+
+export function getCreditCardCycleAlerts(cycle: CreditCardCycle, now = new Date(), upcomingDays = 7): CreditCardCycleAlerts {
+  if (cycle.status === 'closed') return { overdue: false, upcoming: false, missingAmount: false };
+  const today = toLocalYMD(now);
+  const limit = new Date(now.getFullYear(), now.getMonth(), now.getDate() + upcomingDays);
+  const limitYmd = toLocalYMD(limit);
+  return {
+    overdue: Boolean(cycle.dueDate && cycle.dueDate < today),
+    upcoming: Boolean(cycle.dueDate && cycle.dueDate >= today && cycle.dueDate <= limitYmd),
+    missingAmount: typeof cycle.amountDue !== 'number',
   };
 }
 

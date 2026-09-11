@@ -1,3 +1,11 @@
+## v2.9.0 — Per-card currencies and due alerts
+
+- Add an independent currency to every credit card and copy it into newly created billing cycles.
+- Migrate legacy cards and cycles once to the main currency while preserving explicit historical cycle currencies.
+- Split open-cycle alerts into overdue, due within seven days, missing amount and ordinary pending states.
+- Keep currency totals separate and show simultaneous alerts where applicable.
+- Add unit coverage for currency inheritance, migration preservation and alert boundaries.
+
 ## v2.8.2 — Shared navigation
 
 - Replace AddTransaction's duplicated five-item bar with the same BottomNavigation used by Layout.
