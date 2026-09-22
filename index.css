@@ -730,3 +730,8 @@ html.theme-applefluid-light .sf-month-summary .text-red-500 { color:#c3282d; }
 .sf-records-page .flex-1 { min-width:0; }
 .sf-records-page .sf-panel button { min-height:44px; }
 @media(min-width:420px) { .sf-category-grid { grid-template-columns:repeat(5,minmax(0,1fr)); } }
+.sf-draft-status { display:flex; gap:12px; align-items:center; justify-content:space-between; font-size:12px; line-height:1.5; color:rgb(var(--sf-text-secondary)); }
+.sf-draft-status button { color:rgb(var(--sf-primary)); min-height:44px; flex-shrink:0; }
+.sf-undo-toast { position:fixed; bottom:calc(100px + env(safe-area-inset-bottom)); left:16px; right:16px; max-width:540px; margin:auto; z-index:60; display:flex; align-items:center; gap:12px; padding:10px 16px; border-radius:16px; background:rgb(var(--sf-surface-bg)); color:rgb(var(--sf-text-primary)); box-shadow:0 4px 24px #0004; border:1px solid rgb(var(--sf-text-primary)/.15); }
+.sf-undo-toast span { flex:1; font-size:14px; }
+.sf-undo-toast button { min-height:44px; color:rgb(var(--sf-primary)); padding:4px 8px; }

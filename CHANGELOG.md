@@ -1,3 +1,10 @@
+## v2.12.0 — Drafts, durable save and undo
+
+- Preserve entry drafts within the current browser tab across navigation and reload, including receipt previews when session storage permits.
+- Wait for database commit before leaving entry; retry with the same transaction ID.
+- Restore the last deleted transaction and its newly introduced recurrence skip without reverting unrelated edits. Undo is session-only until dismissed or replaced by the next deletion.
+- Add write-failure, draft, deletion and recurrence regression coverage.
+
 ## v2.11.0 — Entry and records usability
 
 - Refine amount entry and responsive category selection with search and recent-use ordering.
