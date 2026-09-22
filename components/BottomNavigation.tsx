@@ -32,13 +32,13 @@ export default function BottomNavigation({ action }: { action?: React.ReactNode 
   return <>
     {action && <div data-testid="navigation-action" className="fixed left-4 right-4 z-40" style={{ bottom: actionBottom }}>{action}</div>}
     <nav ref={navRef} aria-label="主要導航" className="sf-tabbar fixed bottom-0 left-0 right-0 sf-surface border-t sf-divider pb-safe-bottom pt-2 px-4 z-50">
-      <div className="flex justify-between items-end max-w-md mx-auto">
+      <div className="sf-nav-items">
         {items.map(item => {
           const active = location.pathname === item.path || (item.path === '/cards' && location.pathname.startsWith('/cards/')) || (item.path === '/settings' && location.pathname === '/reports');
           const Icon = item.icon, preload = navRoutePreloads[item.path];
           const prefetch = () => { void preload?.().catch(() => undefined); };
-          return <button key={item.path} aria-current={active ? 'page' : undefined} onClick={() => { triggerHaptic(HapticPatterns.Light); navigate(item.path); }} onPointerEnter={prefetch} onFocus={prefetch} onTouchStart={prefetch} className={`flex flex-col items-center gap-1 flex-1 min-w-0 py-1 transition-colors active:scale-95 duration-200 ${active ? 'text-primary' : 'text-gray-500'}`}>
-            <Icon size={24} strokeWidth={active ? 2.5 : 2} /><span className="text-[10px]">{item.label}</span>
+          return <button key={item.path} aria-current={active ? 'page' : undefined} onClick={() => { triggerHaptic(HapticPatterns.Light); navigate(item.path); }} onPointerEnter={prefetch} onFocus={prefetch} onTouchStart={prefetch} className={`sf-nav-item flex flex-col items-center gap-1 flex-1 min-w-0 py-1 transition-colors active:scale-95 duration-200 ${active ? 'text-primary' : 'text-gray-500'}`}>
+            <Icon size={24} strokeWidth={active ? 2.5 : 2} /><span className="sf-nav-label">{item.label}</span>
           </button>;
         })}
       </div>

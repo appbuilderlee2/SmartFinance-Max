@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
   AlertTriangle, ChevronRight, CloudOff, Database, FileDown,
-  Info, Palette, RefreshCw, Search, ShieldCheck, Upload, X,
+  Wallet, Globe, Info, Palette, RefreshCw, Search, ShieldCheck, Upload, X,
 } from 'lucide-react';
 import { useData } from '../contexts/DataContext';
 import { toLocalYMD } from '../utils/date';
@@ -49,6 +49,8 @@ const formatBytes = (bytes: number) => {
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
   return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
 };
+
+const groupIcons = [Wallet, Palette, Globe, Database, ShieldCheck, Info];
 
 const Settings: React.FC = () => {
   const navigate = useNavigate();
@@ -248,14 +250,14 @@ const Settings: React.FC = () => {
   };
 
   return (
-    <div className="p-4 pt-safe-top mt-4 space-y-6 pb-28">
+    <div className="sf-settings-page p-4 pt-safe-top mt-4 space-y-6 pb-28">
       <header>
         {(section || query) && <button className="text-primary mb-3" onClick={() => setParams({})}>‹ 返回設定</button>}
-        <h1 className="text-lg font-bold">{groups.find(g => g[0] === section)?.[1] || '設定'}</h1>
+        <h1 className="sf-page-title">{groups.find(g => g[0] === section)?.[1] || '設定'}</h1>
         <p className="text-xs text-gray-500 mt-1">SmartFinance v{__APP_VERSION__}</p>
       </header>
 
-      <label className="sf-panel flex items-center gap-3 px-4 py-3">
+      <label className="sf-settings-search flex items-center gap-3 px-4 py-3">
         <Search size={18} className="text-gray-500" />
         <input
           aria-label="搜尋設定"
@@ -273,9 +275,15 @@ const Settings: React.FC = () => {
         </div>
       ) : null}
 
-      {!section && !query && <nav aria-label="設定分類" className="space-y-2">
-        {groups.map(([id, title, subtitle]) => <button key={id} className="sf-panel w-full p-4 flex items-center gap-3 text-left" onClick={() => setParams({ section: id })}><div className="flex-1"><span className="font-medium">{title}</span><p className="text-xs text-gray-500 mt-1">{id === 'preferences' ? `${currency} · ${subtitle}` : subtitle}</p></div><ChevronRight size={18} /></button>)}
-        <button disabled={checkingUpdate} onClick={checkUpdate} className="sf-panel w-full p-4 text-primary">{checkingUpdate ? '檢查中…' : '檢查更新'}</button>
+      {!section && !query && <nav aria-label="設定分類" className="sf-settings-groups">
+        {[groups.slice(0, 3), groups.slice(3)].map((group, index) => <div key={index} className="sf-panel sf-settings-group">
+          {group.map(([id, title, subtitle], row) => { const GroupIcon = groupIcons[index * 3 + row]; return <button key={id} className="sf-settings-row" onClick={() => setParams({ section: id })}>
+            <span className={`sf-settings-icon sf-settings-icon-${id}`}><GroupIcon size={19} /></span>
+            <span className="sf-settings-copy"><span className="sf-settings-title">{title}</span><span className="sf-settings-subtitle">{id === 'preferences' ? `${currency} · ${subtitle}` : subtitle}</span></span>
+            <ChevronRight size={17} className="sf-settings-chevron" />
+          </button>; })}
+        </div>)}
+        <button disabled={checkingUpdate} onClick={checkUpdate} className="sf-settings-update text-primary"><RefreshCw size={17} />{checkingUpdate ? '檢查中…' : '檢查更新'}</button>
       </nav>}
       {(section || query) && !Object.values(sections).some(Boolean) ? (
         <div className="sf-panel p-8 text-center text-gray-400">搵唔到「{query}」相關設定</div>

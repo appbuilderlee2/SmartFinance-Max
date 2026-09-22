@@ -1,6 +1,6 @@
 # SmartFinance-Max (PWA)
 
-目前版本：**v2.9.0**
+目前版本：**v2.10.0**
 
 Pages：https://appbuilderlee2.github.io/SmartFinance-Max/
 
