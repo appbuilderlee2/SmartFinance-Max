@@ -191,7 +191,7 @@ const Dashboard: React.FC = () => {
     <div className="p-4 space-y-6 pt-safe-top mt-4 max-w-5xl mx-auto">
       <header className="flex flex-col gap-3 mb-2">
         <div className="flex justify-between items-center">
-          <h1 className="text-2xl font-bold">統計總覽</h1>
+          <h1 className="sf-page-title">統計總覽</h1>
           <button className="sf-control rounded-xl px-4 py-2 text-primary" onClick={() => navigate('/subscriptions', { state: { from: '/' } })}>訂閱服務</button>
         </div>
         <div className="flex gap-2 flex-wrap">

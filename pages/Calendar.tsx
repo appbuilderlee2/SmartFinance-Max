@@ -2,7 +2,7 @@
 import { parseDate } from '../utils/date';
 import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ChevronLeft, ChevronRight, X } from 'lucide-react';
+import { ChevronLeft, ChevronRight, X, Plus } from 'lucide-react';
 import { useLedger } from '../contexts/DataContext';
 import { Currency, TransactionType } from '../types';
 import { Icon } from '../components/Icon';
@@ -136,12 +136,11 @@ const Calendar: React.FC = () => {
                 <button
                     key={day}
                     onClick={(e) => { e.stopPropagation(); setSelectedDay(day); }}
-                    className={`h-16 rounded-lg flex flex-col items-center justify-center text-sm transition-all px-1
-            ${isSelected ? 'bg-primary text-white' : 'hover:bg-surface/80'}
-            ${isToday && !isSelected ? 'ring-1 ring-primary' : ''}
-          `}
+                    aria-pressed={isSelected}
+                    aria-current={isToday ? 'date' : undefined}
+                    className="sf-calendar-day"
                 >
-                    <span className={isSelected ? 'text-white' : 'text-gray-300'}>{day}</span>
+                    <span className="sf-day-number">{day}</span>
                     {(hasExpense || hasIncome) && (
                         <div className="flex flex-col items-center mt-0.5 space-y-0.5 leading-tight max-w-[64px] text-center">
                             {hasExpense && (
@@ -164,14 +163,22 @@ const Calendar: React.FC = () => {
     };
 
     return (
-        <div className="min-h-screen bg-background pb-24 pt-safe-top">
+        <div className="sf-calendar-page min-h-screen pb-24 pt-safe-top">
+            <header className="sf-page-header">
+                <h1 className="sf-page-title">月曆</h1>
+                <div className="flex items-center gap-2">
+                    <button className="sf-today-button" onClick={() => { const today = new Date(); setVisibleMonth(today.getFullYear() * 12 + today.getMonth()); setSelectedDay(null); }}>今天</button>
+                    <button className="sf-add-button" aria-label="新增帳目" onClick={() => navigate('/add')}><Plus size={22} /></button>
+                </div>
+            </header>
             {/* Header */}
-            <div className="px-4 py-3 flex justify-between items-center sf-topbar sticky top-0 z-50">
+            <div className="sf-month-toolbar flex justify-between items-center">
                 <button onClick={prevMonth} aria-label="上個月" className="p-2 text-primary">
                     <ChevronLeft size={24} />
                 </button>
                 <div className="flex items-center gap-2 w-48">
                     <select
+                        aria-label="年份"
                         value={year}
                         onChange={(e) => { setVisibleMonth(Number(e.target.value) * 12 + month); setSelectedDay(null); }}
                         className="sf-control text-white text-sm rounded-lg px-3 py-1 flex-1"
@@ -181,6 +188,7 @@ const Calendar: React.FC = () => {
                         ))}
                     </select>
                     <select
+                        aria-label="月份"
                         value={month}
                         onChange={(e) => { setVisibleMonth(year * 12 + Number(e.target.value)); setSelectedDay(null); }}
                         className="sf-control text-white text-sm rounded-lg px-3 py-1 flex-1"
@@ -196,7 +204,7 @@ const Calendar: React.FC = () => {
             </div>
 
             {/* Calendar Grid */}
-            <div className="p-4">
+            <div className="sf-calendar-grid">
                 {/* Week day headers */}
                 <div className="grid grid-cols-7 gap-1 mb-2">
                     {weekDays.map(day => (
@@ -225,12 +233,14 @@ const Calendar: React.FC = () => {
                 <div
                     key={visibleMonth}
                     data-month-key={`${year}-${String(month + 1).padStart(2, '0')}`}
-                    className="sf-panel p-4"
+                    className="sf-panel sf-month-summary p-5"
                     aria-live="polite"
                     aria-atomic="true"
                 >
                     <h3 className="text-sm text-gray-400 mb-3">{year}年{month + 1}月摘要</h3>
-                    <div className="grid grid-cols-2 gap-4">
+                    <p className="sf-summary-label">本月結餘</p>
+                    <p className="sf-summary-balance">{formatMoney(fromMinorUnits(toMinorUnits(monthlyTotals.income, currency) - toMinorUnits(monthlyTotals.expense, currency), currency), currency)}</p>
+                    <div className="sf-summary-breakdown grid grid-cols-2 gap-4">
                         <div>
                             <p className="text-xs text-gray-500">收入</p>
                             <p className="text-lg font-semibold text-green-500">
@@ -257,13 +267,13 @@ const Calendar: React.FC = () => {
                                 : `${month + 1}月 全月明細`}
                         </h3>
                         {selectedDay !== null && (
-                            <button onClick={clearSelection} className="text-gray-500 hover:text-white">
+                            <button onClick={clearSelection} aria-label="顯示全月明細" className="sf-icon-button text-gray-500 hover:text-white">
                                 <X size={16} />
                             </button>
                         )}
                     </div>
                     {displayTransactions.length === 0 ? (
-                        <p className="text-gray-500 text-sm text-center py-4">無記錄</p>
+                        <div className="sf-empty-state"><p>無記錄</p><p className="text-sm">在這裡查看每日收支</p><button className="sf-today-button" onClick={() => navigate('/add')}>新增帳目</button></div>
                     ) : (
                         <div className="space-y-2 overflow-y-auto">
                             {displayTransactions.map(tx => {

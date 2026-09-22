@@ -1,3 +1,10 @@
+## v2.10.0 — iOS layout refinement
+
+- Preserve all six navigation destinations with equal touch targets and a visible selected state.
+- Refine calendar typography, circular dates, Today navigation and currency-aware balance summary.
+- Group settings rows with consistent icons and readable secondary labels.
+- Simplify Apple Fluid content surfaces while retaining glass navigation, light/dark/system preferences and accessibility fallbacks.
+
 ## v2.9.0 — Per-card currencies and due alerts
 
 - Add an independent currency to every credit card and copy it into newly created billing cycles.
