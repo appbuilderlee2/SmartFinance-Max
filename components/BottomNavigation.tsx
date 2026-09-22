@@ -18,6 +18,14 @@ export default function BottomNavigation({ action }: { action?: React.ReactNode 
   const navRef = useRef<HTMLElement>(null);
   const [actionBottom, setActionBottom] = useState(110);
   const hasAction = Boolean(action);
+  const [keyboardInset, setKeyboardInset] = useState(0);
+  useLayoutEffect(() => {
+    const viewport = window.visualViewport;
+    if (!hasAction || !viewport) return;
+    const update = () => setKeyboardInset(Math.max(0, window.innerHeight - viewport.height - viewport.offsetTop));
+    update(); viewport.addEventListener('resize', update); viewport.addEventListener('scroll', update);
+    return () => { viewport.removeEventListener('resize', update); viewport.removeEventListener('scroll', update); };
+  }, [hasAction]);
   useLayoutEffect(() => {
     if (!hasAction || !navRef.current) return;
     const measure = () => {
@@ -28,10 +36,10 @@ export default function BottomNavigation({ action }: { action?: React.ReactNode 
     observer.observe(navRef.current);
     window.addEventListener('resize', measure);
     return () => { observer.disconnect(); window.removeEventListener('resize', measure); };
-  }, [hasAction]);
+  }, [hasAction, keyboardInset]);
   return <>
     {action && <div data-testid="navigation-action" className="fixed left-4 right-4 z-40" style={{ bottom: actionBottom }}>{action}</div>}
-    <nav ref={navRef} aria-label="主要導航" className="sf-tabbar fixed bottom-0 left-0 right-0 sf-surface border-t sf-divider pb-safe-bottom pt-2 px-4 z-50">
+    <nav style={keyboardInset ? { transform: `translateY(-${keyboardInset}px)` } : undefined} ref={navRef} aria-label="主要導航" className="sf-tabbar fixed bottom-0 left-0 right-0 sf-surface border-t sf-divider pb-safe-bottom pt-2 px-4 z-50">
       <div className="sf-nav-items">
         {items.map(item => {
           const active = location.pathname === item.path || (item.path === '/cards' && location.pathname.startsWith('/cards/')) || (item.path === '/settings' && location.pathname === '/reports');
