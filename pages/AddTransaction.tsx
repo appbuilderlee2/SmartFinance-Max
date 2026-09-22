@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Plus, Camera, X, ChevronDown, ChevronUp } from 'lucide-react';
 import { useData } from '../contexts/DataContext';
@@ -9,12 +9,12 @@ import { Currency, RecurrenceFrequency, TransactionType } from '../types';
 import BottomNavigation from '../components/BottomNavigation';
 import { rememberTags } from '../utils/tagHistory';
 import TagPicker from '../components/TagPicker';
-import { localYMDToStoredISOString, toLocalYMD } from '../utils/date';
+import { localYMDToStoredISOString, toLocalYMD, parseDate } from '../utils/date';
 import { parseMoneyInput } from '../utils/money';
 
 const AddTransaction: React.FC = () => {
   const navigate = useNavigate();
-  const { addTransaction, categories, currency } = useData();
+  const { addTransaction, categories, currency, transactions } = useData();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // State for NumPad visibility
@@ -34,23 +34,36 @@ const AddTransaction: React.FC = () => {
   const [txCurrency, setTxCurrency] = useState<Currency>(currency);
   const [showDetails, setShowDetails] = useState(false);
 
+  const [categoryQuery, setCategoryQuery] = useState('');
+  const [formError, setFormError] = useState('');
+  const categoryOptions = useMemo(() => {
+    const latest = new Map<string, number>();
+    for (const tx of transactions) {
+      if (tx.type === transactionType) latest.set(tx.categoryId, Math.max(latest.get(tx.categoryId) || 0, parseDate(tx.date)?.getTime() || 0));
+    }
+    return categories.filter(c => c.type === transactionType && c.name.toLocaleLowerCase().includes(categoryQuery.trim().toLocaleLowerCase()))
+      .sort((a, b) => (latest.get(b.id) || 0) - (latest.get(a.id) || 0));
+  }, [categories, transactions, transactionType, categoryQuery]);
+  const changeType = (type: TransactionType) => { setTransactionType(type); setSelectedCategory(null); setCategoryQuery(''); setFormError(''); };
+
   const handleSave = () => {
+    setFormError('');
     const amountValue = parseMoneyInput(amount, txCurrency);
-    if (!selectedCategory) {
-      alert("請選擇分類");
+    if (!categories.some(c => c.id === selectedCategory && c.type === transactionType)) {
+      setFormError("請選擇分類");
       return;
     }
     if (amountValue === null || amountValue <= 0) {
-      alert(`請輸入有效金額（${txCurrency === Currency.JPY ? '不可輸入小數' : '最多兩位小數'}）`);
+      setFormError(`請輸入有效金額（${txCurrency === Currency.JPY ? '不可輸入小數' : '最多兩位小數'}）`);
       return;
     }
     if (!date) {
-      alert("請選擇日期");
+      setFormError("請選擇日期");
       return;
     }
     const storedDate = localYMDToStoredISOString(date);
     if (!storedDate) {
-      alert("日期格式不正確");
+      setFormError("日期格式不正確");
       return;
     }
 
@@ -61,7 +74,7 @@ const AddTransaction: React.FC = () => {
 
     addTransaction({
       amount: amountValue,
-      categoryId: selectedCategory,
+      categoryId: selectedCategory!,
       note: note,
       // Store as ISO string, but make sure the UI always displays it as local date.
       date: storedDate,
@@ -92,7 +105,7 @@ const AddTransaction: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background flex flex-col pt-safe-top pb-safe-bottom">
+    <div className="sf-entry-page min-h-screen bg-background flex flex-col pt-safe-top pb-safe-bottom">
       {/* Header */}
       <div className="px-4 py-3 flex justify-between items-center sf-topbar sticky top-0 z-10">
         <button onClick={() => navigate(-1)} className="text-primary text-base">取消</button>
@@ -100,18 +113,20 @@ const AddTransaction: React.FC = () => {
         <div className="w-14" />
       </div>
 
-      <div className="p-4 space-y-6 flex-1 overflow-y-auto scrollbar-hide pb-56">
+      <div className="sf-entry-content p-4 space-y-6 flex-1 pb-56">
         {/* Transaction Type Toggle */}
         <div className="flex sf-control rounded-xl p-1">
           <button
-            onClick={() => setTransactionType(TransactionType.EXPENSE)}
+            aria-pressed={transactionType === TransactionType.EXPENSE}
+            onClick={() => changeType(TransactionType.EXPENSE)}
             className={`flex-1 py-2 rounded-lg text-sm transition-all duration-200 ${transactionType === TransactionType.EXPENSE ? 'bg-red-500 text-white shadow-md' : 'text-gray-400 hover:text-gray-200'
               }`}
           >
             支出
           </button>
           <button
-            onClick={() => setTransactionType(TransactionType.INCOME)}
+            aria-pressed={transactionType === TransactionType.INCOME}
+            onClick={() => changeType(TransactionType.INCOME)}
             className={`flex-1 py-2 rounded-lg text-sm transition-all duration-200 ${transactionType === TransactionType.INCOME ? 'bg-green-500 text-white shadow-md' : 'text-gray-400 hover:text-gray-200'
               }`}
           >
@@ -125,9 +140,10 @@ const AddTransaction: React.FC = () => {
           type="button"
           aria-label="輸入金額"
           onClick={() => setIsNumPadOpen(true)}
-          className={`sf-card w-full py-8 px-4 flex flex-col items-center justify-center mb-4 transition-colors duration-300 cursor-pointer ${transactionType === TransactionType.INCOME ? 'bg-green-500/10 border border-green-500/20' : ''
+          className={`sf-entry-amount sf-card w-full py-8 px-4 flex flex-col items-center justify-center mb-4 transition-colors duration-300 cursor-pointer ${transactionType === TransactionType.INCOME ? 'bg-green-500/10 border border-green-500/20' : ''
           }`}>
-          <div className="flex items-baseline text-white">
+          <span className="sf-entry-caption">{transactionType === TransactionType.EXPENSE ? '支出金額' : '收入金額'} · {txCurrency}</span>
+          <div className="sf-entry-number flex items-baseline text-white">
             <span className="text-3xl mr-2 text-gray-400">{getCurrencySymbol(txCurrency)}</span>
             <span className={`text-6xl font-light tracking-tight ${!amount || amount === '0' ? 'text-gray-600' : 'text-white'}`}>
               {amount || '0'}
@@ -140,11 +156,14 @@ const AddTransaction: React.FC = () => {
           <h3 className="text-gray-400 text-sm mb-3 ml-1">
             {transactionType === TransactionType.EXPENSE ? '支出分類' : '收入分類'}
           </h3>
-          <div className="grid grid-cols-5 gap-4">
-            {categories.filter(c => c.type === transactionType).map(cat => (
+          <input aria-label="搜尋分類" placeholder="搜尋分類" className="sf-field mb-3" value={categoryQuery} onChange={event => setCategoryQuery(event.target.value)} />
+          <p className="sf-entry-caption mb-3">最近使用的分類優先顯示</p>
+          <div className="sf-category-grid">
+            {categoryOptions.map(cat => (
               <button
                 key={cat.id}
-                onClick={() => setSelectedCategory(cat.id)}
+                aria-pressed={selectedCategory === cat.id}
+                onClick={() => { setSelectedCategory(cat.id); setFormError(''); }}
                 className="flex flex-col items-center gap-2 group"
               >
                 <div className={`w-12 h-12 rounded-full flex items-center justify-center transition-all duration-300 ${selectedCategory === cat.id ? cat.color + ' text-white scale-110 shadow-lg ring-2 ring-white/20' : 'sf-control text-gray-400 group-active:scale-95'
@@ -153,7 +172,7 @@ const AddTransaction: React.FC = () => {
                     ? <span className="text-lg">{cat.icon.replace('emoji:', '')}</span>
                     : <Icon name={cat.icon} size={20} />}
                 </div>
-                <span className={`text-[10px] transition-colors ${selectedCategory === cat.id ? 'text-white' : 'text-gray-500'}`}>{cat.name}</span>
+                <span className={`sf-category-name transition-colors ${selectedCategory === cat.id ? 'text-white' : 'text-gray-500'}`}>{cat.name}</span>
               </button>
             ))}
             {/* Add New Category Button */}
@@ -171,6 +190,7 @@ const AddTransaction: React.FC = () => {
           <h3 className="text-gray-400 text-sm mb-2 ml-1">日期</h3>
           <div className="sf-control rounded-xl px-4 py-3">
             <input
+              aria-label="交易日期"
               type="date"
               value={date}
               onChange={e => setDate(e.target.value)}
@@ -285,12 +305,15 @@ const AddTransaction: React.FC = () => {
           )}
         </div>
 
-        <div className="h-44"></div> {/* Spacer for fixed bottom bar */}
+
       </div>
 
       {/* Shared navigation; hide both actions while the numeric keypad is open. */}
       {!isNumPadOpen && <BottomNavigation action={
-        <button onClick={handleSave} className="w-full bg-primary text-white font-semibold py-4 rounded-2xl text-base shadow-lg active:scale-[0.99] transition-transform">儲存</button>
+        <div className="sf-entry-save">
+          {formError && <p role="alert" className="sf-entry-error">{formError}</p>}
+          <button onClick={handleSave} className="w-full bg-primary text-white font-semibold py-4 rounded-2xl text-base shadow-lg active:scale-[0.99] transition-transform">儲存</button>
+        </div>
       } />}
 
       {/* Numeric Keypad - Modal */}
@@ -306,14 +329,14 @@ const AddTransaction: React.FC = () => {
             <NumPad
               onNumber={(num) => {
                 if (num === '.') {
-                  if (!amount.includes('.')) setAmount(amount + '.');
+                  if (txCurrency !== Currency.JPY && !amount.includes('.')) setAmount((amount || '0') + '.');
                 } else if (amount === '0') {
                   setAmount(num);
                 } else {
                   // Limit to 2 decimal places
                   const parts = amount.split('.');
                   if (parts.length === 2 && parts[1].length >= 2) return;
-                  setAmount(amount + num);
+                  if (amount.length < 12) setAmount(amount + num);
                 }
               }}
               onDelete={() => {

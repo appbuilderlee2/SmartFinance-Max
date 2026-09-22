@@ -1,3 +1,12 @@
+## v2.11.0 — Entry and records usability
+
+- Refine amount entry and responsive category selection with search and recent-use ordering.
+- Reset categories when switching income/expense; present validation inline.
+- Add currency-separated daily totals for the full filtered result, independent of pagination.
+- Restore filters and loaded rows when returning from transaction details.
+- Adjust entry navigation and save action to the visual viewport when the keyboard opens.
+- Preserve all six navigation destinations.
+
 ## v2.10.0 — iOS layout refinement
 
 - Preserve all six navigation destinations with equal touch targets and a visible selected state.
