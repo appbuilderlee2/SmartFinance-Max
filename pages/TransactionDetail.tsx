@@ -15,7 +15,9 @@ import { parseMoneyInput } from '../utils/money';
 const TransactionDetail: React.FC = () => {
    const { id } = useParams();
    const navigate = useNavigate();
-   const { transactions, categories, updateTransaction, currency } = useData();
+   const { transactions, categories, saveEditedTransaction, currency } = useData();
+   const [saving, setSaving] = useState(false);
+   const [saveError, setSaveError] = useState('');
 
    const categoryById = useMemo(() => {
       return new Map(categories.map(c => [c.id, c] as const));
@@ -55,7 +57,9 @@ const TransactionDetail: React.FC = () => {
    const currentCategory = categoryById.get(selectedCategory);
    const transactionType = currentCategory?.type || tx.type;
 
-   const handleSave = () => {
+   const handleSave = async () => {
+      if (saving) return;
+      setSaveError('');
       const amountValue = parseMoneyInput(amount, txCurrency);
       if (!selectedCategory) {
          alert('請選擇分類');
@@ -79,7 +83,9 @@ const TransactionDetail: React.FC = () => {
          rememberTags(tags);
       }
 
-      updateTransaction(tx.id, {
+      setSaving(true);
+      try {
+      await saveEditedTransaction(tx.id, {
          amount: amountValue,
          categoryId: selectedCategory || tx.categoryId,
          note,
@@ -92,6 +98,9 @@ const TransactionDetail: React.FC = () => {
          currency: txCurrency
       });
       navigate(-1);
+      } catch (error) {
+         setSaveError(error instanceof Error ? error.message : '儲存失敗，請重試');
+      } finally { setSaving(false); }
    };
 
    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -114,10 +123,11 @@ const TransactionDetail: React.FC = () => {
                <span>返回</span>
             </button>
             <h2 className="text-lg font-semibold text-white">編輯帳目</h2>
-            <button onClick={handleSave} className="text-primary font-bold text-base active:opacity-70">
-               儲存
+            <button onClick={() => void handleSave()} disabled={saving} className="text-primary font-bold text-base active:opacity-70 disabled:opacity-50">
+               {saving ? '儲存中…' : '儲存'}
             </button>
          </div>
+         {saveError && <div role="alert" className="mx-4 mt-3 rounded-xl border border-red-500/40 bg-red-500/10 p-3 text-sm text-red-200">{saveError}</div>}
 
          <div className="p-4 space-y-6">
             {/* Amount Card - Editable */}

@@ -1,12 +1,13 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ChevronLeft, Plus, CreditCard, Trash2, X, Pencil, ArrowUp, ArrowDown, Cloud, Search } from 'lucide-react';
 import { useData } from '../contexts/DataContext';
 import { CardCatalogItem, fetchCardCatalog } from '../services/cardCatalog';
 import { makeId } from '../utils/id';
 import { getCurrentYearMonth, createOpenCycle } from '../utils/creditCardCycles';
-import { loadCycles, saveCycles, upsertCycle } from '../utils/creditCardCycleStorage';
+import { loadCycles, upsertCycle } from '../utils/creditCardCycleStorage';
+import { writeJson, flushStorage } from '../utils/storage';
 import { Currency } from '../types';
 
 interface CreditCardType {
@@ -31,7 +32,10 @@ interface CreditCardType {
 
 const CreditCardManager: React.FC<{ embedded?: boolean; editId?: string; adding?: boolean; onDone?: () => void }> = ({ embedded, editId, adding, onDone }) => {
     const navigate = useNavigate();
-    const { creditCards, addCreditCard, updateCreditCard, deleteCreditCard, setCreditCards, currency } = useData();
+    const { creditCards, deleteCreditCard, setCreditCards, saveCreditCardChange, currency } = useData();
+    const pendingCardId = useRef<string | null>(null);
+    const [saving, setSaving] = useState(false);
+    const [saveError, setSaveError] = useState('');
 
     const [showModal, setShowModal] = useState(false);
     const [editingId, setEditingId] = useState<string | null>(null);
@@ -58,6 +62,7 @@ const CreditCardManager: React.FC<{ embedded?: boolean; editId?: string; adding?
     });
 
     const openAddModal = () => {
+        pendingCardId.current = null; setSaveError('');
         setEditingId(null);
         setFormData({ name: '', lastFourDigits: '', annualFee: 0, feeMonth: undefined, cashbackType: '', expiryDate: '', creditLimit: undefined, imageUrl: undefined, rewardCategories: [], currency, statementDay: undefined, dueDay: undefined, dueInNextMonth: true, remindStatement: true, remindDue: true });
         setCatalogQuery('');
@@ -66,6 +71,7 @@ const CreditCardManager: React.FC<{ embedded?: boolean; editId?: string; adding?
     };
 
     const openEditModal = (card: CreditCardType) => {
+        pendingCardId.current = null; setSaveError('');
         setEditingId(card.id);
         setFormData({ ...card, currency: card.currency || currency });
         setCatalogQuery('');
@@ -105,21 +111,27 @@ const CreditCardManager: React.FC<{ embedded?: boolean; editId?: string; adding?
         }));
     };
 
-    const handleSave = () => {
+    const handleSave = async () => {
+        if (saving) return;
+        setSaveError('');
         if (!formData.name) {
             alert('請填寫卡片名稱');
             return;
         }
 
+        setSaving(true);
+        try {
         if (editingId) {
-            updateCreditCard(editingId, formData);
+            const existing = creditCards.find(card => card.id === editingId);
+            if (!existing) throw new Error('找不到信用卡，請重新開啟');
+            await saveCreditCardChange({ ...existing, ...formData });
         } else {
             const newCard = {
                 ...formData,
-                id: makeId('card')
+                id: pendingCardId.current || (pendingCardId.current = makeId('card'))
             } as CreditCardType;
 
-            addCreditCard(newCard);
+            await saveCreditCardChange(newCard);
 
             // Create initial cycle for the newly-added card (current YYYY-MM) so the cycle page isn't empty.
             const { year, month0, yearMonth } = getCurrentYearMonth(new Date());
@@ -128,12 +140,16 @@ const CreditCardManager: React.FC<{ embedded?: boolean; editId?: string; adding?
             if (!existing) {
                 const cycle = createOpenCycle(newCard, year, month0);
                 const updated = upsertCycle(loadCycles(), cycle);
-                saveCycles(updated);
+                if (!await writeJson('smartfinance_creditcard_cycles', updated)) throw new Error('帳單週期未能儲存，請重試');
+                await flushStorage();
             }
         }
 
         setShowModal(false);
+        pendingCardId.current = null;
         onDone?.();
+        } catch (error) { setSaveError(error instanceof Error ? error.message : '儲存失敗，請重試'); }
+        finally { setSaving(false); }
     };
 
     const moveCard = (index: number, direction: 'up' | 'down') => {
@@ -279,11 +295,12 @@ const CreditCardManager: React.FC<{ embedded?: boolean; editId?: string; adding?
                     <div className={embedded && (editId || adding) ? 'space-y-4' : 'sf-panel w-full rounded-t-3xl p-6 pb-safe-bottom animate-slide-up max-h-[90vh] overflow-y-auto'}>
                         <div className="flex justify-between items-center mb-6">
                             <h3 className="text-lg font-semibold text-white">{editingId ? '編輯信用卡' : '新增信用卡'}</h3>
-                            <button aria-label="取消卡片編輯" onClick={() => { setShowModal(false); if (editId || adding) onDone?.(); }} className="text-gray-400">
+                            <button aria-label="取消卡片編輯" disabled={saving} onClick={() => { setShowModal(false); if (editId || adding) onDone?.(); }} className="text-gray-400 disabled:opacity-50">
                                 <X size={24} />
                             </button>
                         </div>
 
+                        {saveError && <div role="alert" className="mb-3 rounded-xl border border-red-500/40 bg-red-500/10 p-3 text-sm text-red-200">{saveError}</div>}
                         <div className="space-y-4">
                             {/* Catalog (API) */}
                             <div className="sf-control rounded-xl p-3 space-y-2">
@@ -539,10 +556,11 @@ const CreditCardManager: React.FC<{ embedded?: boolean; editId?: string; adding?
                             </div>
 
                             <button
-                                onClick={handleSave}
-                                className="w-full bg-primary py-4 rounded-xl font-bold text-white mt-4 shadow-lg"
+                                onClick={() => void handleSave()}
+                                disabled={saving}
+                                className="w-full bg-primary py-4 rounded-xl font-bold text-white mt-4 shadow-lg disabled:opacity-50"
                             >
-                                {editingId ? '儲存變更' : '新增'}
+                                {saving ? '儲存中…' : editingId ? '儲存變更' : '新增'}
                             </button>
                         </div>
                     </div>
