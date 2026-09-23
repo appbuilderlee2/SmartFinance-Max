@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { ChevronLeft, CheckCircle2, DollarSign, Undo2, ChevronRight, CalendarDays, PlusCircle } from 'lucide-react';
 import { useData } from '../contexts/DataContext';
 import { loadCycles, saveCycles, upsertCycle } from '../utils/creditCardCycleStorage';
+import { flushStorage, getSaveStatus, retryStorage } from '../utils/storage';
 import { getNextYearMonth, createOpenCycle, getCurrentYearMonth } from '../utils/creditCardCycles';
 
 const CreditCardCycles: React.FC = () => {
@@ -10,6 +11,21 @@ const CreditCardCycles: React.FC = () => {
   const { creditCards, setCreditCards } = useData();
 
   const [cycles, setCycles] = useState(() => loadCycles());
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState('');
+  const persistCycles = async (updated: typeof cycles, onSaved?: () => void) => {
+    if (saving) return;
+    setSaving(true); setSaveError('');
+    try {
+      if (getSaveStatus() === 'error') await retryStorage();
+      await flushStorage();
+      if (!await saveCycles(updated)) throw new Error('週期未能儲存，請重試。');
+      await flushStorage();
+      setCycles(updated);
+      onSaved?.();
+    } catch (error) { setSaveError(error instanceof Error ? error.message : '週期未能儲存，請重試。'); }
+    finally { setSaving(false); }
+  };
 
   // UI-selected cycle per card (YYYY-MM)
   const [selectedYmByCard, setSelectedYmByCard] = useState<Record<string, string>>({});
@@ -85,8 +101,7 @@ const CreditCardCycles: React.FC = () => {
     };
 
     const updated = upsertCycle(cycles, next);
-    setCycles(updated);
-    saveCycles(updated);
+    void persistCycles(updated);
   };
 
   const markPaidOnly = (cardId: string, yearMonth: string) => {
@@ -118,8 +133,7 @@ const CreditCardCycles: React.FC = () => {
     };
 
     const updated = upsertCycle(cycles, nextClosed);
-    setCycles(updated);
-    saveCycles(updated);
+    void persistCycles(updated);
   };
 
   const ensureNextCycle = (cardId: string, yearMonth: string) => {
@@ -137,10 +151,7 @@ const CreditCardCycles: React.FC = () => {
     const nextOpen = createOpenCycle(card, nextYm.year, nextYm.month0);
 
     const updated = upsertCycle(cycles, nextOpen);
-    setCycles(updated);
-    saveCycles(updated);
-
-    setSelectedYmByCard((prev) => ({ ...prev, [cardId]: nextOpen.yearMonth }));
+    void persistCycles(updated, () => setSelectedYmByCard((prev) => ({ ...prev, [cardId]: nextOpen.yearMonth })));
   };
 
   const cancelPaid = (cardId: string, yearMonth: string) => {
@@ -164,9 +175,7 @@ const CreditCardCycles: React.FC = () => {
 
     const reopened = { ...existing, status: 'open' as const, paidAt: undefined };
     const updated = upsertCycle(cycles, reopened);
-    setCycles(updated);
-    saveCycles(updated);
-    setTimeout(() => setCycles(loadCycles()), 0);
+    void persistCycles(updated);
   };
 
   return (
@@ -180,7 +189,9 @@ const CreditCardCycles: React.FC = () => {
         <div className="w-16" />
       </div>
 
-      <div className="p-4 space-y-4">
+      <fieldset disabled={saving} className="p-4 space-y-4 disabled:opacity-70">
+        {saveError && <div role="alert" className="rounded-xl border border-red-500/40 bg-red-500/10 p-3 text-sm text-red-200">{saveError}</div>}
+        {saving && <div role="status" className="text-sm text-gray-300">儲存中…</div>}
         <div className="text-xs text-gray-500">
           以「截數月」為一期。你可以手動建立下一期；亦可以用上/下一期按鈕查閱之前週期。
         </div>
@@ -348,7 +359,7 @@ const CreditCardCycles: React.FC = () => {
         {(!creditCards || creditCards.length === 0) && (
           <div className="text-sm text-gray-500">未有信用卡資料。</div>
         )}
-      </div>
+      </fieldset>
     </div>
   );
 };

@@ -1,5 +1,6 @@
 import { captureDeletion, restoreDeletion, type DeletedTransaction } from '../utils/transactionUndo';
 import { BACKUP_EXPORT_MARKER } from '../utils/backupReminder';
+import { clearEntryDraft } from '../utils/entryDraft';
 import { writeJson } from '../utils/storage';
 import { renameTransactionTags, tagKey, normalizeTag, uniqueTags } from '../utils/tags';
 import { loadTagHistory } from '../utils/tagHistory';
@@ -377,7 +378,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     try {
       await clearStorageData();
-      sessionStorage.removeItem('sf.entryDraft.v1');
+      if (!await clearEntryDraft()) reportStorageError('entry-draft-reset', new Error('草稿未能清除'));
       try { localStorage.removeItem(BACKUP_EXPORT_MARKER); } catch { /* UI marker only */ }
       setDeleted(null);
       resetSecurityCache();
