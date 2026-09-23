@@ -7,8 +7,8 @@ export function loadCycles(): CreditCardCycle[] {
   return readJson<CreditCardCycle[]>(CYCLES_KEY) ?? [];
 }
 
-export function saveCycles(cycles: CreditCardCycle[]): void {
-  writeJson(CYCLES_KEY, cycles);
+export function saveCycles(cycles: CreditCardCycle[]): Promise<boolean> {
+  return writeJson(CYCLES_KEY, cycles);
 }
 
 export function upsertCycle(cycles: CreditCardCycle[], cycle: CreditCardCycle): CreditCardCycle[] {

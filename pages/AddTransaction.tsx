@@ -1,4 +1,4 @@
-import { readEntryDraft, saveEntryDraft, clearEntryDraft } from '../utils/entryDraft';
+import { readEntryDraft, saveEntryDraft, clearEntryDraft, MAX_RECEIPT_BYTES, type EntryDraft } from '../utils/entryDraft';
 import { makeId } from '../utils/id';
 import React, { useState, useRef, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -15,11 +15,22 @@ import { localYMDToStoredISOString, toLocalYMD, parseDate } from '../utils/date'
 import { parseMoneyInput } from '../utils/money';
 
 const AddTransaction: React.FC = () => {
+  const { transactions } = useData();
+  const [draft, setDraft] = useState<EntryDraft | null | undefined>();
+  useEffect(() => {
+    let active = true;
+    void readEntryDraft().then(value => { if (active) setDraft(value && !transactions.some(tx => tx.id === value.id) ? value : null); });
+    return () => { active = false; };
+  }, []);
+  if (draft === undefined) return <div className="min-h-screen bg-background pt-safe-top p-6 text-gray-300">正在載入草稿…</div>;
+  return <EntryForm initialDraft={draft} />;
+};
+
+const EntryForm: React.FC<{ initialDraft: EntryDraft | null }> = ({ initialDraft }) => {
   const navigate = useNavigate();
   const { saveTransaction, categories, currency, transactions } = useData();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const [initialDraft] = useState(readEntryDraft);
   const draftId = useRef(initialDraft?.id || makeId('tx'));
   const saved = useRef(false);
   const savingRef = useRef(false);
@@ -56,7 +67,10 @@ const AddTransaction: React.FC = () => {
 
   useEffect(() => {
     if (saved.current) return;
-    setDraftWarning(!saveEntryDraft({ id: draftId.current, amount, selectedCategory, note, date, recurrence, receiptPreview, tags, transactionType, txCurrency, showDetails }));
+    let active = true;
+    void saveEntryDraft({ id: draftId.current, amount, selectedCategory, note, date, recurrence, receiptPreview, tags, transactionType, txCurrency, showDetails })
+      .then(ok => { if (active) setDraftWarning(!ok); });
+    return () => { active = false; };
   }, [amount, selectedCategory, note, date, recurrence, receiptPreview, tags, transactionType, txCurrency, showDetails]);
 
   const handleSave = async () => {
@@ -103,7 +117,8 @@ const AddTransaction: React.FC = () => {
       currency: txCurrency
     });
 
-    saved.current = true; clearEntryDraft();
+    saved.current = true;
+    if (!await clearEntryDraft()) setDraftWarning(true);
     navigate('/records');
     } catch (error) { setFormError(error instanceof Error ? error.message : '儲存失敗，請重試'); }
     finally { savingRef.current = false; setSaving(false); }
@@ -112,10 +127,13 @@ const AddTransaction: React.FC = () => {
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      if (!file.type.startsWith('image/')) { setFormError('請選擇圖片收據'); return; }
+      if (file.size > MAX_RECEIPT_BYTES) { setFormError('收據圖片不可超過 5 MB，請先縮小圖片'); return; }
       const reader = new FileReader();
       reader.onloadend = () => {
-        setReceiptPreview(reader.result as string);
+        if (typeof reader.result === 'string') { setFormError(''); setReceiptPreview(reader.result); }
       };
+      reader.onerror = () => setFormError('收據讀取失敗，請重試');
       reader.readAsDataURL(file);
     }
   };
@@ -134,8 +152,8 @@ const AddTransaction: React.FC = () => {
       </div>
 
       <fieldset disabled={saving} className="sf-entry-content p-4 space-y-6 flex-1 pb-56 min-w-0">
-        <div className="sf-draft-status"><span>{draftWarning ? '草稿暫時未能保存，請勿重新整理' : '草稿會在本分頁保留，儲存成功後清除'}</span>
-        <button type="button" onClick={() => { if (transactions.some(tx => tx.id === draftId.current)) { setFormError('此帳目已提交，請先重試完成儲存，再到記錄編輯或刪除。'); return; } if (!window.confirm('清除目前未儲存的草稿？')) return; clearEntryDraft(); saved.current = true; window.location.reload(); }}>清除草稿</button></div>
+        <div className="sf-draft-status"><span>{draftWarning ? '草稿暫時未能保存，請勿關閉頁面' : '草稿保存在此裝置，儲存成功後清除'}</span>
+        <button type="button" onClick={() => { void (async () => { if (transactions.some(tx => tx.id === draftId.current)) { setFormError('此帳目已提交，請先重試完成儲存，再到記錄編輯或刪除。'); return; } if (!window.confirm('清除目前未儲存的草稿？')) return; if (!await clearEntryDraft()) { setFormError('草稿未能清除，請重試'); return; } saved.current = true; window.location.reload(); })(); }}>清除草稿</button></div>
         {/* Transaction Type Toggle */}
         <div className="flex sf-control rounded-xl p-1">
           <button

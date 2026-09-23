@@ -28,7 +28,7 @@ const CreditCard2SwipeWhich = lazy(routeModules.creditCard2SwipeWhich);
 // Layout
 import Layout from './components/Layout';
 import { hasOnboarded } from './utils/firstRun';
-import { STORAGE_ERROR_EVENT, subscribeStorage, getSaveStatus, retryStorage, flushStorage } from './utils/storage';
+import { STORAGE_ERROR_EVENT, subscribeStorage, getSaveStatus, retryStorage, flushStorage, getStaleTab, subscribeStaleTab } from './utils/storage';
 import SecurityGate from './components/SecurityGate';
 
 const Loading: React.FC = () => <div className="p-4 text-gray-400">載入中…</div>;
@@ -36,13 +36,15 @@ const Loading: React.FC = () => <div className="p-4 text-gray-400">載入中…<
 
 const StorageStatus = () => {
   const saveStatus = useSyncExternalStore(subscribeStorage, getSaveStatus);
+  const stale = useSyncExternalStore(subscribeStaleTab, getStaleTab);
   return (<div role="status" aria-live="polite" className={saveStatus === 'saved' ? 'sr-only' : 'fixed bottom-20 right-3 z-[60] rounded-lg bg-background border sf-divider px-2 py-1 text-xs'}>
           {saveStatus === 'saving' ? '儲存中…' : saveStatus === 'error' ? '尚未儲存' : '已儲存'}
-          {saveStatus === 'error' && <button className="ml-2 text-primary" onClick={() => void retryStorage()}>重試</button>}
+          {saveStatus === 'error' && !stale && <button className="ml-2 text-primary" onClick={() => void retryStorage()}>重試</button>}
         </div>);
 };
 
 const App: React.FC = () => {
+  const stale = useSyncExternalStore(subscribeStaleTab, getStaleTab);
   const [swUpdate, setSwUpdate] = useState<ServiceWorkerRegistration | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [storageError, setStorageError] = useState(false);
@@ -126,6 +128,16 @@ const App: React.FC = () => {
     <DataProvider>
       <SecurityGate>
       <Router>
+        {stale && <div role="alertdialog" aria-modal="true" aria-label="另一分頁有更新" className="fixed inset-0 z-[110] flex items-center justify-center bg-black/75 px-5">
+          <div className="sf-panel max-w-sm rounded-2xl p-6 text-gray-100 shadow-2xl space-y-4">
+            <h2 className="text-lg font-semibold">另一分頁已更新資料</h2>
+            <p className="text-sm text-gray-300">此分頁嘅帳目可能已過期。重新載入後會取得最新資料；未儲存嘅修改可能會消失，記帳草稿會保留。</p>
+            <button className="w-full rounded-xl bg-primary px-4 py-3 font-semibold text-white" onClick={() => {
+              if (getSaveStatus() !== 'saved' && !window.confirm('此分頁可能有未儲存修改，確定重新載入？')) return;
+              window.location.reload();
+            }}>重新載入最新資料</button>
+          </div>
+        </div>}
         {networkNotice && (
           <div
             role="status"

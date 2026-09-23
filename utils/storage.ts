@@ -25,6 +25,38 @@ export type ParseResult<T> = {
 };
 
 export const STORAGE_ERROR_EVENT = 'sf-storage-error';
+const CROSS_TAB_KEY = 'smartfinance-tab-update';
+const tabId = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+let channel: BroadcastChannel | null = null;
+let staleTab = false;
+let crossTabStarted = false;
+const staleListeners = new Set<() => void>();
+export const getStaleTab = () => staleTab;
+export const subscribeStaleTab = (listener: () => void) => { staleListeners.add(listener); return () => { staleListeners.delete(listener); }; };
+function markStale(source: unknown) {
+  if (source === tabId || staleTab) return;
+  staleTab = true;
+  staleListeners.forEach(listener => listener());
+  reportStorageError('other-tab', new Error('另一分頁已更新資料，請重新載入此分頁'));
+}
+function startCrossTabMonitor() {
+  if (crossTabStarted || typeof window === 'undefined') return;
+  crossTabStarted = true;
+  if (typeof BroadcastChannel !== 'undefined') {
+    channel = new BroadcastChannel(CROSS_TAB_KEY);
+    channel.onmessage = event => markStale(event.data?.source);
+  }
+  window.addEventListener('storage', event => {
+    if (event.key !== CROSS_TAB_KEY || !event.newValue) return;
+    try { markStale(JSON.parse(event.newValue).source); } catch { /* ignore invalid marker */ }
+  });
+}
+function publishChange() {
+  if (staleTab) return;
+  const notice = { source: tabId, time: Date.now() };
+  channel?.postMessage(notice);
+  try { localStorage.setItem(CROSS_TAB_KEY, JSON.stringify(notice)); } catch { /* BroadcastChannel still works */ }
+}
 
 export type StorageBackend = 'indexeddb' | 'localstorage';
 
@@ -49,6 +81,7 @@ async function drain(): Promise<void> {
   running = true;
   setStatus('saving');
   while (pending.length) {
+    if (staleTab) { running = false; setStatus('error'); return; }
     const job = pending[0];
     try { await job.run(); pending.shift(); job.resolve(true); }
     catch (error) {
@@ -58,12 +91,17 @@ async function drain(): Promise<void> {
   running = false; setStatus('saved');
 }
 function enqueue(run: () => Promise<void>): Promise<boolean> {
+  if (staleTab) { reportStorageError('other-tab', new Error('另一分頁已更新資料')); return Promise.resolve(false); }
   const result = new Promise<boolean>(resolve => pending.push({ run, resolve }));
   if (saveStatus !== 'error') void drain();
   return result;
 }
-export async function retryStorage(): Promise<void> { await drain(); }
+export async function retryStorage(): Promise<void> {
+  if (staleTab) throw new Error('另一分頁已更新資料，請重新載入');
+  await drain();
+}
 export function flushStorage(): Promise<void> {
+  if (staleTab) return Promise.reject(new Error('另一分頁已更新資料，請重新載入'));
   if (!pending.length) return Promise.resolve();
   if (saveStatus === 'error') return Promise.reject(new Error('資料未能儲存，請先重試或匯出備份'));
   return new Promise((resolve, reject) => {
@@ -125,6 +163,7 @@ export function initializeStorage(): Promise<StorageInitialization> {
       localStorage.setItem('sf_indexeddb_authoritative', 'true');
       backend = 'indexeddb';
       initialized = true;
+      startCrossTabMonitor();
       return {
         backend,
         migrated: migration.migrated,
@@ -139,6 +178,7 @@ export function initializeStorage(): Promise<StorageInitialization> {
       replaceCache(snapshot);
       backend = 'localstorage';
       initialized = true;
+      startCrossTabMonitor();
       reportStorageError('indexeddb', error);
       return { backend, migrated: false, importedKeys: 0, storedKeys: Object.keys(snapshot).length };
     }
@@ -189,6 +229,7 @@ export function writeText(key: string, value: string): Promise<boolean> {
     if (key === THEME_KEY && cache.get(key) === value) localStorage.setItem(key, value);
     if (backend === 'indexeddb' && database) await writeDatabaseValue(database, key, value);
     else localStorage.setItem(key, value);
+    publishChange();
   });
 }
 
@@ -214,6 +255,7 @@ export function writeCoreData(rows: Transaction[], values: KeyValueSnapshot): Pr
       }
     }
     durableRows = next;
+    publishChange();
   });
 }
 
@@ -223,6 +265,7 @@ export function removeKey(key: string): void {
     if (backend === 'indexeddb' && database) await removeDatabaseValue(database, key);
     else localStorage.removeItem(key);
     if (key === THEME_KEY) localStorage.removeItem(key);
+    publishChange();
   });
 }
 
@@ -254,6 +297,7 @@ export async function replaceStorageSnapshot(snapshot: KeyValueSnapshot): Promis
   replaceCache(filtered);
   const theme = filtered[THEME_KEY];
   if (theme) localStorage.setItem(THEME_KEY, theme); else localStorage.removeItem(THEME_KEY);
+  publishChange();
 }
 
 export async function clearStorageData(): Promise<void> {
@@ -262,6 +306,7 @@ export async function clearStorageData(): Promise<void> {
   clearLegacyAppStorage();
   cache.clear(); transactionRows = []; durableRows.clear();
   if (backend === 'indexeddb') localStorage.setItem('sf_indexeddb_authoritative', 'true');
+  publishChange();
 }
 
 export function getStorageBackend(): StorageBackend {

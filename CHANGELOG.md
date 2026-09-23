@@ -296,3 +296,9 @@ Validation: typecheck, production build and 55 unit/regression tests passed loca
 - Display the last JSON export attempt and a 30-day reminder when local finance data exists; ask users to verify that iOS actually saved the download.
 - Wait for database commits when finishing transaction edits, budgets and credit-card forms. Keep the form open with a retryable error when a write fails.
 - Include card-cycle creation in the confirmed card-save path, and preserve card ID across retries.
+## v2.14.0 — Durable drafts, cycle saves and stale-tab protection
+
+- Store the entry draft, including an image receipt up to 5 MB, in a separate IndexedDB database that survives closing and reopening the tab. Migrate existing session drafts.
+- Wait for credit-card cycle writes before updating the screen. Keep the current cycle visible with an inline error if a write fails.
+- Notify an open tab when another tab commits finance data, block edits on its stale state, and offer a guarded reload.
+- Add draft migration and cross-tab end-to-end coverage.
