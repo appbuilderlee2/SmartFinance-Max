@@ -1,15 +1,34 @@
 
-import React, { useMemo } from 'react';
+import React, { useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ChevronLeft } from 'lucide-react';
 import { useData } from '../contexts/DataContext';
 import { Icon } from '../components/Icon';
 import { getCurrencySymbol } from '../utils/currency';
 import { addMoney, formatMoney, parseMoneyInput, sumMoney } from '../utils/money';
+import { flushStorage } from '../utils/storage';
 
 const BudgetSettings: React.FC = () => {
   const navigate = useNavigate();
-  const { budgets, categories, updateBudget, currency } = useData();
+  const { budgets, categories, updateBudget, saveBudgetLimit, currency } = useData();
+  const lastEdit = useRef<{ id: string; limit: number } | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState('');
+  const changeLimit = (id: string, limit: number) => {
+    lastEdit.current = { id, limit };
+    setSaveError('');
+    updateBudget(id, limit);
+  };
+  const finish = async () => {
+    if (saving) return;
+    setSaving(true);
+    try {
+      if (lastEdit.current) await saveBudgetLimit(lastEdit.current.id, lastEdit.current.limit);
+      else await flushStorage();
+      navigate(-1);
+    } catch (error) { setSaveError(error instanceof Error ? error.message : '預算未能儲存，請重試'); }
+    finally { setSaving(false); }
+  };
 
   const categoryById = useMemo(() => {
     return new Map(categories.map(c => [c.id, c] as const));
@@ -26,8 +45,9 @@ const BudgetSettings: React.FC = () => {
           <ChevronLeft size={24} />
         </button>
         <h2 className="text-lg font-semibold">月預算設定</h2>
-        <button className="text-primary font-bold" onClick={() => navigate(-1)}>完成</button>
+        <button className="text-primary font-bold disabled:opacity-50" disabled={saving} onClick={() => void finish()}>{saving ? '儲存中…' : '完成'}</button>
       </div>
+      {saveError && <div role="alert" className="mx-4 mt-3 rounded-xl border border-red-500/40 bg-red-500/10 p-3 text-sm text-red-200">{saveError}</div>}
 
       <div className="p-4 space-y-6">
         {/* Total Budget Card */}
@@ -104,7 +124,7 @@ const BudgetSettings: React.FC = () => {
                       max="20000"
                       step="500"
                       value={budget.limit}
-                      onChange={(e) => updateBudget(budget.categoryId, parseInt(e.target.value))}
+                      onChange={(e) => changeLimit(budget.categoryId, parseInt(e.target.value))}
                       className="w-full accent-white h-1 bg-gray-600 rounded-lg appearance-none cursor-pointer"
                     />
                   </div>
@@ -118,7 +138,7 @@ const BudgetSettings: React.FC = () => {
                         value={budget.limit}
                         onChange={(e) => {
                           const amount = parseMoneyInput(e.target.value, currency);
-                          if (amount !== null) updateBudget(budget.categoryId, amount);
+                          if (amount !== null) changeLimit(budget.categoryId, amount);
                         }}
                       />
                     </div>

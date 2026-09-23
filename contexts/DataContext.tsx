@@ -1,4 +1,5 @@
 import { captureDeletion, restoreDeletion, type DeletedTransaction } from '../utils/transactionUndo';
+import { BACKUP_EXPORT_MARKER } from '../utils/backupReminder';
 import { writeJson } from '../utils/storage';
 import { renameTransactionTags, tagKey, normalizeTag, uniqueTags } from '../utils/tags';
 import { loadTagHistory } from '../utils/tagHistory';
@@ -76,6 +77,9 @@ interface DataContextType {
   storageBackend: StorageBackend;
   addTransaction: (tx: Omit<Transaction, 'id'>) => void;
   saveTransaction: (tx: Transaction) => Promise<void>;
+  saveEditedTransaction: (id: string, fields: Partial<Transaction>) => Promise<void>;
+  saveBudgetLimit: (categoryId: string, limit: number) => Promise<void>;
+  saveCreditCardChange: (card: CreditCard) => Promise<void>;
   updateTransaction: (id: string, tx: Partial<Transaction>) => void;
   deleteTransaction: (id: string) => void;
   renameTag: (source: string, target: string) => void;
@@ -127,6 +131,8 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [storageBackend, setStorageBackend] = useState<StorageBackend>('indexeddb');
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const saveWaiters = useRef(new Map<string, { row: Transaction; resolve: (ok: boolean) => void }>());
+  const changeWaiters = useRef<Array<(ok: boolean) => void>>([]);
+  const [changeRevision, setChangeRevision] = useState(0);
   const [deleted, setDeleted] = useState<DeletedTransaction | null>(null);
   const [undoError, setUndoError] = useState('');
   const [categories, setCategories] = useState<Category[]>(CATEGORIES);
@@ -172,14 +178,15 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     if (!storageReady) return;
     const waiters = [...saveWaiters.current.entries()].filter(([, item]) => transactions.includes(item.row));
+    const changes = changeWaiters.current.splice(0);
     void writeCoreData(transactions, {
       smartfinance_categories: JSON.stringify(categories),
       smartfinance_budgets: JSON.stringify(budgets),
       smartfinance_subscriptions: JSON.stringify(subscriptions),
       smartfinance_creditcards: JSON.stringify(creditCards),
       smartfinance_currency: currency,
-    }).then(ok => { for (const [id, waiter] of waiters) { if (saveWaiters.current.get(id) === waiter) { saveWaiters.current.delete(id); waiter.resolve(ok); } } });
-  }, [storageReady, transactions, categories, budgets, subscriptions, creditCards, currency]);
+    }).then(ok => { for (const [id, waiter] of waiters) { if (saveWaiters.current.get(id) === waiter) { saveWaiters.current.delete(id); waiter.resolve(ok); } } changes.forEach(resolve => resolve(ok)); });
+  }, [storageReady, transactions, categories, budgets, subscriptions, creditCards, currency, changeRevision]);
 
   // Budget Spending Logic (recalculate spent whenever transactions/categories/currency change)
   // Improvement: avoid JSON.stringify object-wide compare and reduce repeated date parsing.
@@ -237,6 +244,26 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (!await committed) throw new Error('儲存失敗，輸入已保留。請重試。');
     await flushStorage();
   };
+
+  const persistCoreChange = async (change: () => void) => {
+    if (getSaveStatus() === 'error') await retryStorage();
+    await flushStorage();
+    const committed = new Promise<boolean>(resolve => changeWaiters.current.push(resolve));
+    change();
+    setChangeRevision(previous => previous + 1);
+    if (!await committed) throw new Error('儲存失敗，請重試。');
+    await flushStorage();
+  };
+  const saveEditedTransaction = (id: string, fields: Partial<Transaction>) =>
+    persistCoreChange(() => updateTransaction(id, fields));
+  const saveBudgetLimit = (id: string, limit: number) =>
+    persistCoreChange(() => updateBudget(id, limit));
+  const saveCreditCardChange = (card: CreditCard) =>
+    persistCoreChange(() => setCreditCards(previous => {
+      const index = previous.findIndex(item => item.id === card.id);
+      if (index < 0) return [...previous, card];
+      return previous.map(item => item.id === card.id ? { ...item, ...card } : item);
+    }));
 
   const renameTag = (source: string, target: string) => {
     const name = normalizeTag(target);
@@ -350,7 +377,9 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     try {
       await clearStorageData();
-    sessionStorage.removeItem('sf.entryDraft.v1'); setDeleted(null);
+      sessionStorage.removeItem('sf.entryDraft.v1');
+      try { localStorage.removeItem(BACKUP_EXPORT_MARKER); } catch { /* UI marker only */ }
+      setDeleted(null);
       resetSecurityCache();
     } catch {
       alert('資料未能重置，請先處理儲存錯誤。'); return;
@@ -535,7 +564,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       creditCards,
       themeColor,
       storageBackend,
-      addTransaction, saveTransaction,
+      addTransaction, saveTransaction, saveEditedTransaction, saveBudgetLimit, saveCreditCardChange,
       deleteTransaction,
       updateTransaction,
       renameTag,

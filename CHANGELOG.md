@@ -291,3 +291,8 @@ Validation: typecheck, production build and 55 unit/regression tests passed loca
 ### 🧰 工程 / 維護
 - 加入 GitHub Actions CI：自動跑 `npm ci` + `npm run build`。
 - 加入 localStorage schema version 記號：`smartfinance_schema_version`（v1）。
+## v2.13.0 — Backup nudges and confirmed edits
+
+- Display the last JSON export attempt and a 30-day reminder when local finance data exists; ask users to verify that iOS actually saved the download.
+- Wait for database commits when finishing transaction edits, budgets and credit-card forms. Keep the form open with a retryable error when a write fails.
+- Include card-cycle creation in the confirmed card-save path, and preserve card ID across retries.

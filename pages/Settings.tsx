@@ -15,6 +15,7 @@ import {
   SmartFinanceBackup,
 } from '../utils/backup';
 import { getStorageSnapshot, replaceStorageSnapshot, flushStorage } from '../utils/storage';
+import { BACKUP_EXPORT_MARKER, readBackupExportMarker, shouldRemindBackup } from '../utils/backupReminder';
 import { ALL_CURRENCIES, loadPreferences, savePreferences, type AppPreferences } from '../utils/preferences';
 import { Currency } from '../types';
 import { createPinSecurity, disablePinSecurity, loadSecuritySettings, saveSecuritySettings, verifyPin, type SecuritySettings } from '../utils/security';
@@ -32,7 +33,7 @@ const downloadText = (contents: string, filename: string, type: string) => {
   link.href = url;
   link.download = filename;
   link.click();
-  URL.revokeObjectURL(url);
+  window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
 };
 
 const countArray = (snapshot: Record<string, string>, key: string): number => {
@@ -74,6 +75,7 @@ const Settings: React.FC = () => {
   const jsonInputRef = useRef<HTMLInputElement>(null);
   const csvInputRef = useRef<HTMLInputElement>(null);
   const [notice, setNotice] = useState<Notice>(null);
+  const [lastExport, setLastExport] = useState<number | null>(() => readBackupExportMarker(localStorage));
   const [dangerOpen, setDangerOpen] = useState(false);
   const [dangerText, setDangerText] = useState('');
   const [checkingUpdate, setCheckingUpdate] = useState(false);
@@ -163,7 +165,9 @@ const Settings: React.FC = () => {
     return !normalized || terms.some(term => term.toLocaleLowerCase('zh-Hant').includes(normalized));
   };
 
-  const exportBackup = (format: 'json' | 'csv', prefix = 'smartfinance_backup') => {
+  const exportBackup = async (format: 'json' | 'csv', prefix = 'smartfinance_backup') => {
+    try { await flushStorage(); }
+    catch { setNotice({ tone: 'warning', text: '資料尚未寫入完成，請先重試儲存再匯出備份。' }); return false; }
     const backup = createBackupFromSnapshot(getStorageSnapshot(), __APP_VERSION__);
     const date = toLocalYMD(new Date());
     if (format === 'json') {
@@ -171,7 +175,12 @@ const Settings: React.FC = () => {
     } else {
       downloadText(`\uFEFF${backupToCsv(backup)}`, `${prefix}_${date}.csv`, 'text/csv;charset=utf-8');
     }
-    setNotice({ tone: 'success', text: '備份已匯出，請妥善保存檔案。' });
+    if (format === 'json') {
+      const timestamp = Date.now();
+      try { localStorage.setItem(BACKUP_EXPORT_MARKER, new Date(timestamp).toISOString()); setLastExport(timestamp); } catch { /* UI marker is best-effort */ }
+    }
+    setNotice({ tone: 'success', text: '已啟動備份下載；請確認檔案已存到裝置或「檔案」App。' });
+    return true;
   };
 
   const restoreParsedBackup = async (backup: SmartFinanceBackup) => {
@@ -189,7 +198,7 @@ const Settings: React.FC = () => {
     }
 
     // Always give the user a recovery file before any destructive replacement.
-    exportBackup('json', 'smartfinance_還原前自動備份');
+    if (!await exportBackup('json', 'smartfinance_還原前自動備份')) return;
     const next = mode === '合併'
       ? mergeBackupSnapshots(getStorageSnapshot(), backup.storage)
       : backup.storage;
@@ -274,6 +283,13 @@ const Settings: React.FC = () => {
           {notice.text}
         </div>
       ) : null}
+
+      {!section && !query && diagnostics.transactions + diagnostics.cards + diagnostics.subscriptions > 0 && shouldRemindBackup(lastExport) && (
+        <div role="status" className="sf-panel border border-amber-500/30 p-4 text-sm text-amber-100 flex items-center justify-between gap-3">
+          <span>記帳資料只在此裝置。{lastExport ? '距離上次啟動 JSON 備份下載已超過 30 日。' : '未記錄到 JSON 備份下載。'}</span>
+          <button className="shrink-0 text-primary" onClick={() => setParams({ section: 'data' })}>去備份</button>
+        </div>
+      )}
 
       {!section && !query && <nav aria-label="設定分類" className="sf-settings-groups">
         {[groups.slice(0, 3), groups.slice(3)].map((group, index) => <div key={index} className="sf-panel sf-settings-group">
@@ -376,6 +392,7 @@ const Settings: React.FC = () => {
         <section>
           <h2 className="text-gray-500 text-xs ml-3 mb-2 uppercase tracking-wider">資料、備份與還原</h2>
           <div className="sf-panel divide-y sf-divider overflow-hidden">
+            <div className="p-4 text-sm text-gray-300">上次啟動 JSON 備份下載：{lastExport ? new Date(lastExport).toLocaleString() : '未有記錄'}<p className="mt-1 text-xs text-gray-500">下載後請檢查檔案確實已儲存；此日期不代表備份已成功存好。</p></div>
             <details open={query ? true : undefined}><summary className="p-4 cursor-pointer">資料庫狀態與檢查</summary><div className="p-4 space-y-3">
               <div className="flex items-center justify-between">
                 <span className="flex items-center gap-2"><Database size={18} />資料庫狀態</span>
@@ -390,11 +407,11 @@ const Settings: React.FC = () => {
               <button onClick={runIntegrityCheck} className="w-full rounded-lg border sf-divider py-2 text-sm flex items-center justify-center gap-2"><ShieldCheck size={16} />檢查資料完整性</button>
             </div></details>
             <div className="grid grid-cols-2 divide-x sf-divider">
-              <button onClick={() => exportBackup('json')} className="p-4 flex items-center justify-center gap-2"><FileDown size={16} />匯出 JSON</button>
+              <button onClick={() => void exportBackup('json')} className="p-4 flex items-center justify-center gap-2"><FileDown size={16} />匯出 JSON</button>
               <button onClick={() => jsonInputRef.current?.click()} className="p-4 flex items-center justify-center gap-2"><Upload size={16} />還原 JSON</button>
             </div>
             <details open={query ? true : undefined}><summary className="p-4 cursor-pointer">CSV 匯入／匯出</summary><div className="grid grid-cols-2 divide-x sf-divider">
-              <button onClick={() => exportBackup('csv')} className="p-4 flex items-center justify-center gap-2"><FileDown size={16} />匯出 CSV</button>
+              <button onClick={() => void exportBackup('csv')} className="p-4 flex items-center justify-center gap-2"><FileDown size={16} />匯出 CSV</button>
               <button onClick={() => csvInputRef.current?.click()} className="p-4 flex items-center justify-center gap-2"><Upload size={16} />還原 CSV</button>
             </div></details>
             <div className="p-4 text-xs text-gray-400 flex gap-2"><CloudOff size={16} className="shrink-0" />資料只儲存於此裝置。還原可選擇合併或取代；操作前會自動匯出復原備份。</div>
