@@ -137,6 +137,8 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [changeRevision, setChangeRevision] = useState(0);
   const [deleted, setDeleted] = useState<DeletedTransaction | null>(null);
   const [undoError, setUndoError] = useState('');
+  const [undoSaving, setUndoSaving] = useState(false);
+  const undoSavingRef = useRef(false);
   const [categories, setCategories] = useState<Category[]>(CATEGORIES);
   const [budgets, setBudgets] = useState<Budget[]>([]);
   const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
@@ -281,6 +283,27 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const deleteTransaction = (id: string) => {
     setDeleted(captureDeletion(transactions, id)); setUndoError('');
     setTransactions(prev => removeRecurringOccurrence(prev, id));
+  };
+
+  const undoDeletion = async () => {
+    if (!deleted || undoSavingRef.current) return;
+    const target = deleted;
+    if (!categories.some(cat => cat.id === target.row.categoryId)) {
+      setUndoError('原分類已移除，請先還原分類再復原帳目');
+      return;
+    }
+    undoSavingRef.current = true;
+    setUndoSaving(true);
+    setUndoError('');
+    try {
+      await persistCoreChange(() => setTransactions(previous => restoreDeletion(previous, target)));
+      setDeleted(current => current === target ? null : current);
+    } catch {
+      setUndoError('復原未能儲存，請重試。');
+    } finally {
+      undoSavingRef.current = false;
+      setUndoSaving(false);
+    }
   };
 
   const addSubscription = (sub: Omit<Subscription, 'id'>) => {
@@ -592,11 +615,8 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       <LedgerContext.Provider value={ledger}>{children}</LedgerContext.Provider>
       {deleted && <div role="status" className="sf-undo-toast">
         <span>{undoError || '帳目已移除'}</span>
-        <button onClick={() => {
-          if (!categories.some(cat => cat.id === deleted.row.categoryId)) { setUndoError('原分類已移除，請先還原分類再復原帳目'); return; }
-          setTransactions(previous => restoreDeletion(previous, deleted)); setDeleted(null);
-        }}>復原</button>
-        <button aria-label="關閉復原提示" onClick={() => setDeleted(null)}>✕</button>
+        <button disabled={undoSaving} onClick={() => { void undoDeletion(); }}>{undoSaving ? '儲存中…' : undoError ? '重試' : '復原'}</button>
+        <button disabled={undoSaving} aria-label="關閉復原提示" onClick={() => setDeleted(null)}>✕</button>
       </div>}
     </DataContext.Provider>
   );

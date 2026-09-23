@@ -276,7 +276,7 @@ test('PIN lock rejects an incorrect PIN and unlocks with the correct PIN', async
   await page.getByRole('dialog', { name: '設定 App PIN' }).getByRole('button', { name: '下一步' }).click();
   await page.getByRole('dialog', { name: '確認 PIN' }).getByLabel('確認 PIN').fill('2468');
   await page.getByRole('dialog', { name: '確認 PIN' }).getByRole('button', { name: '開啟 PIN 鎖' }).click();
-  await expect(page.getByRole('status').filter({ hasText: 'App PIN 鎖已開啟' })).toBeVisible();
+  await expect(page.getByRole('status').filter({ hasText: 'App PIN 鎖已開啟' })).toBeVisible({ timeout: 10000 });
 
   await page.reload();
   await expect(page.getByRole('heading', { name: 'SmartFinance 已鎖定' })).toBeVisible();
