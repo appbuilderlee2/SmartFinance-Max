@@ -8,6 +8,7 @@ import { getCurrencySymbol } from '../utils/currency';
 import { parseLocalYMD, toLocalYMD } from '../utils/date';
 import { parseMoneyInput } from '../utils/money';
 import { loadPreferences } from '../utils/preferences';
+import { showAppAlert, showAppConfirm } from '../utils/appDialog';
 
 const SERVICE_ICON_PRESETS = [
   { label: 'Netflix', value: 'emoji:🎬' },
@@ -87,17 +88,17 @@ const AddSubscription: React.FC = () => {
 
   const handleSave = () => {
     if (!name || !amount) {
-      alert("請輸入名稱與金額");
+      void showAppAlert('請輸入名稱與金額');
       return;
     }
     const amountValue = parseMoneyInput(amount, subscriptionCurrency);
     if (amountValue === null || amountValue <= 0) {
-      alert(`請輸入有效金額（${subscriptionCurrency === Currency.JPY ? '不可輸入小數' : '最多兩位小數'}）`);
+      void showAppAlert(`請輸入有效金額（${subscriptionCurrency === Currency.JPY ? '不可輸入小數' : '最多兩位小數'}）`);
       return;
     }
     const billingDate = parseLocalYMD(date);
     if (!billingDate) {
-      alert('請輸入有效扣款日期');
+      void showAppAlert('請輸入有效扣款日期');
       return;
     }
 
@@ -108,7 +109,7 @@ const AddSubscription: React.FC = () => {
     const finalCategoryId = isValidCategory ? categoryId : (existingCategoryId || fallbackCategoryId);
 
     if (!finalCategoryId) {
-      alert("請選擇分類");
+      void showAppAlert('請選擇分類');
       return;
     }
 
@@ -145,10 +146,11 @@ const AddSubscription: React.FC = () => {
 
   const handleDelete = () => {
     if (!isEdit || !id) return;
-    if (window.confirm('確定要刪除這筆訂閱嗎？')) {
+    void showAppConfirm('刪除後不會自動再建立往後的訂閱紀錄。', { title: '刪除這筆訂閱？', confirmLabel: '刪除訂閱', destructive: true }).then(confirmed => {
+      if (!confirmed) return;
       deleteSubscription(id);
       navigateBackToList();
-    }
+    });
   };
 
   const handleBack = () => {

@@ -28,6 +28,7 @@ import { fromMinorUnits, toMinorUnits } from '../utils/money';
 import { processDueRecurringTransactions, removeRecurringOccurrence } from '../utils/recurringTransactions';
 import { resetSecurityCache } from '../utils/security';
 import { loadCycles, migrateCreditCardCurrencies, saveCycles } from '../utils/creditCardCycleStorage';
+import { showAppAlert, showAppConfirm } from '../utils/appDialog';
 
 export interface CreditCard {
   id: string;
@@ -136,6 +137,8 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [changeRevision, setChangeRevision] = useState(0);
   const [deleted, setDeleted] = useState<DeletedTransaction | null>(null);
   const [undoError, setUndoError] = useState('');
+  const [undoSaving, setUndoSaving] = useState(false);
+  const undoSavingRef = useRef(false);
   const [categories, setCategories] = useState<Category[]>(CATEGORIES);
   const [budgets, setBudgets] = useState<Budget[]>([]);
   const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
@@ -282,6 +285,27 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setTransactions(prev => removeRecurringOccurrence(prev, id));
   };
 
+  const undoDeletion = async () => {
+    if (!deleted || undoSavingRef.current) return;
+    const target = deleted;
+    if (!categories.some(cat => cat.id === target.row.categoryId)) {
+      setUndoError('原分類已移除，請先還原分類再復原帳目');
+      return;
+    }
+    undoSavingRef.current = true;
+    setUndoSaving(true);
+    setUndoError('');
+    try {
+      await persistCoreChange(() => setTransactions(previous => restoreDeletion(previous, target)));
+      setDeleted(current => current === target ? null : current);
+    } catch {
+      setUndoError('復原未能儲存，請重試。');
+    } finally {
+      undoSavingRef.current = false;
+      setUndoSaving(false);
+    }
+  };
+
   const addSubscription = (sub: Omit<Subscription, 'id'>) => {
     const newSub = { ...sub, id: makeId('sub') };
     setSubscriptions(prev => [...prev, newSub]);
@@ -374,7 +398,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const resetData = async (confirmed = false) => {
-    if (!confirmed && !window.confirm("確定要重置所有資料？這將清除您的所有紀錄（包含交易/訂閱/信用卡等）。")) return;
+    if (!confirmed && !await showAppConfirm('這將清除交易、訂閱、信用卡及其他本機紀錄。此操作無法復原。', { title: '重置所有資料？', confirmLabel: '重置資料', destructive: true })) return;
 
     try {
       await clearStorageData();
@@ -383,7 +407,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setDeleted(null);
       resetSecurityCache();
     } catch {
-      alert('資料未能重置，請先處理儲存錯誤。'); return;
+      await showAppAlert('資料未能重置，請先處理儲存錯誤。'); return;
     }
 
     // Also clear any app caches / stale service worker state (best-effort).
@@ -428,7 +452,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setCreditCards([]);
     setThemeColorState('blue');
 
-    alert("資料已重置");
+    await showAppAlert('資料已重置');
   };
 
   // Persistence and application of theme (UI skin)
@@ -591,11 +615,8 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       <LedgerContext.Provider value={ledger}>{children}</LedgerContext.Provider>
       {deleted && <div role="status" className="sf-undo-toast">
         <span>{undoError || '帳目已移除'}</span>
-        <button onClick={() => {
-          if (!categories.some(cat => cat.id === deleted.row.categoryId)) { setUndoError('原分類已移除，請先還原分類再復原帳目'); return; }
-          setTransactions(previous => restoreDeletion(previous, deleted)); setDeleted(null);
-        }}>復原</button>
-        <button aria-label="關閉復原提示" onClick={() => setDeleted(null)}>✕</button>
+        <button disabled={undoSaving} onClick={() => { void undoDeletion(); }}>{undoSaving ? '儲存中…' : undoError ? '重試' : '復原'}</button>
+        <button disabled={undoSaving} aria-label="關閉復原提示" onClick={() => setDeleted(null)}>✕</button>
       </div>}
     </DataContext.Provider>
   );

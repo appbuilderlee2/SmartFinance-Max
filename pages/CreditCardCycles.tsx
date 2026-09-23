@@ -5,10 +5,13 @@ import { useData } from '../contexts/DataContext';
 import { loadCycles, saveCycles, upsertCycle } from '../utils/creditCardCycleStorage';
 import { flushStorage, getSaveStatus, retryStorage } from '../utils/storage';
 import { getNextYearMonth, createOpenCycle, getCurrentYearMonth } from '../utils/creditCardCycles';
+import { parseMoneyInput } from '../utils/money';
+import { Currency } from '../types';
+import { showAppAlert, showAppConfirm, showAppPrompt } from '../utils/appDialog';
 
 const CreditCardCycles: React.FC = () => {
   const navigate = useNavigate();
-  const { creditCards, setCreditCards } = useData();
+  const { creditCards, setCreditCards, currency } = useData();
 
   const [cycles, setCycles] = useState(() => loadCycles());
   const [saving, setSaving] = useState(false);
@@ -66,36 +69,31 @@ const CreditCardCycles: React.FC = () => {
     });
   }, [creditCards, cardCycles, selectedYmByCard]);
 
-  const setAmountDue = (cardId: string, yearMonth: string) => {
+  const setAmountDue = async (cardId: string, yearMonth: string) => {
     const card = creditCards.find((c) => c.id === cardId);
     if (!card) return;
 
     const id = `ccyc_${cardId}_${yearMonth}`;
     const existing = cycles.find((c) => c.id === id);
     if (!existing) {
-      alert('呢一期未建立。請先「建立下一期」或先揀一個已存在嘅週期。');
+      void showAppAlert('呢一期未建立。請先「建立下一期」或揀一個已存在嘅週期。');
       return;
     }
 
-    const raw = window.prompt(
-      `輸入 ${card.name}（${yearMonth}）本期應繳金額`,
-      typeof existing.amountDue === 'number' ? existing.amountDue.toString() : ''
-    );
+    const unit = (existing.currency || card.currency || currency) as Currency;
+    const raw = await showAppPrompt(`${card.name}（${yearMonth}）本期應繳金額 · ${unit}`, {
+      title: '輸入應繳金額', defaultValue: typeof existing.amountDue === 'number' ? existing.amountDue.toString() : '',
+      inputMode: 'decimal', confirmLabel: '儲存',
+      validate: value => parseMoneyInput(value, unit) === null ? (unit === Currency.JPY ? '請輸入 0 或以上的整數金額。' : '請輸入 0 或以上，最多兩位小數。') : null,
+    });
     if (raw == null) return;
-    const trimmed = raw.trim();
-    if (trimmed === '') {
-      alert('請輸入金額');
-      return;
-    }
-    const n = Number(trimmed);
-    if (!Number.isFinite(n) || n < 0) {
-      alert('金額不正確（請輸入 0 或以上數字）');
-      return;
-    }
+    const n = parseMoneyInput(raw, unit);
+    if (n === null) return;
 
     const next = {
       ...existing,
       amountDue: n,
+      currency: unit,
       amountDueEnteredAt: new Date().toISOString(),
       status: existing.status || 'open',
     };
@@ -104,25 +102,25 @@ const CreditCardCycles: React.FC = () => {
     void persistCycles(updated);
   };
 
-  const markPaidOnly = (cardId: string, yearMonth: string) => {
+  const markPaidOnly = async (cardId: string, yearMonth: string) => {
     const id = `ccyc_${cardId}_${yearMonth}`;
     const existing = cycles.find((c) => c.id === id);
     if (!existing) {
-      alert('搵唔到呢一期資料');
+      void showAppAlert('搵唔到呢一期資料');
       return;
     }
 
     if (existing.status === 'closed') {
-      alert('呢一期已經標記咗繳費');
+      void showAppAlert('呢一期已經標記咗繳費');
       return;
     }
 
     const amt = typeof existing.amountDue === 'number' ? existing.amountDue : null;
     if (amt == null) {
-      const ok = window.confirm('你仲未輸入本期應繳金額，確定要直接標記「已繳費」？');
+      const ok = await showAppConfirm('你仲未輸入本期應繳金額，確定要直接標記「已繳費」？', { title: '確認已繳款', confirmLabel: '標記已繳', destructive: true });
       if (!ok) return;
     } else if (amt <= 0) {
-      const ok = window.confirm('本期應繳金額為 0，確定要標記「已繳費」？');
+      const ok = await showAppConfirm('本期應繳金額為 0，確定要標記「已繳費」？', { title: '確認已繳款', confirmLabel: '標記已繳', destructive: true });
       if (!ok) return;
     }
 
@@ -143,7 +141,7 @@ const CreditCardCycles: React.FC = () => {
     const id = `ccyc_${cardId}_${yearMonth}`;
     const existing = cycles.find((c) => c.id === id);
     if (!existing) {
-      alert('搵唔到呢一期資料');
+      void showAppAlert('搵唔到呢一期資料');
       return;
     }
 
@@ -154,23 +152,23 @@ const CreditCardCycles: React.FC = () => {
     void persistCycles(updated, () => setSelectedYmByCard((prev) => ({ ...prev, [cardId]: nextOpen.yearMonth })));
   };
 
-  const cancelPaid = (cardId: string, yearMonth: string) => {
+  const cancelPaid = async (cardId: string, yearMonth: string) => {
     const card = creditCards.find(c => c.id === cardId);
     if (!card) return;
 
     const id = `ccyc_${cardId}_${yearMonth}`;
     const existing = cycles.find(c => c.id === id);
     if (!existing) {
-      alert('搵唔到呢一期資料');
+      void showAppAlert('搵唔到呢一期資料');
       return;
     }
 
     if (existing.status !== 'closed') {
-      alert('呢一期未標記繳費');
+      void showAppAlert('呢一期未標記繳費');
       return;
     }
 
-    const ok = window.confirm('確定要取消「已繳費」？');
+    const ok = await showAppConfirm('確定要取消「已繳費」？', { title: '取消已繳款標記', confirmLabel: '取消標記', destructive: true });
     if (!ok) return;
 
     const reopened = { ...existing, status: 'open' as const, paidAt: undefined };
@@ -314,7 +312,7 @@ const CreditCardCycles: React.FC = () => {
                   <div className="grid grid-cols-2 gap-2 pt-2">
                     <button
                       type="button"
-                      onClick={() => setAmountDue(card.id, cycle.yearMonth)}
+                      onClick={() => void setAmountDue(card.id, cycle.yearMonth)}
                       className="sf-control rounded-xl p-3 text-gray-200 flex items-center justify-center gap-2"
                     >
                       <DollarSign size={16} />
@@ -323,7 +321,7 @@ const CreditCardCycles: React.FC = () => {
 
                     <button
                       type="button"
-                      onClick={() => markPaidOnly(card.id, cycle.yearMonth)}
+                      onClick={() => void markPaidOnly(card.id, cycle.yearMonth)}
                       className="sf-control rounded-xl p-3 text-gray-200 flex items-center justify-center gap-2"
                     >
                       <CheckCircle2 size={16} />
@@ -341,7 +339,7 @@ const CreditCardCycles: React.FC = () => {
 
                     <button
                       type="button"
-                      onClick={() => cancelPaid(card.id, cycle.yearMonth)}
+                      onClick={() => void cancelPaid(card.id, cycle.yearMonth)}
                       className="sf-control rounded-xl p-3 text-gray-200 flex items-center justify-center gap-2"
                       disabled={cycle.status !== 'closed'}
                       title={cycle.status !== 'closed' ? '只可以對已繳費（closed）週期使用' : ''}

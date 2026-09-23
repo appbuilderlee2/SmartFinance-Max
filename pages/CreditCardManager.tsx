@@ -9,6 +9,7 @@ import { getCurrentYearMonth, createOpenCycle } from '../utils/creditCardCycles'
 import { loadCycles, upsertCycle } from '../utils/creditCardCycleStorage';
 import { writeJson, flushStorage } from '../utils/storage';
 import { Currency } from '../types';
+import { showAppAlert, showAppConfirm } from '../utils/appDialog';
 
 interface CreditCardType {
     id: string;
@@ -115,7 +116,7 @@ const CreditCardManager: React.FC<{ embedded?: boolean; editId?: string; adding?
         if (saving) return;
         setSaveError('');
         if (!formData.name) {
-            alert('請填寫卡片名稱');
+            void showAppAlert('請填寫卡片名稱');
             return;
         }
 
@@ -234,9 +235,11 @@ const CreditCardManager: React.FC<{ embedded?: boolean; editId?: string; adding?
                                     </button>
                                     <button
                                         onClick={() => {
-                                            if (window.confirm('確定要刪除此卡片嗎？')) {
+                                            void showAppConfirm('刪除後，信用卡將從清單移除。', { title: '刪除此卡片？', confirmLabel: '刪除信用卡', destructive: true }).then(confirmed => {
+                                              if (confirmed) {
                                                 deleteCreditCard(card.id);
-                                            }
+                                              }
+                                            });
                                         }}
                                         className="text-red-500 p-2 hover:bg-white/5 rounded-full"
                                     >

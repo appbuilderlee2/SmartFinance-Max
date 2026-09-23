@@ -259,8 +259,9 @@ test('settings data centre protects IndexedDB data during cache maintenance', as
   }));
 
   await search.fill('快取');
-  page.once('dialog', dialog => dialog.accept());
-  await Promise.all([page.waitForEvent('load'), page.getByRole('button', { name: '清除快取並重新載入' }).click()]);
+  await page.getByRole('button', { name: '清除快取並重新載入' }).click();
+  await page.getByRole('alertdialog', { name: '清除快取？' }).getByRole('button', { name: '清除並重新載入' }).click();
+  await page.waitForLoadState('load');
   await expect(page.getByRole('heading', { name: '設定', exact: true })).toBeVisible();
   const stored = await readIndexedDbJson<Array<{ id: string }>>(page, 'smartfinance_transactions');
   expect(stored).toEqual([expect.objectContaining({ id: 'cache-safe', amount: 1 })]);
@@ -270,10 +271,12 @@ test('PIN lock rejects an incorrect PIN and unlocks with the correct PIN', async
   await resetAppData(page);
   await page.goto('/#/settings');
   await page.getByLabel('搜尋設定').fill('PIN');
-  const answers = ['2468', '2468'];
-  page.on('dialog', async dialog => dialog.accept(answers.shift() || ''));
   await page.getByRole('button', { name: '設定 PIN' }).click();
-  await expect(page.getByRole('status').filter({ hasText: 'App PIN 鎖已開啟' })).toBeVisible();
+  await page.getByRole('dialog', { name: '設定 App PIN' }).getByLabel('設定 App PIN').fill('2468');
+  await page.getByRole('dialog', { name: '設定 App PIN' }).getByRole('button', { name: '下一步' }).click();
+  await page.getByRole('dialog', { name: '確認 PIN' }).getByLabel('確認 PIN').fill('2468');
+  await page.getByRole('dialog', { name: '確認 PIN' }).getByRole('button', { name: '開啟 PIN 鎖' }).click();
+  await expect(page.getByRole('status').filter({ hasText: 'App PIN 鎖已開啟' })).toBeVisible({ timeout: 10000 });
 
   await page.reload();
   await expect(page.getByRole('heading', { name: 'SmartFinance 已鎖定' })).toBeVisible();

@@ -2,9 +2,11 @@ import { IDBFactory } from 'fake-indexeddb';
 import { describe, expect, it } from 'vitest';
 import {
   migrateLegacyStorage, migrateTransactionRows, writeDatabaseBatch,
-  openSmartFinanceDatabase,
+  openSmartFinanceDatabase, DATABASE_NAME,
   readDatabaseSnapshot,
+  readDatabaseState,
   replaceDatabaseSnapshot,
+  StorageRevisionConflictError,
 } from './indexedDb';
 import { reconcileThemeMirror } from './storage';
 
@@ -100,4 +102,42 @@ it('rolls back a failed multi-store write, including related metadata', async ()
   expect(snapshot.smartfinance_subscriptions).toBe('["old"]');
   expect(JSON.parse(snapshot.smartfinance_transactions)).toEqual([{ id: 'old' }]);
   database.close();
+});
+
+it('atomically rejects a stale cross-tab write using the stored revision', async () => {
+  const database = await openSmartFinanceDatabase(new IDBFactory());
+  const initial = await readDatabaseState(database);
+  expect(initial.revision).toBe(0);
+
+  const outcomes = await Promise.allSettled([
+    writeDatabaseBatch(database, { smartfinance_currency: 'AUD' }, [], [], initial.revision),
+    writeDatabaseBatch(database, { smartfinance_currency: 'HKD' }, [], [], initial.revision),
+  ]);
+  expect(outcomes.filter(result => result.status === 'fulfilled')).toHaveLength(1);
+  const rejected = outcomes.find(result => result.status === 'rejected');
+  expect(rejected?.status === 'rejected' && rejected.reason).toBeInstanceOf(StorageRevisionConflictError);
+  const saved = await readDatabaseState(database);
+  expect(saved.revision).toBe(1);
+  expect(['AUD', 'HKD']).toContain(saved.snapshot.smartfinance_currency);
+  database.close();
+});
+
+it('closes a version 2 tab before opening the revision-aware version 3 database', async () => {
+  const factory = new IDBFactory();
+  const request = factory.open(DATABASE_NAME, 2);
+  request.onupgradeneeded = () => {
+    const database = request.result;
+    database.createObjectStore('app-data');
+    database.createObjectStore('meta');
+    database.createObjectStore('transactions', { keyPath: 'id' });
+  };
+  const oldDatabase = await new Promise<IDBDatabase>((resolve, reject) => {
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error);
+  });
+  oldDatabase.onversionchange = () => oldDatabase.close();
+
+  const currentDatabase = await openSmartFinanceDatabase(factory);
+  expect(() => oldDatabase.transaction('app-data', 'readonly')).toThrow();
+  currentDatabase.close();
 });

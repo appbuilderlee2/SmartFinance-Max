@@ -7,6 +7,7 @@ import { CATEGORY_ICON_NAMES, Icon } from '../components/Icon';
 import { TransactionType, Category } from '../types';
 import { makeId } from '../utils/id';
 import { getCategoryUsage } from '../utils/categoryIntegrity';
+import { showAppAlert, showAppConfirm } from '../utils/appDialog';
 
 const AVAILABLE_COLORS = [
    'bg-red-500', 'bg-orange-500', 'bg-yellow-500', 'bg-green-500',
@@ -140,16 +141,16 @@ const CategoryManager: React.FC = () => {
       lastHoverIdRef.current = hoverId;
       swapCategoryOrder(draggingId, hoverId);
    };
-   const handleDelete = (category: Category) => {
+   const handleDelete = async (category: Category) => {
       const usage = getCategoryUsage(category.id, transactions, subscriptions, budgets);
       const isUsed = usage.transactionCount > 0 || usage.subscriptionCount > 0 || usage.hasBudget;
       if (!isUsed) {
-         if (window.confirm(`確定要刪除「${category.name}」分類嗎？`)) deleteCategory(category.id);
+         if (await showAppConfirm(`刪除「${category.name}」分類？`, { title: '刪除分類？', confirmLabel: '刪除分類', destructive: true })) deleteCategory(category.id);
          return;
       }
       const replacements = categories.filter((item) => item.type === category.type && item.id !== category.id);
       if (!replacements.length) {
-         alert('呢個分類仍有資料，而且冇其他同類型分類可以接收。請先新增另一個分類。');
+         void showAppAlert('呢個分類仍有資料，而且冇其他同類型分類可以接收。請先新增另一個同類型分類。');
          return;
       }
       setDeleteTarget(category);
@@ -159,7 +160,7 @@ const CategoryManager: React.FC = () => {
    const confirmReassignAndDelete = () => {
       if (!deleteTarget || !replacementId) return;
       if (!deleteCategory(deleteTarget.id, replacementId)) {
-         alert('未能刪除分類，請重新選擇接收分類。');
+         void showAppAlert('未能刪除分類，請重新選擇接收分類。');
          return;
       }
       setDeleteTarget(null);
@@ -198,7 +199,7 @@ const CategoryManager: React.FC = () => {
 
    const handleSave = () => {
       if (!formData.name.trim()) {
-         alert('請輸入分類名稱');
+         void showAppAlert('請輸入分類名稱');
          return;
       }
 

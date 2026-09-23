@@ -1,3 +1,24 @@
+## v2.15.0 — iOS dialogs and safer billing writes
+
+- Replace browser-native alerts, confirmations and prompts with a shared iOS-style dialog system, including queued interactions, keyboard focus handling and safe-area spacing.
+- Commit credit-card cycle changes before reflecting them in the UI; keep failed edits available for retry and apply currency-specific decimal precision.
+- Add revision-checked database writes and cross-tab stale-state protection. Bump the IndexedDB version so older open clients close before the new write protocol takes effect.
+- Clarify that the app PIN gates screen access but does not encrypt the local finance database.
+- Keep all six navigation entries and add regression coverage for dialogs, database conflicts and version upgrades.
+
+## v2.14.0 — Durable drafts, cycle saves and stale-tab protection
+
+- Store the entry draft, including an image receipt up to 5 MB, in a separate IndexedDB database that survives closing and reopening the tab. Migrate existing session drafts.
+- Wait for credit-card cycle writes before updating the screen. Keep the current cycle visible with an inline error if a write fails.
+- Notify an open tab when another tab commits finance data, block edits on its stale state, and offer a guarded reload.
+- Add draft migration and cross-tab end-to-end coverage.
+
+## v2.13.0 — Backup nudges and confirmed edits
+
+- Display the last JSON export attempt and a 30-day reminder when local finance data exists; ask users to verify that iOS actually saved the download.
+- Wait for database commits when finishing transaction edits, budgets and credit-card forms. Keep the form open with a retryable error when a write fails.
+- Include card-cycle creation in the confirmed card-save path, and preserve card ID across retries.
+
 ## v2.12.0 — Drafts, durable save and undo
 
 - Preserve entry drafts within the current browser tab across navigation and reload, including receipt previews when session storage permits.
@@ -291,14 +312,3 @@ Validation: typecheck, production build and 55 unit/regression tests passed loca
 ### 🧰 工程 / 維護
 - 加入 GitHub Actions CI：自動跑 `npm ci` + `npm run build`。
 - 加入 localStorage schema version 記號：`smartfinance_schema_version`（v1）。
-## v2.13.0 — Backup nudges and confirmed edits
-
-- Display the last JSON export attempt and a 30-day reminder when local finance data exists; ask users to verify that iOS actually saved the download.
-- Wait for database commits when finishing transaction edits, budgets and credit-card forms. Keep the form open with a retryable error when a write fails.
-- Include card-cycle creation in the confirmed card-save path, and preserve card ID across retries.
-## v2.14.0 — Durable drafts, cycle saves and stale-tab protection
-
-- Store the entry draft, including an image receipt up to 5 MB, in a separate IndexedDB database that survives closing and reopening the tab. Migrate existing session drafts.
-- Wait for credit-card cycle writes before updating the screen. Keep the current cycle visible with an inline error if a write fails.
-- Notify an open tab when another tab commits finance data, block edits on its stale state, and offer a guarded reload.
-- Add draft migration and cross-tab end-to-end coverage.

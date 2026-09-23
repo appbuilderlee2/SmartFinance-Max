@@ -32,6 +32,6 @@ test('switching transaction type requires a matching category', async ({ page })
   await page.getByRole('button', { name: '餐飲', exact: true }).click();
   await page.getByRole('button', { name: '收入', exact: true }).click();
   await page.getByRole('button', { name: '儲存', exact: true }).click();
-  await expect(page.getByRole('alert')).toHaveText('請選擇分類');
+  await expect(page.locator('.sf-entry-error')).toContainText('請選擇分類');
   await expect(page).toHaveURL(/#\/add$/);
 });

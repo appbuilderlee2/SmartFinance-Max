@@ -2,7 +2,8 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ChevronLeft, Save, Search } from 'lucide-react';
 import { useData } from '../contexts/DataContext';
-import { readJson, writeJson } from '../utils/storage';
+import { flushStorage, readJson, writeJson } from '../utils/storage';
+import { showAppAlert } from '../utils/appDialog';
 
 type SwipeWhichCard = { id: string; name: string; issuer?: string };
 type PCRCard = { id: string; slug: string; name: string; bank?: string };
@@ -83,10 +84,15 @@ const CreditCard2Match: React.FC = () => {
     setMapPCR(nextPCR);
   };
 
-  const onSave = () => {
-    writeJson(KEY_SW, mapSW || {});
-    writeJson(KEY_PCR, mapPCR || {});
-    alert('已儲存配對');
+  const onSave = async () => {
+    void writeJson(KEY_SW, mapSW || {});
+    void writeJson(KEY_PCR, mapPCR || {});
+    try {
+      await flushStorage();
+      await showAppAlert('已儲存配對');
+    } catch (error) {
+      await showAppAlert(error instanceof Error ? error.message : '配對資料未能儲存，請重試。');
+    }
   };
 
   return (

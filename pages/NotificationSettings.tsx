@@ -16,6 +16,7 @@ import {
   type ReminderSettings,
 } from '../utils/reminders';
 import { formatDisplayYmd } from '../utils/preferences';
+import { showAppConfirm } from '../utils/appDialog';
 
 const NotificationSettings: React.FC = () => {
   const navigate = useNavigate();
@@ -481,10 +482,11 @@ const NotificationSettings: React.FC = () => {
                            onClick={() => {
                               // we can't directly call Settings' export function from here; so provide a stamp helper for now.
                               // user can export JSON from Settings; after export, they can tap this to reset the backup reminder timer.
-                              const ok = window.confirm('已匯出 JSON 備份？按「確定」會將備份提醒計時重置。');
-                              if (!ok) return;
-                              stampBackupExportToday();
-                              refreshReminders();
+                              void showAppConfirm('按下確認後會將備份提醒計時重置。', { title: '已匯出 JSON 備份？', confirmLabel: '重置提醒' }).then(ok => {
+                                if (!ok) return;
+                                stampBackupExportToday();
+                                refreshReminders();
+                              });
                            }}
                            className="w-full px-3 py-2 rounded-lg text-xs bg-surface/60 text-gray-200"
                         >
