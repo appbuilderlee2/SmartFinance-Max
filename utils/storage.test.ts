@@ -33,8 +33,10 @@ describe('durable storage queue', () => {
     const put = vi.spyOn(IDBObjectStore.prototype, 'put');
     const updated = rows.map((tx, index) => index === 25 ? { ...tx, amount: 42 } : tx);
     await storage.writeCoreData(updated, {});
-    expect(put).toHaveBeenCalledTimes(1);
-    expect(put.mock.calls[0][0]).toEqual(updated[25]);
+    const storeName = (index: number) => (put.mock.contexts[index] as IDBObjectStore | undefined)?.name;
+    const rowWrite = put.mock.calls.find((_, index) => storeName(index) === 'transactions');
+    expect(put.mock.calls.filter((_, index) => storeName(index) === 'transactions')).toHaveLength(1);
+    expect(rowWrite?.[0]).toEqual(updated[25]);
     expect(JSON.parse(storage.getStorageSnapshot().smartfinance_transactions)).toHaveLength(5000);
   });
   it('retains failed work, reports error and retries in order', async () => {
@@ -52,6 +54,19 @@ describe('durable storage queue', () => {
     const { openSmartFinanceDatabase, readDatabaseSnapshot } = await import('./indexedDb');
     const database = await openSmartFinanceDatabase();
     expect(JSON.parse((await readDatabaseSnapshot(database)).smartfinance_transactions)).toHaveLength(2);
+    database.close();
+  });
+
+  it('marks this tab stale when an external commit wins before its next write', async () => {
+    const storage = await setup();
+    const { openSmartFinanceDatabase, readDatabaseState, writeDatabaseBatch } = await import('./indexedDb');
+    const database = await openSmartFinanceDatabase();
+    const state = await readDatabaseState(database);
+    await writeDatabaseBatch(database, { smartfinance_currency: 'USD' }, [], [], state.revision);
+
+    expect(await storage.writeText('smartfinance_currency', 'AUD')).toBe(false);
+    expect(storage.getStaleTab()).toBe(true);
+    await expect(storage.flushStorage()).rejects.toThrow('另一分頁已更新資料');
     database.close();
   });
 });

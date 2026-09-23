@@ -1,13 +1,22 @@
 import { Transaction } from '../types';
 export const DATABASE_NAME = 'smartfinance-max';
-export const DATABASE_VERSION = 2;
+// Version 3 closes older app tabs so every active writer follows the atomic revision protocol.
+export const DATABASE_VERSION = 3;
 
 export const TRANSACTIONS_STORE = 'transactions';
 export const TRANSACTIONS_KEY = 'smartfinance_transactions';
 const DATA_STORE = 'app-data';
 const META_STORE = 'meta';
 const MIGRATION_KEY = 'localstorage-migration-v1';
+export const STORAGE_REVISION_KEY = 'storage-revision-v1';
 const APP_PREFIXES = ['smartfinance_', 'sf_', 'sf.'];
+
+export class StorageRevisionConflictError extends Error {
+  constructor(public readonly expected: number, public readonly actual: number) {
+    super('本機資料已由另一分頁更新');
+    this.name = 'StorageRevisionConflictError';
+  }
+}
 
 export type KeyValueSnapshot = Record<string, string>;
 
@@ -68,14 +77,15 @@ export function openSmartFinanceDatabase(factory: IDBFactory = indexedDB): Promi
   });
 }
 
-export async function readDatabaseSnapshot(database: IDBDatabase): Promise<KeyValueSnapshot> {
-  const transaction = database.transaction([DATA_STORE, TRANSACTIONS_STORE], 'readonly');
+export async function readDatabaseState(database: IDBDatabase): Promise<{ snapshot: KeyValueSnapshot; revision: number }> {
+  const transaction = database.transaction([DATA_STORE, TRANSACTIONS_STORE, META_STORE], 'readonly');
   const done = transactionDone(transaction);
   const store = transaction.objectStore(DATA_STORE);
-  const [keys, values, records] = await Promise.all([
+  const [keys, values, records, revision] = await Promise.all([
     requestResult(store.getAllKeys()),
     requestResult(store.getAll()),
     requestResult(transaction.objectStore(TRANSACTIONS_STORE).getAll()),
+    requestResult(transaction.objectStore(META_STORE).get(STORAGE_REVISION_KEY)),
   ]);
   await done;
   const snapshot: KeyValueSnapshot = {};
@@ -83,22 +93,44 @@ export async function readDatabaseSnapshot(database: IDBDatabase): Promise<KeyVa
     if (typeof key === 'string' && typeof values[index] === 'string') snapshot[key] = values[index];
   });
   if (records.length || snapshot[TRANSACTIONS_KEY] === undefined) snapshot[TRANSACTIONS_KEY] = JSON.stringify(records);
-  return snapshot;
+  return { snapshot, revision: Number.isSafeInteger(revision) && revision >= 0 ? revision as number : 0 };
+}
+
+export async function readDatabaseSnapshot(database: IDBDatabase): Promise<KeyValueSnapshot> {
+  return (await readDatabaseState(database)).snapshot;
 }
 
 // All related entities and changed transaction rows commit or abort together.
 export async function writeDatabaseBatch(database: IDBDatabase, values: KeyValueSnapshot,
-  changed: Transaction[] = [], deleted: string[] = []): Promise<void> {
-  const transaction = database.transaction([DATA_STORE, TRANSACTIONS_STORE], 'readwrite');
+  changed: Transaction[] = [], deleted: string[] = [], expectedRevision?: number): Promise<number> {
+  const transaction = database.transaction([DATA_STORE, TRANSACTIONS_STORE, META_STORE], 'readwrite');
   const done = transactionDone(transaction);
   const data = transaction.objectStore(DATA_STORE);
   const records = transaction.objectStore(TRANSACTIONS_STORE);
-  try {
-    Object.entries(values).forEach(([key, value]) => data.put(value, key));
-    changed.forEach(record => records.put(record));
-    deleted.forEach(id => records.delete(id));
-  } catch (error) { transaction.abort(); await done.catch(() => undefined); throw error; }
-  await done;
+  const meta = transaction.objectStore(META_STORE);
+  let conflict: StorageRevisionConflictError | null = null;
+  let nextRevision = 0;
+  const revisionRequest = meta.get(STORAGE_REVISION_KEY);
+  revisionRequest.onsuccess = () => {
+    const current = Number.isSafeInteger(revisionRequest.result) && revisionRequest.result >= 0 ? revisionRequest.result as number : 0;
+    if (expectedRevision !== undefined && current !== expectedRevision) {
+      conflict = new StorageRevisionConflictError(expectedRevision, current);
+      transaction.abort();
+      return;
+    }
+    try {
+      Object.entries(values).forEach(([key, value]) => data.put(value, key));
+      changed.forEach(record => records.put(record));
+      deleted.forEach(id => records.delete(id));
+      nextRevision = current + 1;
+      meta.put(nextRevision, STORAGE_REVISION_KEY);
+    } catch {
+      transaction.abort();
+    }
+  };
+  try { await done; }
+  catch (error) { if (conflict) throw conflict; throw error; }
+  return nextRevision;
 }
 
 export async function migrateTransactionRows(database: IDBDatabase): Promise<void> {
@@ -124,36 +156,71 @@ export async function migrateTransactionRows(database: IDBDatabase): Promise<voi
   await done;
 }
 
-export async function writeDatabaseValue(database: IDBDatabase, key: string, value: string): Promise<void> {
-  await writeDatabaseBatch(database, { [key]: value });
+export async function writeDatabaseValue(database: IDBDatabase, key: string, value: string, expectedRevision?: number): Promise<number> {
+  return writeDatabaseBatch(database, { [key]: value }, [], [], expectedRevision);
 }
 
-export async function removeDatabaseValue(database: IDBDatabase, key: string): Promise<void> {
-  const transaction = database.transaction(DATA_STORE, 'readwrite');
+export async function removeDatabaseValue(database: IDBDatabase, key: string, expectedRevision?: number): Promise<number> {
+  const transaction = database.transaction([DATA_STORE, META_STORE], 'readwrite');
   const done = transactionDone(transaction);
-  transaction.objectStore(DATA_STORE).delete(key);
-  await done;
+  const data = transaction.objectStore(DATA_STORE);
+  const meta = transaction.objectStore(META_STORE);
+  let conflict: StorageRevisionConflictError | null = null;
+  let nextRevision = 0;
+  const revisionRequest = meta.get(STORAGE_REVISION_KEY);
+  revisionRequest.onsuccess = () => {
+    const current = Number.isSafeInteger(revisionRequest.result) && revisionRequest.result >= 0 ? revisionRequest.result as number : 0;
+    if (expectedRevision !== undefined && current !== expectedRevision) {
+      conflict = new StorageRevisionConflictError(expectedRevision, current);
+      transaction.abort();
+      return;
+    }
+    data.delete(key);
+    nextRevision = current + 1;
+    meta.put(nextRevision, STORAGE_REVISION_KEY);
+  };
+  try { await done; }
+  catch (error) { if (conflict) throw conflict; throw error; }
+  return nextRevision;
 }
 
-export async function replaceDatabaseSnapshot(database: IDBDatabase, snapshot: KeyValueSnapshot): Promise<void> {
+export async function replaceDatabaseSnapshot(database: IDBDatabase, snapshot: KeyValueSnapshot, expectedRevision?: number): Promise<number> {
   const rows: Transaction[] = JSON.parse(snapshot[TRANSACTIONS_KEY] || '[]');
   if (!Array.isArray(rows)) throw new Error('Invalid transactions');
-  const transaction = database.transaction([DATA_STORE, TRANSACTIONS_STORE], 'readwrite');
+  const transaction = database.transaction([DATA_STORE, TRANSACTIONS_STORE, META_STORE], 'readwrite');
   const done = transactionDone(transaction);
-  try {
-    const store = transaction.objectStore(DATA_STORE);
-    const records = transaction.objectStore(TRANSACTIONS_STORE);
-    store.clear(); records.clear();
-    Object.entries(snapshot).forEach(([key, value]) => {
-      if (isAppDataKey(key) && key !== TRANSACTIONS_KEY) store.put(value, key);
-    });
-    rows.forEach(row => records.put(row));
-  } catch (error) { transaction.abort(); await done.catch(() => undefined); throw error; }
-  await done;
+  const store = transaction.objectStore(DATA_STORE);
+  const records = transaction.objectStore(TRANSACTIONS_STORE);
+  const meta = transaction.objectStore(META_STORE);
+  let conflict: StorageRevisionConflictError | null = null;
+  let nextRevision = 0;
+  const revisionRequest = meta.get(STORAGE_REVISION_KEY);
+  revisionRequest.onsuccess = () => {
+    const current = Number.isSafeInteger(revisionRequest.result) && revisionRequest.result >= 0 ? revisionRequest.result as number : 0;
+    if (expectedRevision !== undefined && current !== expectedRevision) {
+      conflict = new StorageRevisionConflictError(expectedRevision, current);
+      transaction.abort();
+      return;
+    }
+    try {
+      store.clear(); records.clear();
+      Object.entries(snapshot).forEach(([key, value]) => {
+        if (isAppDataKey(key) && key !== TRANSACTIONS_KEY) store.put(value, key);
+      });
+      rows.forEach(row => records.put(row));
+      nextRevision = current + 1;
+      meta.put(nextRevision, STORAGE_REVISION_KEY);
+    } catch {
+      transaction.abort();
+    }
+  };
+  try { await done; }
+  catch (error) { if (conflict) throw conflict; throw error; }
+  return nextRevision;
 }
 
-export async function clearDatabaseData(database: IDBDatabase): Promise<void> {
-  await replaceDatabaseSnapshot(database, {});
+export async function clearDatabaseData(database: IDBDatabase, expectedRevision?: number): Promise<number> {
+  return replaceDatabaseSnapshot(database, {}, expectedRevision);
 }
 
 export async function migrateLegacyStorage(

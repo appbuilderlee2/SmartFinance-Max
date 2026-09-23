@@ -28,6 +28,7 @@ import { fromMinorUnits, toMinorUnits } from '../utils/money';
 import { processDueRecurringTransactions, removeRecurringOccurrence } from '../utils/recurringTransactions';
 import { resetSecurityCache } from '../utils/security';
 import { loadCycles, migrateCreditCardCurrencies, saveCycles } from '../utils/creditCardCycleStorage';
+import { showAppAlert, showAppConfirm } from '../utils/appDialog';
 
 export interface CreditCard {
   id: string;
@@ -374,7 +375,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const resetData = async (confirmed = false) => {
-    if (!confirmed && !window.confirm("確定要重置所有資料？這將清除您的所有紀錄（包含交易/訂閱/信用卡等）。")) return;
+    if (!confirmed && !await showAppConfirm('這將清除交易、訂閱、信用卡及其他本機紀錄。此操作無法復原。', { title: '重置所有資料？', confirmLabel: '重置資料', destructive: true })) return;
 
     try {
       await clearStorageData();
@@ -383,7 +384,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setDeleted(null);
       resetSecurityCache();
     } catch {
-      alert('資料未能重置，請先處理儲存錯誤。'); return;
+      await showAppAlert('資料未能重置，請先處理儲存錯誤。'); return;
     }
 
     // Also clear any app caches / stale service worker state (best-effort).
@@ -428,7 +429,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setCreditCards([]);
     setThemeColorState('blue');
 
-    alert("資料已重置");
+    await showAppAlert('資料已重置');
   };
 
   // Persistence and application of theme (UI skin)

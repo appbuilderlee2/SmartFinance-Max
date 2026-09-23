@@ -8,6 +8,7 @@ import { useData } from '../contexts/DataContext';
 import { Currency, TransactionType } from '../types';
 import { formatMoney } from '../utils/money';
 import { RECURRENCE_LABELS } from '../utils/recurringTransactions';
+import { showAppConfirm } from '../utils/appDialog';
 
 const TransactionView: React.FC = () => {
   const navigate = useNavigate();
@@ -44,8 +45,8 @@ const TransactionView: React.FC = () => {
     hour12: true
   });
 
-  const handleDelete = () => {
-    if (window.confirm(transaction.recurrenceSourceId ? '刪除今次帳目並略過這一期？往後週期會保留。' : transaction.recurrence ? '刪除這筆帳目並停止往後重複？已產生的歷史帳目會保留。' : '確定要刪除這筆帳目嗎？')) {
+  const handleDelete = async () => {
+    if (await showAppConfirm(transaction.recurrenceSourceId ? '刪除今次帳目並略過這一期？往後週期會保留。' : transaction.recurrence ? '刪除這筆帳目並停止往後重複？已產生的歷史帳目會保留。' : '此帳目將會移除。', { title: '刪除帳目？', confirmLabel: '刪除帳目', destructive: true })) {
       deleteTransaction(transaction.id);
       navigate(-1);
     }
@@ -96,9 +97,9 @@ const TransactionView: React.FC = () => {
               <div className="flex justify-between p-4">
                 <span className="text-white">週期</span>
                 <span className="text-gray-400">
-                  <button className="mr-3 text-red-400" onClick={() => {
-                    if (window.confirm('停止往後自動記帳？已有帳目會保留。')) updateTransaction(recurrenceSource?.id || transaction.id, { recurrence: undefined });
-                  }}>停止重複</button>
+                  <button className="mr-3 text-red-400" onClick={() => void showAppConfirm('已有帳目會保留；只停止之後自動建立的帳目。', { title: '停止自動記帳？', confirmLabel: '停止重複', destructive: true }).then(confirmed => {
+                    if (confirmed) updateTransaction(recurrenceSource?.id || transaction.id, { recurrence: undefined });
+                  })}>停止重複</button>
                   {RECURRENCE_LABELS[recurrence]}{transaction.recurrenceSourceId ? '（自動建立）' : ''}
                 </span>
               </div>

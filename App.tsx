@@ -30,6 +30,8 @@ import Layout from './components/Layout';
 import { hasOnboarded } from './utils/firstRun';
 import { STORAGE_ERROR_EVENT, subscribeStorage, getSaveStatus, retryStorage, flushStorage, getStaleTab, subscribeStaleTab } from './utils/storage';
 import SecurityGate from './components/SecurityGate';
+import AppDialogHost from './components/AppDialogHost';
+import { showAppConfirm } from './utils/appDialog';
 
 const Loading: React.FC = () => <div className="p-4 text-gray-400">載入中…</div>;
 
@@ -132,10 +134,10 @@ const App: React.FC = () => {
           <div className="sf-panel max-w-sm rounded-2xl p-6 text-gray-100 shadow-2xl space-y-4">
             <h2 className="text-lg font-semibold">另一分頁已更新資料</h2>
             <p className="text-sm text-gray-300">此分頁嘅帳目可能已過期。重新載入後會取得最新資料；未儲存嘅修改可能會消失，記帳草稿會保留。</p>
-            <button className="w-full rounded-xl bg-primary px-4 py-3 font-semibold text-white" onClick={() => {
-              if (getSaveStatus() !== 'saved' && !window.confirm('此分頁可能有未儲存修改，確定重新載入？')) return;
+            <button className="w-full rounded-xl bg-primary px-4 py-3 font-semibold text-white" onClick={() => void (async () => {
+              if (getSaveStatus() !== 'saved' && !await showAppConfirm('此分頁可能有未儲存修改，重新載入後會取得最新資料。', { title: '重新載入？', confirmLabel: '重新載入', destructive: true })) return;
               window.location.reload();
-            }}>重新載入最新資料</button>
+            })()}>重新載入最新資料</button>
           </div>
         </div>}
         {networkNotice && (
@@ -173,6 +175,7 @@ const App: React.FC = () => {
           </div>
         )}
         <StorageStatus />
+        <AppDialogHost />
         <Routes>
           <Route path="/settings/tags" element={<Suspense fallback={<Loading />}><Layout hideNav><TagManager /></Layout></Suspense>} />
           {/* Public but local-only: keep Welcome as landing (1B) */}

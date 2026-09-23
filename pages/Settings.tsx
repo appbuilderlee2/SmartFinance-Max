@@ -19,6 +19,7 @@ import { BACKUP_EXPORT_MARKER, readBackupExportMarker, shouldRemindBackup } from
 import { ALL_CURRENCIES, loadPreferences, savePreferences, type AppPreferences } from '../utils/preferences';
 import { Currency } from '../types';
 import { createPinSecurity, disablePinSecurity, loadSecuritySettings, saveSecuritySettings, verifyPin, type SecuritySettings } from '../utils/security';
+import { showAppAlert, showAppChoice, showAppConfirm, showAppPrompt } from '../utils/appDialog';
 
 type Notice = { tone: 'success' | 'warning' | 'info'; text: string } | null;
 
@@ -110,9 +111,11 @@ const Settings: React.FC = () => {
   };
 
   const configurePin = async () => {
-    const pin = window.prompt('設定 4 至 8 位數字 PIN：');
+    const validatePin = (value: string) => /^\d{4,8}$/.test(value) ? null : '請輸入 4 至 8 位數字。';
+    const pin = await showAppPrompt('用於重新開啟 App 時解鎖。', { title: '設定 App PIN', inputType: 'password', inputMode: 'numeric', maxLength: 8, validate: validatePin, confirmLabel: '下一步' });
     if (pin === null) return;
-    const confirmation = window.prompt('再次輸入 PIN：');
+    const confirmation = await showAppPrompt('再次輸入相同 PIN 以確認。', { title: '確認 PIN', inputType: 'password', inputMode: 'numeric', maxLength: 8, validate: validatePin, confirmLabel: '開啟 PIN 鎖' });
+    if (confirmation === null) return;
     if (pin !== confirmation) { setNotice({ tone: 'warning', text: '兩次 PIN 不相同，未有更改。' }); return; }
     try {
       const next = await createPinSecurity(pin, security);
@@ -124,7 +127,7 @@ const Settings: React.FC = () => {
   };
 
   const removePin = async () => {
-    const pin = window.prompt('輸入現有 PIN 以關閉 App 鎖：');
+    const pin = await showAppPrompt('輸入現有 PIN 以關閉 App 鎖。', { title: '關閉 PIN 鎖', inputType: 'password', inputMode: 'numeric', maxLength: 8, confirmLabel: '驗證並關閉' });
     if (pin === null) return;
     if (!await verifyPin(pin, security)) { setNotice({ tone: 'warning', text: 'PIN 不正確，App 鎖未有關閉。' }); return; }
     setSecurity(disablePinSecurity());
@@ -191,20 +194,23 @@ const Settings: React.FC = () => {
       `訂閱：${countArray(backup.storage, 'smartfinance_subscriptions')} 項`,
       `信用卡：${countArray(backup.storage, 'smartfinance_creditcards')} 張`,
     ].join('\n');
-    const mode = window.prompt(`${summary}\n\n輸入「合併」保留現有資料，或輸入「取代」完全還原：`);
-    if (mode !== '合併' && mode !== '取代') {
+    const mode = await showAppChoice(`${summary}\n\n合併會保留現有資料；取代會以備份內容完整還原。`, [
+      { label: '合併資料', value: 'merge' },
+      { label: '取代並還原', value: 'replace', destructive: true },
+    ], '還原備份');
+    if (mode !== 'merge' && mode !== 'replace') {
       setNotice({ tone: 'info', text: '已取消還原，現有資料沒有改動。' });
       return;
     }
 
     // Always give the user a recovery file before any destructive replacement.
     if (!await exportBackup('json', 'smartfinance_還原前自動備份')) return;
-    const next = mode === '合併'
+    const next = mode === 'merge'
       ? mergeBackupSnapshots(getStorageSnapshot(), backup.storage)
       : backup.storage;
     validateBackupSnapshot(next);
     await replaceStorageSnapshot(next);
-    window.alert(`${mode}完成，App 將重新載入。`);
+    await showAppAlert(`${mode === 'merge' ? '合併' : '取代'}完成，App 將重新載入。`);
     window.location.reload();
   };
 
@@ -441,7 +447,7 @@ const Settings: React.FC = () => {
             <div className="p-4 flex justify-between"><span>網絡狀態</span><span className={navigator.onLine ? 'text-green-400' : 'text-amber-300'}>{navigator.onLine ? '已連線' : '離線模式'}</span></div>
             <button disabled={checkingUpdate} onClick={checkUpdate} className="w-full p-4 flex items-center justify-center gap-2 disabled:opacity-60"><RefreshCw size={17} className={checkingUpdate ? 'animate-spin' : ''} />{checkingUpdate ? '檢查中…' : '檢查更新'}</button>
             <button onClick={async () => { try { await flushStorage(); window.location.reload(); } catch { setNotice({ tone: 'warning', text: '資料尚未儲存，請先重試或匯出備份。' }); } }} className="w-full p-4 flex items-center justify-center gap-2"><RefreshCw size={17} />重新載入 App</button>
-            <button onClick={async () => { if (window.confirm('只會清除 App 快取，不會刪除 IndexedDB 財務資料。繼續嗎？')) await forceReloadPwa(); }} className="w-full p-4 flex items-center justify-center gap-2"><RefreshCw size={17} />清除快取並重新載入</button>
+            <button onClick={async () => { if (await showAppConfirm('只會清除 App 快取，不會刪除 IndexedDB 財務資料。', { title: '清除快取？', confirmLabel: '清除並重新載入' })) await forceReloadPwa(); }} className="w-full p-4 flex items-center justify-center gap-2"><RefreshCw size={17} />清除快取並重新載入</button>
           </div>
         </section>
       ) : null}
@@ -451,7 +457,7 @@ const Settings: React.FC = () => {
           <h2 className="text-gray-500 text-xs ml-3 mb-2 uppercase tracking-wider">安全與私隱</h2>
           <div className="sf-panel divide-y sf-divider overflow-hidden">
             <div className="p-4 flex items-center justify-between gap-3">
-              <div><div>App PIN 鎖</div><div className="text-xs text-gray-500 mt-1">PIN 經 PBKDF2 加密雜湊後儲存於本機</div></div>
+              <div><div>App PIN 鎖</div><div className="text-xs text-gray-500 mt-1">PIN 以 PBKDF2 雜湊儲存；此鎖只限制畫面存取，財務資料本身仍以可讀資料保存在本機資料庫。</div></div>
               <button onClick={security.lockEnabled ? removePin : configurePin} className={`rounded-lg px-3 py-2 text-sm ${security.lockEnabled ? 'bg-green-500/15 text-green-300' : 'bg-primary/15 text-primary'}`}>{security.lockEnabled ? '已開啟' : '設定 PIN'}</button>
             </div>
             {security.lockEnabled ? (

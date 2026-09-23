@@ -13,6 +13,7 @@ import { rememberTags } from '../utils/tagHistory';
 import TagPicker from '../components/TagPicker';
 import { localYMDToStoredISOString, toLocalYMD, parseDate } from '../utils/date';
 import { parseMoneyInput } from '../utils/money';
+import { showAppConfirm } from '../utils/appDialog';
 
 const AddTransaction: React.FC = () => {
   const { transactions } = useData();
@@ -153,7 +154,7 @@ const EntryForm: React.FC<{ initialDraft: EntryDraft | null }> = ({ initialDraft
 
       <fieldset disabled={saving} className="sf-entry-content p-4 space-y-6 flex-1 pb-56 min-w-0">
         <div className="sf-draft-status"><span>{draftWarning ? '草稿暫時未能保存，請勿關閉頁面' : '草稿保存在此裝置，儲存成功後清除'}</span>
-        <button type="button" onClick={() => { void (async () => { if (transactions.some(tx => tx.id === draftId.current)) { setFormError('此帳目已提交，請先重試完成儲存，再到記錄編輯或刪除。'); return; } if (!window.confirm('清除目前未儲存的草稿？')) return; if (!await clearEntryDraft()) { setFormError('草稿未能清除，請重試'); return; } saved.current = true; window.location.reload(); })(); }}>清除草稿</button></div>
+        <button type="button" onClick={() => { void (async () => { if (transactions.some(tx => tx.id === draftId.current)) { setFormError('此帳目已提交，請先重試完成儲存，再到記錄編輯或刪除。'); return; } if (!await showAppConfirm('清除目前尚未提交的記帳內容。', { title: '清除草稿？', confirmLabel: '清除草稿', destructive: true })) return; if (!await clearEntryDraft()) { setFormError('草稿未能清除，請重試'); return; } saved.current = true; window.location.reload(); })(); }}>清除草稿</button></div>
         {/* Transaction Type Toggle */}
         <div className="flex sf-control rounded-xl p-1">
           <button

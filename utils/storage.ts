@@ -9,7 +9,7 @@ import {
   KeyValueSnapshot,
   migrateLegacyStorage,
   openSmartFinanceDatabase,
-  readDatabaseSnapshot,
+  readDatabaseState, StorageRevisionConflictError,
   removeDatabaseValue,
   replaceDatabaseSnapshot,
   isAppDataKey,
@@ -30,6 +30,7 @@ const tabId = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
 let channel: BroadcastChannel | null = null;
 let staleTab = false;
 let crossTabStarted = false;
+let databaseRevision = 0;
 const staleListeners = new Set<() => void>();
 export const getStaleTab = () => staleTab;
 export const subscribeStaleTab = (listener: () => void) => { staleListeners.add(listener); return () => { staleListeners.delete(listener); }; };
@@ -81,10 +82,20 @@ async function drain(): Promise<void> {
   running = true;
   setStatus('saving');
   while (pending.length) {
-    if (staleTab) { running = false; setStatus('error'); return; }
+    if (staleTab) {
+      while (pending.length) pending.shift()?.resolve(false);
+      running = false;
+      setStatus('error');
+      return;
+    }
     const job = pending[0];
     try { await job.run(); pending.shift(); job.resolve(true); }
     catch (error) {
+      if (error instanceof StorageRevisionConflictError) {
+        markStale('revision-conflict');
+        if (pending[0] === job) pending.shift();
+        while (pending.length) pending.shift()?.resolve(false);
+      }
       running = false; job.resolve(false); setStatus('error'); reportStorageError('write', error); return;
     }
   }
@@ -149,26 +160,34 @@ export function initializeStorage(): Promise<StorageInitialization> {
   initializationPromise = (async () => {
     try {
       database = await openSmartFinanceDatabase();
+      startCrossTabMonitor();
       const migration = await migrateLegacyStorage(database, localStorage);
       await migrateTransactionRows(database);
-      const snapshot = await reconcileThemeMirror(
-        database,
-        localStorage,
-        await readDatabaseSnapshot(database),
-      );
-      replaceCache(snapshot);
+      let state = await readDatabaseState(database);
+      const mirroredTheme = localStorage.getItem(THEME_KEY);
+      if (mirroredTheme && state.snapshot[THEME_KEY] !== mirroredTheme) {
+        try {
+          state.revision = await writeDatabaseValue(database, THEME_KEY, mirroredTheme, state.revision);
+          state.snapshot = { ...state.snapshot, [THEME_KEY]: mirroredTheme };
+        } catch (error) {
+          if (!(error instanceof StorageRevisionConflictError)) throw error;
+          markStale('revision-conflict');
+          state = await readDatabaseState(database);
+        }
+      }
+      databaseRevision = state.revision;
+      replaceCache(state.snapshot);
       // Reconcile mirrors written by older app versions before hydration.
       // Theme is synchronously mirrored before yielding, so reload cannot
       // reconcile a stale mirror over a newly committed setting.
       localStorage.setItem('sf_indexeddb_authoritative', 'true');
       backend = 'indexeddb';
       initialized = true;
-      startCrossTabMonitor();
       return {
         backend,
         migrated: migration.migrated,
         importedKeys: migration.importedKeys,
-        storedKeys: Object.keys(snapshot).length,
+        storedKeys: Object.keys(state.snapshot).length,
       };
     } catch (error) {
       database?.close();
@@ -177,6 +196,7 @@ export function initializeStorage(): Promise<StorageInitialization> {
       const snapshot = collectLegacySnapshot(localStorage);
       replaceCache(snapshot);
       backend = 'localstorage';
+      databaseRevision = 0;
       initialized = true;
       startCrossTabMonitor();
       reportStorageError('indexeddb', error);
@@ -227,7 +247,7 @@ export function writeText(key: string, value: string): Promise<boolean> {
   }
   return enqueue(async () => {
     if (key === THEME_KEY && cache.get(key) === value) localStorage.setItem(key, value);
-    if (backend === 'indexeddb' && database) await writeDatabaseValue(database, key, value);
+    if (backend === 'indexeddb' && database) databaseRevision = await writeDatabaseValue(database, key, value, databaseRevision);
     else localStorage.setItem(key, value);
     publishChange();
   });
@@ -244,7 +264,7 @@ export function writeCoreData(rows: Transaction[], values: KeyValueSnapshot): Pr
     const next = new Map(rows.map(row => [row.id, row]));
     const changed = rows.filter(row => durableRows.get(row.id) !== row);
     const deleted = [...durableRows.keys()].filter(id => !next.has(id));
-    if (backend === 'indexeddb' && database) await writeDatabaseBatch(database, changes, changed, deleted);
+    if (backend === 'indexeddb' && database) databaseRevision = await writeDatabaseBatch(database, changes, changed, deleted, databaseRevision);
     else {
       const previous = collectLegacySnapshot(localStorage);
       try {
@@ -262,7 +282,7 @@ export function writeCoreData(rows: Transaction[], values: KeyValueSnapshot): Pr
 export function removeKey(key: string): void {
   cache.delete(key);
   void enqueue(async () => {
-    if (backend === 'indexeddb' && database) await removeDatabaseValue(database, key);
+    if (backend === 'indexeddb' && database) databaseRevision = await removeDatabaseValue(database, key, databaseRevision);
     else localStorage.removeItem(key);
     if (key === THEME_KEY) localStorage.removeItem(key);
     publishChange();
@@ -288,7 +308,8 @@ export async function replaceStorageSnapshot(snapshot: KeyValueSnapshot): Promis
     Object.entries(snapshot).filter((entry): entry is [string, string] => isAppDataKey(entry[0]) && typeof entry[1] === 'string'),
   );
   if (backend === 'indexeddb' && database) {
-    await replaceDatabaseSnapshot(database, filtered);
+    try { databaseRevision = await replaceDatabaseSnapshot(database, filtered, databaseRevision); }
+    catch (error) { if (error instanceof StorageRevisionConflictError) markStale('revision-conflict'); throw error; }
   } else {
     const previous = collectLegacySnapshot(localStorage);
     try { clearLegacyAppStorage(); Object.entries(filtered).forEach(([key, value]) => localStorage.setItem(key, value)); }
@@ -302,7 +323,10 @@ export async function replaceStorageSnapshot(snapshot: KeyValueSnapshot): Promis
 
 export async function clearStorageData(): Promise<void> {
   await flushStorage();
-  if (backend === 'indexeddb' && database) await clearDatabaseData(database);
+  if (backend === 'indexeddb' && database) {
+    try { databaseRevision = await clearDatabaseData(database, databaseRevision); }
+    catch (error) { if (error instanceof StorageRevisionConflictError) markStale('revision-conflict'); throw error; }
+  }
   clearLegacyAppStorage();
   cache.clear(); transactionRows = []; durableRows.clear();
   if (backend === 'indexeddb') localStorage.setItem('sf_indexeddb_authoritative', 'true');

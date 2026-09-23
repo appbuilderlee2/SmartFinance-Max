@@ -17,8 +17,8 @@ test('draft survives navigation and reload, clears after durable save, and delet
   await expect(page).toHaveURL(/#\/records$/);
   expect(await page.evaluate(()=>sessionStorage.getItem('sf.entryDraft.v1'))).toBeNull();
   await page.getByText('保留草稿測試',{exact:true}).click();
-  page.once('dialog',dialog=>dialog.accept());
   await page.getByRole('button',{name:/刪除/}).click();
+  await page.getByRole('alertdialog', { name: '刪除帳目？' }).getByRole('button', { name: '刪除帳目' }).click();
   await page.getByRole('button',{name:'復原',exact:true}).click();
   await expect(page.getByText('保留草稿測試',{exact:true})).toBeVisible();
   await page.reload();

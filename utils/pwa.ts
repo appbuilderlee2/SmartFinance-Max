@@ -1,8 +1,9 @@
 import { flushStorage } from './storage';
+import { showAppAlert } from './appDialog';
 
 export async function forceReloadPwa(): Promise<void> {
   await flushStorage();
-  if (!navigator.onLine) { alert('請連接網絡後再修復快取，避免失去離線啟動能力。'); return; }
+  if (!navigator.onLine) { await showAppAlert('請連接網絡後再修復快取，避免失去離線啟動能力。'); return; }
   const scope = new URL('.', window.location.href).href;
   // Verify the shell is reachable before discarding the installed copy.
   const response = await fetch(new URL('index.html', scope), { cache: 'no-store' });

@@ -1,12 +1,14 @@
-import { lazy, Suspense, useMemo, useState } from 'react';
+import { lazy, Suspense, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Plus, ChevronLeft, ChevronRight, CreditCard as CardIcon, CalendarDays, FileText, Pencil, Bell, CheckCircle2 } from 'lucide-react';
 import { useData } from '../contexts/DataContext';
 import { CreditCardCycle, createOpenCycle, getCreditCardCycleAlerts, getCurrentYearMonth, getNextYearMonth } from '../utils/creditCardCycles';
 import { loadCycles, saveCycles, upsertCycle } from '../utils/creditCardCycleStorage';
-import { sumMoney } from '../utils/money';
+import { parseMoneyInput, sumMoney } from '../utils/money';
 import { Currency } from '../types';
 import BottomSheet from '../components/BottomSheet';
+import { flushStorage, getSaveStatus, retryStorage } from '../utils/storage';
+import { showAppConfirm } from '../utils/appDialog';
 
 const Manager = lazy(() => import('./CreditCardManager'));
 const dateLabel = (date?: string) => date ? date.replace(/^\d{4}-0?/, '').replace('-0', '/') .replace('-', '/') : '未設定';
@@ -25,6 +27,9 @@ export default function CreditCardCenter() {
   const [amount, setAmount] = useState('');
   const [amountUnit, setAmountUnit] = useState<string>(currency);
   const [error, setError] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState('');
+  const savingRef = useRef(false);
   const liveCycles = useMemo(() => {
     const ids = new Set(creditCards.map(c => c.id));
     return cycles.filter(c => ids.has(c.cardId));
@@ -51,22 +56,39 @@ export default function CreditCardCenter() {
   };
   const openCard = (cardId: string, cycleId?: string) => setParams(p => { p.set('card', cardId); if (cycleId) p.set('cycle', cycleId); else p.delete('cycle'); return p; });
   const back = () => setParams(p => { p.delete('card'); p.delete('cycle'); return p; }, { replace: true });
-  const persist = (next: CreditCardCycle) => {
-    const updated = upsertCycle(loadCycles(), next);
-    saveCycles(updated); setCycles(updated);
+  const persist = async (next: CreditCardCycle): Promise<boolean> => {
+    if (savingRef.current) return false;
+    savingRef.current = true;
+    setSaving(true);
+    setSaveError('');
+    try {
+      if (getSaveStatus() === 'error') await retryStorage();
+      await flushStorage();
+      const updated = upsertCycle(loadCycles(), next);
+      if (!await saveCycles(updated)) throw new Error('帳單未能儲存，請重試。');
+      await flushStorage();
+      setCycles(updated);
+      return true;
+    } catch (error) {
+      setSaveError(error instanceof Error ? error.message : '帳單未能儲存，請重試。');
+      return false;
+    } finally {
+      savingRef.current = false;
+      setSaving(false);
+    }
   };
   const create = (next: boolean) => {
     if (!selectedCard) return;
     const ym = next && cycle ? getNextYearMonth(cycle.year, cycle.month0) : getCurrentYearMonth();
     const fresh = createOpenCycle(selectedCard, ym.year, ym.month0);
     const existing = loadCycles().find(c => c.id === fresh.id);
-    if (!existing) persist(fresh); // Never overwrite a saved amount or paid status.
-    openCard(selectedCard.id, fresh.id);
+    if (existing) { openCard(selectedCard.id, fresh.id); return; }
+    void persist(fresh).then(saved => { if (saved) openCard(selectedCard.id, fresh.id); }); // Never overwrite a saved amount or paid status.
   };
-  const togglePaid = () => {
+  const togglePaid = async () => {
     if (!cycle) return;
-    if (!window.confirm(cycle.status === 'closed' ? '取消已繳款標記？' : '標記已繳款？只更新記錄，不會實際扣款。')) return;
-    persist({ ...cycle, status: cycle.status === 'closed' ? 'open' : 'closed', paidAt: cycle.status === 'closed' ? undefined : new Date().toISOString() });
+    if (!await showAppConfirm(cycle.status === 'closed' ? '取消已繳款標記？' : '只更新記錄，不會實際扣款。', { title: cycle.status === 'closed' ? '取消已繳款？' : '標記已繳款？', confirmLabel: cycle.status === 'closed' ? '取消標記' : '標記已繳', destructive: true })) return;
+    await persist({ ...cycle, status: cycle.status === 'closed' ? 'open' : 'closed', paidAt: cycle.status === 'closed' ? undefined : new Date().toISOString() });
   };
   const changeMonth = (delta: number) => {
     const [y,m] = month.split('-').map(Number), d = new Date(y,m-1+delta,1);
@@ -76,15 +98,17 @@ export default function CreditCardCenter() {
   const cardArt = (name: string, digits?: string, large = false) => <div className={large ? 'sf-credit-art sf-credit-art-large' : 'sf-credit-art'}>{large ? <><strong>{name}</strong><span>•••• {digits?.slice(-4) || '未設定'}</span></> : <CardIcon size={28} />}</div>;
   return <main className="sf-credit-center">
     <header className="sf-credit-header">{selectedCard ? <><button className="text-primary flex items-center" onClick={back}><ChevronLeft size={20} />信用卡</button><h1>{selectedCard.name}</h1><button aria-label="編輯卡片" onClick={() => setEditor(selectedCard.id)}><Pencil size={20} /></button></> : <><h1>信用卡</h1><button aria-label="新增信用卡" className="text-primary" onClick={() => setEditor('new')}><Plus /></button></>}</header>
+    {saveError && <p role="alert" className="sf-credit-panel mt-3 text-sm text-red-300">{saveError}</p>}
+    {saving && <p role="status" className="mt-2 text-sm text-gray-400">帳單儲存中…</p>}
     {!selectedCard && <nav className="sf-credit-tabs" aria-label="信用卡檢視">{[['overview','總覽'],['cycles','週期'],['manage','管理']].map(([id,label]) => <button key={id} aria-pressed={tab === id} onClick={() => setParams({tab:id})}>{label}</button>)}</nav>}
     {selectedCard ? <>
       {cardArt(selectedCard.name, selectedCard.lastFourDigits, true)}<p className="sf-credit-note">卡片幣別 · {selectedCard.currency || currency}</p>
       <section className="sf-credit-panel mt-4">
         <p className="text-sm">{cycle?.status === 'closed' ? '本期已繳款' : '本期待繳'}</p>{cycle && cycle.status !== 'closed' && alertBadges(cycle)}<strong className="sf-credit-amount">{cycleMoney(cycle)}</strong>
         {cycle ? <><div className="sf-credit-dates"><div><small>結帳日</small><span>{dateLabel(cycle.statementDate)}</span></div><div><small>繳款日</small><span>{dateLabel(cycle.dueDate)}</span></div></div><p className="text-sm text-gray-400 mb-4">截數月份 {cycle.yearMonth}</p>
-          <button className="sf-primary-button w-full" onClick={togglePaid}>{cycle.status === 'closed' ? '取消已繳款' : '標記已繳款'}</button>
-          <button className="text-primary w-full mt-2" onClick={() => { setAmount(cycle.amountDue?.toString() || ''); setAmountUnit(cycleCurrency(cycle)); setError(''); setAmountSheet(true); }}>輸入／修改應繳金額</button>
-        </> : <button className="sf-primary-button w-full mt-4" onClick={() => create(false)}>建立本期帳單</button>}
+          <button className="sf-primary-button w-full" disabled={saving} onClick={() => void togglePaid()}>{cycle.status === 'closed' ? '取消已繳款' : '標記已繳款'}</button>
+          <button className="text-primary w-full mt-2 disabled:opacity-50" disabled={saving} onClick={() => { setAmount(cycle.amountDue?.toString() || ''); setAmountUnit(cycleCurrency(cycle)); setError(''); setAmountSheet(true); }}>輸入／修改應繳金額</button>
+        </> : <button className="sf-primary-button w-full mt-4" disabled={saving} onClick={() => create(false)}>建立本期帳單</button>}
       </section>
       <p className="sf-credit-note">只更新記錄，不會實際扣款</p>
       <section className="sf-credit-panel sf-credit-actions">
@@ -110,6 +134,6 @@ export default function CreditCardCenter() {
       </>}
     </>}
     {editor && <BottomSheet title={editor === 'new' ? '新增信用卡' : '卡片設定'} onClose={() => { setEditor(null); setCycles(loadCycles()); }}><Suspense fallback={<p>載入表單…</p>}><Manager embedded adding={editor === 'new'} editId={editor === 'new' ? undefined : editor} onDone={() => { setEditor(null); setCycles(loadCycles()); }} /></Suspense></BottomSheet>}
-    {amountSheet && cycle && <BottomSheet title="本期應繳金額" onClose={() => setAmountSheet(false)}><label>金額<input className="sf-field" inputMode="decimal" value={amount} onChange={e => setAmount(e.target.value)} /></label><label>幣別<select className="sf-field" value={amountUnit} onChange={e => setAmountUnit(e.target.value)}>{Object.values(Currency).map(u => <option key={u}>{u}</option>)}</select></label>{error && <p role="alert" className="text-red-400">{error}</p>}<button className="sf-primary-button w-full mt-4" onClick={() => { const n = Number(amount); if (!amount.trim() || !Number.isFinite(n) || n < 0) { setError('請輸入 0 或以上的有效金額'); return; } persist({...cycle,amountDue:n,currency:amountUnit,amountDueEnteredAt:new Date().toISOString()}); setAmountSheet(false); }}>儲存金額</button></BottomSheet>}
+    {amountSheet && cycle && <BottomSheet title="本期應繳金額" onClose={() => { if (!saving) setAmountSheet(false); }}><fieldset disabled={saving} className="space-y-4 disabled:opacity-60"><label>金額<input className="sf-field" inputMode="decimal" value={amount} onChange={e => { setAmount(e.target.value); setError(''); }} /></label><label>幣別<select className="sf-field" value={amountUnit} onChange={e => { setAmountUnit(e.target.value); setError(''); }}>{Object.values(Currency).map(u => <option key={u}>{u}</option>)}</select></label>{error && <p role="alert" className="text-red-400">{error}</p>}{saveError && <p role="alert" className="text-red-300">{saveError}</p>}<button type="button" className="sf-primary-button w-full mt-4" onClick={() => { const n = parseMoneyInput(amount, amountUnit as Currency); if (n === null || n < 0) { setError(amountUnit === Currency.JPY ? '請輸入 0 或以上的整數金額' : '請輸入 0 或以上，最多兩位小數'); return; } void persist({...cycle,amountDue:n,currency:amountUnit,amountDueEnteredAt:new Date().toISOString()}).then(saved => { if (saved) setAmountSheet(false); }); }}>{saving ? '儲存中…' : '儲存金額'}</button></fieldset></BottomSheet>}
   </main>;
 }

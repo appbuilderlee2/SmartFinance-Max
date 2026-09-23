@@ -11,6 +11,7 @@ import { localYMDToStoredISOString, toLocalYMD } from '../utils/date';
 import { rememberTags } from '../utils/tagHistory';
 import TagPicker from '../components/TagPicker';
 import { parseMoneyInput } from '../utils/money';
+import { showAppAlert } from '../utils/appDialog';
 
 const TransactionDetail: React.FC = () => {
    const { id } = useParams();
@@ -62,20 +63,20 @@ const TransactionDetail: React.FC = () => {
       setSaveError('');
       const amountValue = parseMoneyInput(amount, txCurrency);
       if (!selectedCategory) {
-         alert('請選擇分類');
+         await showAppAlert('請選擇分類');
          return;
       }
       if (amountValue === null || amountValue <= 0) {
-         alert(`請輸入有效金額（${txCurrency === Currency.JPY ? '不可輸入小數' : '最多兩位小數'}）`);
+         await showAppAlert(`請輸入有效金額（${txCurrency === Currency.JPY ? '不可輸入小數' : '最多兩位小數'}）`);
          return;
       }
       if (!date) {
-         alert('請選擇日期');
+         await showAppAlert('請選擇日期');
          return;
       }
       const storedDate = localYMDToStoredISOString(date);
       if (!storedDate) {
-         alert('日期格式不正確');
+         await showAppAlert('日期格式不正確');
          return;
       }
       // Persist tags MRU on save as well
