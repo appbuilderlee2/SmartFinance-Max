@@ -1,3 +1,4 @@
+import { captureDeletion, restoreDeletion, type DeletedTransaction } from '../utils/transactionUndo';
 import { writeJson } from '../utils/storage';
 import { renameTransactionTags, tagKey, normalizeTag, uniqueTags } from '../utils/tags';
 import { loadTagHistory } from '../utils/tagHistory';
@@ -7,7 +8,7 @@ import React, { createContext, useContext, useState, useEffect, useMemo, useRef 
 import { Transaction, Category, Budget, Subscription, TransactionType, Currency } from '../types';
 import { CATEGORIES } from '../constants';
 import {
-  clearStorageData,
+  clearStorageData, flushStorage, retryStorage, getSaveStatus,
   initializeStorage,
   readJson,
   readText,
@@ -74,6 +75,7 @@ interface DataContextType {
   themeColor: ThemeName;
   storageBackend: StorageBackend;
   addTransaction: (tx: Omit<Transaction, 'id'>) => void;
+  saveTransaction: (tx: Transaction) => Promise<void>;
   updateTransaction: (id: string, tx: Partial<Transaction>) => void;
   deleteTransaction: (id: string) => void;
   renameTag: (source: string, target: string) => void;
@@ -124,6 +126,9 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [storageReady, setStorageReady] = useState(false);
   const [storageBackend, setStorageBackend] = useState<StorageBackend>('indexeddb');
   const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const saveWaiters = useRef(new Map<string, { row: Transaction; resolve: (ok: boolean) => void }>());
+  const [deleted, setDeleted] = useState<DeletedTransaction | null>(null);
+  const [undoError, setUndoError] = useState('');
   const [categories, setCategories] = useState<Category[]>(CATEGORIES);
   const [budgets, setBudgets] = useState<Budget[]>([]);
   const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
@@ -166,13 +171,14 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // Related entity changes commit in one database transaction.
   useEffect(() => {
     if (!storageReady) return;
+    const waiters = [...saveWaiters.current.entries()].filter(([, item]) => transactions.includes(item.row));
     void writeCoreData(transactions, {
       smartfinance_categories: JSON.stringify(categories),
       smartfinance_budgets: JSON.stringify(budgets),
       smartfinance_subscriptions: JSON.stringify(subscriptions),
       smartfinance_creditcards: JSON.stringify(creditCards),
       smartfinance_currency: currency,
-    });
+    }).then(ok => { for (const [id, waiter] of waiters) { if (saveWaiters.current.get(id) === waiter) { saveWaiters.current.delete(id); waiter.resolve(ok); } } });
   }, [storageReady, transactions, categories, budgets, subscriptions, creditCards, currency]);
 
   // Budget Spending Logic (recalculate spent whenever transactions/categories/currency change)
@@ -222,6 +228,16 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setTransactions(prev => [newTx, ...prev]);
   };
 
+  const saveTransaction = async (row: Transaction) => {
+    if (saveWaiters.current.has(row.id)) throw new Error('帳目正在儲存');
+    if (getSaveStatus() === 'error') await retryStorage();
+    await flushStorage();
+    const committed = new Promise<boolean>(resolve => saveWaiters.current.set(row.id, { row, resolve }));
+    setTransactions(previous => [row, ...previous.filter(tx => tx.id !== row.id)]);
+    if (!await committed) throw new Error('儲存失敗，輸入已保留。請重試。');
+    await flushStorage();
+  };
+
   const renameTag = (source: string, target: string) => {
     const name = normalizeTag(target);
     if (!name) return;
@@ -234,6 +250,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const deleteTransaction = (id: string) => {
+    setDeleted(captureDeletion(transactions, id)); setUndoError('');
     setTransactions(prev => removeRecurringOccurrence(prev, id));
   };
 
@@ -333,6 +350,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     try {
       await clearStorageData();
+    sessionStorage.removeItem('sf.entryDraft.v1'); setDeleted(null);
       resetSecurityCache();
     } catch {
       alert('資料未能重置，請先處理儲存錯誤。'); return;
@@ -517,7 +535,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       creditCards,
       themeColor,
       storageBackend,
-      addTransaction,
+      addTransaction, saveTransaction,
       deleteTransaction,
       updateTransaction,
       renameTag,
@@ -541,6 +559,14 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setThemeColor: setThemeColorState
     }}>
       <LedgerContext.Provider value={ledger}>{children}</LedgerContext.Provider>
+      {deleted && <div role="status" className="sf-undo-toast">
+        <span>{undoError || '帳目已移除'}</span>
+        <button onClick={() => {
+          if (!categories.some(cat => cat.id === deleted.row.categoryId)) { setUndoError('原分類已移除，請先還原分類再復原帳目'); return; }
+          setTransactions(previous => restoreDeletion(previous, deleted)); setDeleted(null);
+        }}>復原</button>
+        <button aria-label="關閉復原提示" onClick={() => setDeleted(null)}>✕</button>
+      </div>}
     </DataContext.Provider>
   );
 };

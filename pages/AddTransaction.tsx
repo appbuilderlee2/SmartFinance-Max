@@ -1,4 +1,6 @@
-import React, { useState, useRef, useMemo } from 'react';
+import { readEntryDraft, saveEntryDraft, clearEntryDraft } from '../utils/entryDraft';
+import { makeId } from '../utils/id';
+import React, { useState, useRef, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Plus, Camera, X, ChevronDown, ChevronUp } from 'lucide-react';
 import { useData } from '../contexts/DataContext';
@@ -14,25 +16,31 @@ import { parseMoneyInput } from '../utils/money';
 
 const AddTransaction: React.FC = () => {
   const navigate = useNavigate();
-  const { addTransaction, categories, currency, transactions } = useData();
+  const { saveTransaction, categories, currency, transactions } = useData();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  const [initialDraft] = useState(readEntryDraft);
+  const draftId = useRef(initialDraft?.id || makeId('tx'));
+  const saved = useRef(false);
+  const savingRef = useRef(false);
+  const [saving, setSaving] = useState(false);
+  const [draftWarning, setDraftWarning] = useState(false);
   // State for NumPad visibility
   const [isNumPadOpen, setIsNumPadOpen] = useState(false);
 
   // Fix date initialization to account for local timezone
   const getTodayString = () => toLocalYMD(new Date());
 
-  const [amount, setAmount] = useState<string>('');
-  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
-  const [note, setNote] = useState('');
-  const [date, setDate] = useState(getTodayString());
-  const [recurrence, setRecurrence] = useState<RecurrenceFrequency | 'none'>('none');
-  const [receiptPreview, setReceiptPreview] = useState<string | null>(null);
-  const [tags, setTags] = useState<string[]>([]);
-  const [transactionType, setTransactionType] = useState<TransactionType>(TransactionType.EXPENSE);
-  const [txCurrency, setTxCurrency] = useState<Currency>(currency);
-  const [showDetails, setShowDetails] = useState(false);
+  const [amount, setAmount] = useState<string>(initialDraft?.amount || '');
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(initialDraft?.selectedCategory || null);
+  const [note, setNote] = useState(initialDraft?.note || '');
+  const [date, setDate] = useState(initialDraft?.date || getTodayString());
+  const [recurrence, setRecurrence] = useState<RecurrenceFrequency | 'none'>(initialDraft?.recurrence || 'none');
+  const [receiptPreview, setReceiptPreview] = useState<string | null>(initialDraft?.receiptPreview || null);
+  const [tags, setTags] = useState<string[]>(initialDraft?.tags || []);
+  const [transactionType, setTransactionType] = useState<TransactionType>(initialDraft?.transactionType || TransactionType.EXPENSE);
+  const [txCurrency, setTxCurrency] = useState<Currency>(initialDraft?.txCurrency || currency);
+  const [showDetails, setShowDetails] = useState(initialDraft?.showDetails || false);
 
   const [categoryQuery, setCategoryQuery] = useState('');
   const [formError, setFormError] = useState('');
@@ -46,7 +54,13 @@ const AddTransaction: React.FC = () => {
   }, [categories, transactions, transactionType, categoryQuery]);
   const changeType = (type: TransactionType) => { setTransactionType(type); setSelectedCategory(null); setCategoryQuery(''); setFormError(''); };
 
-  const handleSave = () => {
+  useEffect(() => {
+    if (saved.current) return;
+    setDraftWarning(!saveEntryDraft({ id: draftId.current, amount, selectedCategory, note, date, recurrence, receiptPreview, tags, transactionType, txCurrency, showDetails }));
+  }, [amount, selectedCategory, note, date, recurrence, receiptPreview, tags, transactionType, txCurrency, showDetails]);
+
+  const handleSave = async () => {
+    if (savingRef.current) return;
     setFormError('');
     const amountValue = parseMoneyInput(amount, txCurrency);
     if (!categories.some(c => c.id === selectedCategory && c.type === transactionType)) {
@@ -72,7 +86,10 @@ const AddTransaction: React.FC = () => {
       rememberTags(tags);
     }
 
-    addTransaction({
+    savingRef.current = true; setSaving(true);
+    try {
+    await saveTransaction({
+      id: draftId.current,
       amount: amountValue,
       categoryId: selectedCategory!,
       note: note,
@@ -86,7 +103,10 @@ const AddTransaction: React.FC = () => {
       currency: txCurrency
     });
 
+    saved.current = true; clearEntryDraft();
     navigate('/records');
+    } catch (error) { setFormError(error instanceof Error ? error.message : '儲存失敗，請重試'); }
+    finally { savingRef.current = false; setSaving(false); }
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -113,7 +133,9 @@ const AddTransaction: React.FC = () => {
         <div className="w-14" />
       </div>
 
-      <div className="sf-entry-content p-4 space-y-6 flex-1 pb-56">
+      <fieldset disabled={saving} className="sf-entry-content p-4 space-y-6 flex-1 pb-56 min-w-0">
+        <div className="sf-draft-status"><span>{draftWarning ? '草稿暫時未能保存，請勿重新整理' : '草稿會在本分頁保留，儲存成功後清除'}</span>
+        <button type="button" onClick={() => { if (transactions.some(tx => tx.id === draftId.current)) { setFormError('此帳目已提交，請先重試完成儲存，再到記錄編輯或刪除。'); return; } if (!window.confirm('清除目前未儲存的草稿？')) return; clearEntryDraft(); saved.current = true; window.location.reload(); }}>清除草稿</button></div>
         {/* Transaction Type Toggle */}
         <div className="flex sf-control rounded-xl p-1">
           <button
@@ -306,13 +328,13 @@ const AddTransaction: React.FC = () => {
         </div>
 
 
-      </div>
+      </fieldset>
 
       {/* Shared navigation; hide both actions while the numeric keypad is open. */}
       {!isNumPadOpen && <BottomNavigation action={
         <div className="sf-entry-save">
           {formError && <p role="alert" className="sf-entry-error">{formError}</p>}
-          <button onClick={handleSave} className="w-full bg-primary text-white font-semibold py-4 rounded-2xl text-base shadow-lg active:scale-[0.99] transition-transform">儲存</button>
+          <button disabled={saving} onClick={handleSave} className="w-full bg-primary text-white font-semibold py-4 rounded-2xl text-base shadow-lg active:scale-[0.99] transition-transform">{saving ? '儲存中…' : '儲存'}</button>
         </div>
       } />}
 
