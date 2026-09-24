@@ -292,9 +292,7 @@ const Calendar: React.FC = () => {
                                             )}
                                             {category && (
                                                 <div className={`w-6 h-6 rounded-full ${category.color} flex items-center justify-center text-xs`}>
-                                                    {category.icon.startsWith('emoji:')
-                                                        ? category.icon.replace('emoji:', '')
-                                                        : <Icon name={category.icon} size={14} />}
+                                                    <Icon name={category.icon} size={14} />
                                                 </div>
                                             )}
                                             <span className="text-white text-sm">{category?.name || '未分類'}</span>

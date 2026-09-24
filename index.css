@@ -595,7 +595,7 @@ textarea {
 .sf-tag { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 8px 12px; border-radius: 12px; border: 1px solid #8883; overflow-wrap: anywhere; max-width: 100%; }
 .sf-primary-button { display: block; width: 100%; min-height: 48px; border-radius: 14px; color: white; background: rgb(var(--sf-primary)); font-weight: 600; }
 .sf-report { max-width: 680px; margin: auto; padding: 0 20px calc(100px + env(safe-area-inset-bottom)); }
-.sf-tag-manager { padding-top: calc(env(safe-area-inset-top, 0px) + 12px); }
+.sf-tag-manager, .sf-reports-page { padding-top: calc(env(safe-area-inset-top, 0px) + 12px); }
 .sf-report button { min-height: 44px; }
 .sf-report-surface { background: #8881; border: 1px solid #8882; border-radius: 18px; padding: 16px; }
 .sf-report-row { display: flex; width: 100%; align-items: center; gap: 12px; padding: 14px 0; border-bottom: 1px solid #8882; text-align: left; }

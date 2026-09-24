@@ -77,7 +77,7 @@ export default function Reports() {
     })}</div>
     {tab === 'trend' && <div>{trend.map(p => <div className="sf-report-row text-sm" key={p.label}><span className="flex-1">{p.label}</span><span className="text-emerald-400">{money(p.income)}</span><span>{money(p.expense)}</span></div>)}</div>}
   </div>;
-  return <main className="sf-report">
+  return <main className="sf-report sf-reports-page">
     <header className="flex items-center justify-between py-2 gap-3"><button className="text-primary flex items-center" onClick={() => detail ? setDetail(null) : navigate('/settings')}><ChevronLeft size={20} />{detail ? '返回報告' : '返回設定'}</button><h1 className="font-semibold">報告統計</h1><button aria-label="匯出報告 CSV" onClick={exportCSV}><Download size={20} /></button></header>
     <div className="flex items-center gap-2 py-3"><div className="flex items-center justify-between flex-1 sf-control rounded-xl"><button aria-label="上一個月" onClick={() => moveMonth(month - 1)}><ChevronLeft size={18} /></button><span className="text-sm">{title}</span><button aria-label="下一個月" onClick={() => moveMonth(month + 1)}><ChevronRight size={18} /></button></div><select aria-label="報告幣別" value={filter.currency} onChange={e => setFilter(f => ({ ...f, currency: e.target.value as Currency }))} className="sf-control rounded-xl px-2 h-11 max-w-[100px]">{currencies.map(c => <option key={c}>{c}</option>)}</select><button aria-label="篩選報告" className="p-2 sf-control rounded-xl" onClick={() => { setDraft(filter); setDraftPreset(preset); setError(''); setSheet(true); }}><SlidersHorizontal size={20} /></button></div>
     <p className="text-xs text-gray-400 mb-3">{filter.start || '最早記錄'} — {filter.end || '最新記錄'} · 僅計算 {filter.currency}</p>

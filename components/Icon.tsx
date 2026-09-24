@@ -70,9 +70,12 @@ const ICONS: Record<string, LucideIcon> = {
   Wallet,
 };
 
-export const isSupportedIcon = (name: string): boolean => name.startsWith('emoji:') || name in ICONS;
+export const EMOJI_IMAGE_PREFIX = 'emoji-image:';
+export const isEmojiImageIcon = (name: string): boolean => name.startsWith(`${EMOJI_IMAGE_PREFIX}data:image/png;base64,`);
+export const isSupportedIcon = (name: string): boolean => name.startsWith('emoji:') || isEmojiImageIcon(name) || name in ICONS;
 
 export const Icon: React.FC<IconProps> = ({ name, size = 24, className }) => {
+  if (isEmojiImageIcon(name)) return <img src={name.slice(EMOJI_IMAGE_PREFIX.length)} alt="" aria-hidden="true" width={size} height={size} className={className} style={{ width: size, height: size, objectFit: 'contain' }} />;
   if (name.startsWith('emoji:')) {
     return (
       <span className={className} style={{ fontSize: size }}>

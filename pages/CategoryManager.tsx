@@ -3,7 +3,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ChevronLeft, GripVertical, Plus, Trash2, Edit2, X } from 'lucide-react';
 import { useData } from '../contexts/DataContext';
-import { CATEGORY_ICON_NAMES, Icon } from '../components/Icon';
+import { CATEGORY_ICON_NAMES, EMOJI_IMAGE_PREFIX, Icon, isEmojiImageIcon } from '../components/Icon';
 import { TransactionType, Category } from '../types';
 import { makeId } from '../utils/id';
 import { getCategoryUsage } from '../utils/categoryIntegrity';
@@ -40,6 +40,7 @@ const CategoryManager: React.FC = () => {
    });
    const [iconTab, setIconTab] = useState<'icons' | 'emoji'>('icons');
    const [customEmoji, setCustomEmoji] = useState('');
+   const [emojiError, setEmojiError] = useState('');
    const [deleteTarget, setDeleteTarget] = useState<Category | null>(null);
    const [replacementId, setReplacementId] = useState('');
 
@@ -176,6 +177,7 @@ const CategoryManager: React.FC = () => {
       setFormData({ name: '', icon: 'Tag', color: 'bg-gray-500', order: maxOrder + 1 });
       setIconTab('icons');
       setCustomEmoji('');
+      setEmojiError('');
       setShowModal(true);
    };
 
@@ -187,14 +189,48 @@ const CategoryManager: React.FC = () => {
          color: cat.color,
          order: typeof cat.order === 'number' ? cat.order : 1
       });
-      if (cat.icon.startsWith('emoji:')) {
+      if (cat.icon.startsWith('emoji:') || isEmojiImageIcon(cat.icon)) {
          setIconTab('emoji');
-         setCustomEmoji(cat.icon.replace('emoji:', ''));
+         setCustomEmoji(cat.icon.startsWith('emoji:') ? cat.icon.slice('emoji:'.length) : '');
       } else {
          setIconTab('icons');
          setCustomEmoji('');
       }
+      setEmojiError('');
       setShowModal(true);
+   };
+
+   const selectEmojiImage = async (file: File) => {
+      if (!['image/png', 'image/jpeg', 'image/webp', 'image/gif'].includes(file.type) || file.size > 5 * 1024 * 1024) {
+         setEmojiError('請選擇不超過 5 MB 的 PNG、JPEG、WebP 或 GIF 圖片。');
+         return;
+      }
+      try {
+         const url = URL.createObjectURL(file);
+         try {
+            const image = new Image();
+            image.src = url;
+            await image.decode();
+            const canvas = document.createElement('canvas');
+            canvas.width = canvas.height = 96;
+            const context = canvas.getContext('2d');
+            if (!context) throw new Error('無法處理圖片');
+            const scale = Math.min(96 / image.naturalWidth, 96 / image.naturalHeight);
+            context.drawImage(image, (96 - image.naturalWidth * scale) / 2, (96 - image.naturalHeight * scale) / 2, image.naturalWidth * scale, image.naturalHeight * scale);
+            const dataUrl = canvas.toDataURL('image/png');
+            if (dataUrl.length > 128 * 1024) throw new Error('圖片太複雜，請選擇較簡單的圖像');
+            setFormData(previous => ({ ...previous, icon: `${EMOJI_IMAGE_PREFIX}${dataUrl}` }));
+            setCustomEmoji('');
+            setEmojiError('');
+         } finally { URL.revokeObjectURL(url); }
+      } catch (error) { setEmojiError(error instanceof Error ? error.message : '無法讀取圖片，請重試。'); }
+   };
+
+   const handleEmojiPaste = (event: React.ClipboardEvent<HTMLElement>) => {
+      const image = [...event.clipboardData.items].find(item => item.type.startsWith('image/'))?.getAsFile();
+      if (!image) return;
+      event.preventDefault();
+      void selectEmojiImage(image);
    };
 
    const handleSave = () => {
@@ -240,7 +276,7 @@ const CategoryManager: React.FC = () => {
                >
                   {isReorderMode ? '完成' : '編輯'}
                </button>
-               <button onClick={openAddModal} className="text-primary text-xl"><Plus /></button>
+               <button aria-label="新增分類" onClick={openAddModal} className="text-primary text-xl"><Plus /></button>
             </div>
          </div>
 
@@ -295,9 +331,7 @@ const CategoryManager: React.FC = () => {
                         onPointerLeave={clearDragTimer}
                         className={`w-10 h-10 rounded-full flex items-center justify-center ${cat.color} text-white ${isReorderMode ? 'cursor-move' : ''}`}
                      >
-                        {cat.icon.startsWith('emoji:')
-                           ? <span className="text-lg">{cat.icon.replace('emoji:', '')}</span>
-                           : <Icon name={cat.icon} size={20} />}
+                        <Icon name={cat.icon} size={20} />
                      </div>
                      <span className="text-white font-medium">{cat.name}</span>
                   </div>
@@ -315,8 +349,8 @@ const CategoryManager: React.FC = () => {
 
          {/* Add/Edit Modal */}
          {showModal && (
-            <div className="fixed inset-0 bg-black/70 z-50 flex items-end">
-               <div className="sf-panel w-full rounded-t-3xl p-6 pb-safe-bottom animate-slide-up">
+            <div role="dialog" aria-modal="true" aria-label={editingCategory ? '編輯分類' : '新增分類'} className="fixed inset-0 bg-black/70 z-50 flex items-end">
+               <div className="sf-panel w-full max-h-[90dvh] overflow-y-auto rounded-t-3xl p-6 pb-safe-bottom animate-slide-up">
                   <div className="flex justify-between items-center mb-6">
                      <h3 className="text-lg font-semibold text-white">
                         {editingCategory ? '編輯分類' : '新增分類'}
@@ -373,18 +407,39 @@ const CategoryManager: React.FC = () => {
                                     type="text"
                                     inputMode="text"
                                     value={customEmoji}
+                                    onPaste={handleEmojiPaste}
                                     onChange={(e) => {
                                        const value = e.target.value;
                                        setCustomEmoji(value);
                                        const trimmed = value.trim();
-                                       if (trimmed) {
-                                          setFormData({ ...formData, icon: `emoji:${trimmed}` });
-                                       }
+                                       setFormData(previous => ({ ...previous, icon: trimmed ? `emoji:${trimmed}` : 'Tag' }));
                                     }}
                                     placeholder="輸入表情符號"
-                                    className="w-full bg-transparent text-white placeholder-gray-500 focus:outline-none text-sm"
+                                    className="w-full bg-transparent text-white placeholder-gray-500 focus:outline-none text-base"
                                  />
                               </div>
+                              <div contentEditable suppressContentEditableWarning role="textbox" aria-label="貼上或輸入自製表情符號" data-placeholder="貼上或輸入 Genmoji" onPaste={handleEmojiPaste} onInput={event => {
+                                 const field = event.currentTarget;
+                                 const image = field.querySelector<HTMLImageElement>('img[src^="data:image/"], img[src^="blob:"]');
+                                 if (image?.src) {
+                                    const source = image.src;
+                                    field.replaceChildren();
+                                    void fetch(source).then(response => response.blob()).then(blob => selectEmojiImage(new File([blob], 'genmoji.png', { type: blob.type || 'image/png' }))).catch(() => setEmojiError('無法讀取自製表情符號，請改用貼上或選擇圖片。'));
+                                 } else {
+                                    const value = field.textContent?.trim() || '';
+                                    if (value) {
+                                       setCustomEmoji(value);
+                                       setFormData(previous => ({ ...previous, icon: `emoji:${value}` }));
+                                       field.replaceChildren();
+                                    }
+                                 }
+                              }} className="sf-control rounded-xl px-3 py-3 min-h-11 text-base text-white empty:before:content-[attr(data-placeholder)] empty:before:text-gray-500" />
+                              <label className="inline-flex items-center gap-2 text-primary text-sm min-h-11 cursor-pointer">
+                                 選擇自製表情符號圖片
+                                 <input type="file" accept="image/*" className="sr-only" onChange={event => { const file = event.target.files?.[0]; if (file) void selectEmojiImage(file); event.target.value = ''; }} />
+                              </label>
+                              {(formData.icon.startsWith('emoji:') || isEmojiImageIcon(formData.icon)) && <div className="flex items-center gap-2 text-sm text-gray-300">已選圖示 <Icon name={formData.icon} size={32} /></div>}
+                              {emojiError && <p role="alert" className="text-sm text-red-400">{emojiError}</p>}
                               <div className="grid grid-cols-8 gap-2 max-h-32 overflow-y-auto">
                                  {AVAILABLE_EMOJIS.map(emoji => (
                                     <button
