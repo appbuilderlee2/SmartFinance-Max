@@ -60,7 +60,6 @@ test('transaction survives navigation and reload', async ({ page }) => {
   await page.getByRole('button', { name: '2', exact: true }).click();
   await page.getByRole('button', { name: '3', exact: true }).click();
   await page.getByRole('button', { name: '完成輸入' }).click();
-  await page.getByRole('button', { name: '查看全部' }).click();
   await page.getByRole('button', { name: '餐飲' }).click();
   await page.getByRole('button', { name: /詳細資訊/ }).click();
   await page.getByPlaceholder('輸入備註...').fill('E2E 午餐');

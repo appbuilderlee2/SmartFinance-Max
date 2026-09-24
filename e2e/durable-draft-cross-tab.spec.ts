@@ -35,7 +35,6 @@ test('older tab blocks stale edits after another tab writes', async ({ page, con
   await other.getByRole('button', { name: '輸入金額' }).click();
   await other.getByRole('button', { name: '7', exact: true }).click();
   await other.getByRole('button', { name: '完成輸入' }).click();
-  await other.getByRole('button', { name: '查看全部' }).click();
   await other.getByRole('button', { name: '餐飲', exact: true }).click();
   await other.getByRole('button', { name: '儲存', exact: true }).click();
   await expect(other).toHaveURL(/#\/records$/);
