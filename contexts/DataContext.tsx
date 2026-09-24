@@ -204,6 +204,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // 1) Ensure every category has a budget row
     const existingBudgetIds = new Set(budgets.map(b => b.categoryId));
     const missingBudgets = categories
+      .filter(c => c.type === TransactionType.EXPENSE)
       .filter(c => !existingBudgetIds.has(c.id))
       .map(c => ({ categoryId: c.id, limit: 0, spent: 0 }));
 

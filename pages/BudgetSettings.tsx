@@ -7,6 +7,7 @@ import { Icon } from '../components/Icon';
 import { getCurrencySymbol } from '../utils/currency';
 import { addMoney, formatMoney, parseMoneyInput, sumMoney } from '../utils/money';
 import { flushStorage } from '../utils/storage';
+import { expenseBudgets } from '../utils/expenseBudgets';
 
 const BudgetSettings: React.FC = () => {
   const navigate = useNavigate();
@@ -34,8 +35,9 @@ const BudgetSettings: React.FC = () => {
     return new Map(categories.map(c => [c.id, c] as const));
   }, [categories]);
 
-  const totalBudget = sumMoney(budgets.map(b => b.limit), currency);
-  const totalSpent = sumMoney(budgets.map(b => b.spent), currency);
+  const spendingBudgets = useMemo(() => expenseBudgets(budgets, categories), [budgets, categories]);
+  const totalBudget = sumMoney(spendingBudgets.map(b => b.limit), currency);
+  const totalSpent = sumMoney(spendingBudgets.map(b => b.spent), currency);
   const remaining = addMoney(totalBudget, -totalSpent, currency);
 
   return (
@@ -86,7 +88,7 @@ const BudgetSettings: React.FC = () => {
               </button>
             </div>
           )}
-          {budgets.map((budget) => {
+          {spendingBudgets.map((budget) => {
             const cat = categoryById.get(budget.categoryId);
             if (!cat) return null;
 
