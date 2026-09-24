@@ -7,6 +7,7 @@ import { formatMoney, addMoney, sumMoney } from '../utils/money';
 import { toLocalYMD, parseDate } from '../utils/date';
 import { monthRange, reportTotals, selectReportRows, ReportFilter } from '../utils/reporting';
 import { userTags } from '../utils/tags';
+import { expenseBudgets } from '../utils/expenseBudgets';
 import BottomSheet from '../components/BottomSheet';
 
 interface ReportViewState {
@@ -58,7 +59,7 @@ export default function Reports() {
   }, [rows, filter.currency, preset]);
   const detailRows = useMemo(() => rows.filter(t => t.categoryId === detail && t.type === kind).sort((a, b) => b.date.localeCompare(a.date)), [rows, detail, kind]);
   const amountTotal = kind === TransactionType.EXPENSE ? totals.expense : totals.income;
-  const budget = sumMoney(budgets.map(b => b.limit), currency);
+  const budget = sumMoney(expenseBudgets(budgets, categories).map(b => b.limit), currency);
   const extras = !!(filter.note || filter.tags.length || filter.categories.length || filter.min || filter.max);
   const title = preset === 'month' ? `${Math.floor(month / 12)}年${month % 12 + 1}月` : preset === 'year' ? `${now.getFullYear()}年` : preset === 'all' ? '全部期間' : '自訂期間';
   function moveMonth(next: number) { setMonth(next); setPreset('month'); setFilter(f => ({ ...f, ...monthRange(next) })); setDetail(null); }

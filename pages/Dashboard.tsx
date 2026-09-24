@@ -7,6 +7,9 @@ import { useLedger } from '../contexts/DataContext';
 import { Currency, TransactionType } from '../types';
 import { getCurrencySymbol } from '../utils/currency';
 import { formatMoney, fromMinorUnits, sumMoney, toMinorUnits } from '../utils/money';
+import { parseDate } from '../utils/date';
+import { dashboardTrendPeriods } from '../utils/dashboardPeriods';
+import { expenseBudgets } from '../utils/expenseBudgets';
 
 type PeriodMode = 'month' | 'year';
 
@@ -37,8 +40,8 @@ const Dashboard: React.FC = () => {
 
   const yearsOptions = useMemo(() => {
     const yearsSet = new Set<number>();
-    transactions.forEach(t => yearsSet.add(new Date(t.date).getFullYear()));
-    if (!yearsSet.size) yearsSet.add(now.getFullYear());
+    transactions.forEach(t => { const date = parseDate(t.date); if (date) yearsSet.add(date.getFullYear()); });
+    yearsSet.add(now.getFullYear());
     return Array.from(yearsSet).sort((a, b) => b - a);
   }, [transactions, now]);
 
@@ -46,7 +49,8 @@ const Dashboard: React.FC = () => {
     let income = 0;
     let expense = 0;
     transactions.forEach(t => {
-      const d = new Date(t.date);
+      const d = parseDate(t.date);
+      if (!d) return;
       const txCurrency = (t.currency as Currency) || currency;
       if (txCurrency !== selectedCurrency) return;
 
@@ -73,7 +77,8 @@ const Dashboard: React.FC = () => {
     let income = 0;
     let expense = 0;
     transactions.forEach((transaction) => {
-      const date = new Date(transaction.date);
+      const date = parseDate(transaction.date);
+      if (!date) return;
       const transactionCurrency = (transaction.currency as Currency) || currency;
       if (transactionCurrency !== selectedCurrency || date.getFullYear() !== targetYear) return;
       if (periodMode === 'month' && date.getMonth() !== targetMonth) return;
@@ -96,7 +101,8 @@ const Dashboard: React.FC = () => {
   const pieData = useMemo(() => {
     const map = new Map<string, number>();
     transactions.forEach(t => {
-      const d = new Date(t.date);
+      const d = parseDate(t.date);
+      if (!d) return;
       const txCurrency = (t.currency as Currency) || currency;
       if (txCurrency !== selectedCurrency) return;
       if (d.getFullYear() !== selectedYear) return;
@@ -112,13 +118,14 @@ const Dashboard: React.FC = () => {
       return {
         name: cat?.name || 'Unknown',
         value: fromMinorUnits(val, selectedCurrency),
-        color: cat?.color.replace('bg-', 'text-').replace('text-', '#') || '#8884d8' // Hacky color mapping for demo
+        color: getColorHex(cat?.color || ''),
+        id: catId,
       };
     }).sort((a, b) => b.value - a.value).slice(0, 5); // Top 5
   }, [transactions, categoryById, selectedMonth, selectedYear, currency, selectedCurrency, periodMode]);
 
   // Helper to map Tailwind colors to Hex for Recharts
-  const getColorHex = (tailwindClass: string) => {
+  function getColorHex(tailwindClass: string) {
     // Simple mapping for the demo constants
     if (tailwindClass.includes('red')) return '#ef4444';
     if (tailwindClass.includes('blue')) return '#3b82f6';
@@ -130,43 +137,28 @@ const Dashboard: React.FC = () => {
     if (tailwindClass.includes('emerald')) return '#10b981';
     if (tailwindClass.includes('amber')) return '#f59e0b';
     return '#64748b';
-  };
-
-  const categoryByName = useMemo(() => {
-    return new Map(categories.map(c => [c.name, c] as const));
-  }, [categories]);
-
-  const finalPieData = pieData.map(p => {
-    // Find category to get original tailwind class
-    const cat = categoryByName.get(p.name);
-    return { ...p, color: getColorHex(cat?.color || '') };
-  });
+  }
 
   // 3. Trend Data
   const trendData = useMemo(() => {
     const data: Array<{ month: string; income: number; expense: number }> = [];
-    const points = periodMode === 'year' ? 12 : 6;
-
-    for (let i = points - 1; i >= 0; i--) {
-      const d = new Date();
-      d.setFullYear(selectedYear);
-      d.setMonth(periodMode === 'year' ? i : selectedMonth - i);
-      const monthLabel = `${d.getMonth() + 1}月`;
+    for (const period of dashboardTrendPeriods(selectedYear, selectedMonth, periodMode)) {
 
       let inc = 0;
       let exp = 0;
 
       transactions.forEach(t => {
-        const tDate = new Date(t.date);
+        const tDate = parseDate(t.date);
+        if (!tDate) return;
         const txCurrency = (t.currency as Currency) || currency;
         if (txCurrency !== selectedCurrency) return;
-        if (tDate.getMonth() === d.getMonth() && tDate.getFullYear() === d.getFullYear()) {
+        if (tDate.getMonth() === period.month && tDate.getFullYear() === period.year) {
           if (t.type === TransactionType.INCOME) inc += toMinorUnits(t.amount, selectedCurrency);
           else exp += toMinorUnits(t.amount, selectedCurrency);
         }
       });
       data.push({
-        month: monthLabel,
+        month: period.label,
         income: fromMinorUnits(inc, selectedCurrency),
         expense: fromMinorUnits(exp, selectedCurrency),
       });
@@ -175,11 +167,12 @@ const Dashboard: React.FC = () => {
   }, [transactions, selectedMonth, selectedYear, currency, selectedCurrency, periodMode]);
 
   // Check budget status
-  const totalBudget = sumMoney(budgets.map(b => b.limit), currency);
+  const totalBudget = sumMoney(expenseBudgets(budgets, categories).map(b => b.limit), currency);
   const isOverBudget = periodMode === 'month' && selectedCurrency === currency && periodStats.expense > totalBudget && totalBudget > 0;
   const hasOtherCurrenciesInPeriod = useMemo(() => {
     return transactions.some((t) => {
-      const d = new Date(t.date);
+      const d = parseDate(t.date);
+      if (!d) return false;
       if (d.getFullYear() !== selectedYear) return false;
       if (periodMode === 'month' && d.getMonth() !== selectedMonth) return false;
       const txCurrency = (t.currency as Currency) || currency;
@@ -286,19 +279,19 @@ const Dashboard: React.FC = () => {
       {/* Pie Chart Section */}
       <div className="sf-panel p-4 space-y-3">
         <h3 className="text-lg font-semibold">分類圓餅圖 ({periodMode === 'month' ? '本月' : '本年'})</h3>
-        {finalPieData.length > 0 ? (
+        {pieData.length > 0 ? (
           <div className="h-64 relative">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
                 <Pie
-                  data={finalPieData}
+                  data={pieData}
                   innerRadius={60}
                   outerRadius={80}
                   paddingAngle={5}
                   dataKey="value"
                 >
-                  {finalPieData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.color} stroke="none" />
+                  {pieData.map((entry) => (
+                    <Cell key={entry.id} fill={entry.color} stroke="none" />
                   ))}
                 </Pie>
                 <Tooltip
@@ -315,8 +308,8 @@ const Dashboard: React.FC = () => {
         )}
         {/* Legend */}
         <div className="grid grid-cols-2 gap-2">
-          {finalPieData.map((item) => (
-            <div key={item.name} className="flex items-center gap-2 text-xs">
+          {pieData.map((item) => (
+            <div key={item.id} className="flex items-center gap-2 text-xs">
               <div className="w-3 h-3 rounded-full" style={{ backgroundColor: item.color }} />
               <div className="flex flex-col">
                 <span className="text-gray-300">{item.name}</span>
