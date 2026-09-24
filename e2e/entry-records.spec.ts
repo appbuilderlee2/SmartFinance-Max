@@ -31,6 +31,7 @@ test('record search, currency subtotals and history survive a detail round trip'
 
 test('switching transaction type requires a matching category', async ({ page }) => {
   await page.goto('/#/add');
+  await page.getByRole('button', { name: '查看全部' }).click();
   await page.getByRole('button', { name: '餐飲', exact: true }).click();
   await page.getByRole('button', { name: '收入', exact: true }).click();
   await page.getByRole('button', { name: '儲存', exact: true }).click();
