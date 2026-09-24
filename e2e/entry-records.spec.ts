@@ -6,6 +6,8 @@ test('record search, currency subtotals and history survive a detail round trip'
   await page.getByRole('button', { name: '2', exact: true }).click();
   await page.getByRole('button', { name: '5', exact: true }).click();
   await page.getByRole('button', { name: '完成輸入' }).click();
+  await expect(page.getByLabel('交易日期')).toBeVisible();
+  await page.getByRole('button', { name: '查看全部' }).click();
   await page.getByLabel('搜尋分類').fill('餐');
   await page.getByRole('button', { name: '餐飲', exact: true }).click();
   await page.getByRole('button', { name: /詳細資訊/ }).click();
