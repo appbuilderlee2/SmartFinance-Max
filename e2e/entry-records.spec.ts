@@ -7,10 +7,9 @@ test('record search, currency subtotals and history survive a detail round trip'
   await page.getByRole('button', { name: '5', exact: true }).click();
   await page.getByRole('button', { name: '完成輸入' }).click();
   await expect(page.getByLabel('交易日期')).toBeVisible();
-  await page.getByRole('button', { name: '查看全部' }).click();
-  await page.getByLabel('搜尋分類').fill('餐');
-  await page.getByRole('button', { name: '餐飲', exact: true }).click();
   await page.getByRole('button', { name: /詳細資訊/ }).click();
+  await page.getByLabel('搜尋分類').fill('餐');
+  await page.locator('.sf-category-search-results').getByRole('button', { name: '餐飲', exact: true }).click();
   await page.getByPlaceholder('輸入備註...').fill('午餐搜尋測試');
   await page.getByRole('button', { name: '儲存', exact: true }).click();
   await expect(page).toHaveURL(/#\/records$/);
@@ -31,7 +30,6 @@ test('record search, currency subtotals and history survive a detail round trip'
 
 test('switching transaction type requires a matching category', async ({ page }) => {
   await page.goto('/#/add');
-  await page.getByRole('button', { name: '查看全部' }).click();
   await page.getByRole('button', { name: '餐飲', exact: true }).click();
   await page.getByRole('button', { name: '收入', exact: true }).click();
   await page.getByRole('button', { name: '儲存', exact: true }).click();

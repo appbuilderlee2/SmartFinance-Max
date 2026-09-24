@@ -54,19 +54,16 @@ const EntryForm: React.FC<{ initialDraft: EntryDraft | null }> = ({ initialDraft
   const [showDetails, setShowDetails] = useState(initialDraft?.showDetails || false);
 
   const [categoryQuery, setCategoryQuery] = useState('');
-  const [showAllCategories, setShowAllCategories] = useState(false);
   const [formError, setFormError] = useState('');
   const categoryOptions = useMemo(() => {
     const latest = new Map<string, number>();
     for (const tx of transactions) {
       if (tx.type === transactionType) latest.set(tx.categoryId, Math.max(latest.get(tx.categoryId) || 0, parseDate(tx.date)?.getTime() || 0));
     }
-    return categories.filter(c => c.type === transactionType && c.name.toLocaleLowerCase().includes(categoryQuery.trim().toLocaleLowerCase()))
+    return categories.filter(c => c.type === transactionType)
       .sort((a, b) => (latest.get(b.id) || 0) - (latest.get(a.id) || 0));
-  }, [categories, transactions, transactionType, categoryQuery]);
-  const recentCategories = categoryOptions.slice(0, 4);
-  const visibleCategories = showAllCategories ? categoryOptions : selectedCategory && !recentCategories.some(c => c.id === selectedCategory)
-    ? [...recentCategories.slice(0, 3), ...categoryOptions.filter(c => c.id === selectedCategory)] : recentCategories;
+  }, [categories, transactions, transactionType]);
+  const matchingCategories = categoryQuery.trim() ? categoryOptions.filter(c => c.name.toLocaleLowerCase().includes(categoryQuery.trim().toLocaleLowerCase())) : [];
   const changeType = (type: TransactionType) => { setTransactionType(type); setSelectedCategory(null); setCategoryQuery(''); setFormError(''); };
 
   useEffect(() => {
@@ -196,13 +193,9 @@ const EntryForm: React.FC<{ initialDraft: EntryDraft | null }> = ({ initialDraft
 
         {/* Categories Grid */}
         <div>
-          <div className="flex items-center justify-between mb-2">
-            <h3 className="text-gray-400 text-sm ml-1">{transactionType === TransactionType.EXPENSE ? '支出分類' : '收入分類'} · 最近使用</h3>
-            <button type="button" aria-expanded={showAllCategories} onClick={() => { setShowAllCategories(value => !value); setCategoryQuery(''); }} className="text-primary text-sm min-h-11 px-2">{showAllCategories ? '收起' : '查看全部'}</button>
-          </div>
-          {showAllCategories && <input aria-label="搜尋分類" placeholder="搜尋分類" className="sf-field mb-3" value={categoryQuery} onChange={event => setCategoryQuery(event.target.value)} />}
+          <h3 className="text-gray-400 text-sm mb-2 ml-1">{transactionType === TransactionType.EXPENSE ? '支出分類' : '收入分類'} · 最近使用優先</h3>
           <div className="sf-category-grid">
-            {visibleCategories.map(cat => (
+            {categoryOptions.map(cat => (
               <button
                 key={cat.id}
                 aria-pressed={selectedCategory === cat.id}
@@ -219,12 +212,12 @@ const EntryForm: React.FC<{ initialDraft: EntryDraft | null }> = ({ initialDraft
               </button>
             ))}
             {/* Add New Category Button */}
-            {showAllCategories && <button onClick={() => navigate('/categories')} className="flex flex-col items-center gap-2">
+            <button onClick={() => navigate('/categories')} className="flex flex-col items-center gap-2">
               <div className="w-12 h-12 rounded-full sf-control text-primary flex items-center justify-center active:scale-95 transition-transform">
                 <Plus size={24} />
               </div>
               <span className="text-[10px] text-gray-500">新增</span>
-            </button>}
+            </button>
           </div>
         </div>
 
@@ -259,6 +252,14 @@ const EntryForm: React.FC<{ initialDraft: EntryDraft | null }> = ({ initialDraft
 
           {showDetails && (
             <div className="space-y-3 mt-3">
+              <div>
+                <label htmlFor="entry-category-search" className="block text-gray-400 text-sm mb-2 ml-1">搜尋分類</label>
+                <input id="entry-category-search" placeholder="搜尋分類" className="sf-field" value={categoryQuery} onChange={event => setCategoryQuery(event.target.value)} />
+                {categoryQuery.trim() && <div className="sf-category-search-results mt-2 sf-panel rounded-xl overflow-hidden">
+                  {matchingCategories.length ? matchingCategories.map(cat => <button key={cat.id} type="button" aria-pressed={selectedCategory === cat.id} onClick={() => { setSelectedCategory(cat.id); setCategoryQuery(''); setFormError(''); }} className="w-full min-h-11 px-4 py-2 text-left text-gray-200 border-b border-white/10 last:border-0">{cat.name}</button>)
+                    : <p className="px-4 py-3 text-sm text-gray-400">找不到分類</p>}
+                </div>}
+              </div>
               {/* Currency */}
               <div className="w-full sf-control rounded-xl p-4 flex items-center justify-between">
                 <span className="text-gray-400 text-sm">幣別</span>
