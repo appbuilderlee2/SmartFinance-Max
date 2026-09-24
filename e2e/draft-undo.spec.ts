@@ -4,6 +4,7 @@ test('draft survives navigation and reload, clears after durable save, and delet
   await page.getByRole('button',{name:'輸入金額'}).click();
   await page.getByRole('button',{name:'7',exact:true}).click();
   await page.getByRole('button',{name:'完成輸入'}).click();
+  await page.getByRole('button',{name:'查看全部'}).click();
   await page.getByRole('button',{name:'餐飲',exact:true}).click();
   await page.getByRole('button',{name:/詳細資訊/}).click();
   await page.getByPlaceholder('輸入備註...').fill('保留草稿測試');
@@ -31,6 +32,7 @@ test('failed database write keeps the form and retries without a duplicate', asy
   await page.getByRole('button',{name:'輸入金額'}).click();
   await page.getByRole('button',{name:'8',exact:true}).click();
   await page.getByRole('button',{name:'完成輸入'}).click();
+  await page.getByRole('button',{name:'查看全部'}).click();
   await page.getByRole('button',{name:'餐飲',exact:true}).click();
   await page.getByRole('button',{name:/詳細資訊/}).click();
   await page.getByPlaceholder('輸入備註...').fill('失敗重試唯一帳目');
