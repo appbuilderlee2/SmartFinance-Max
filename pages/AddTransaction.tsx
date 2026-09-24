@@ -13,7 +13,6 @@ import { rememberTags } from '../utils/tagHistory';
 import TagPicker from '../components/TagPicker';
 import { localYMDToStoredISOString, toLocalYMD, parseDate } from '../utils/date';
 import { parseMoneyInput } from '../utils/money';
-import { showAppConfirm } from '../utils/appDialog';
 
 const AddTransaction: React.FC = () => {
   const { transactions } = useData();
@@ -55,6 +54,7 @@ const EntryForm: React.FC<{ initialDraft: EntryDraft | null }> = ({ initialDraft
   const [showDetails, setShowDetails] = useState(initialDraft?.showDetails || false);
 
   const [categoryQuery, setCategoryQuery] = useState('');
+  const [showAllCategories, setShowAllCategories] = useState(false);
   const [formError, setFormError] = useState('');
   const categoryOptions = useMemo(() => {
     const latest = new Map<string, number>();
@@ -64,6 +64,9 @@ const EntryForm: React.FC<{ initialDraft: EntryDraft | null }> = ({ initialDraft
     return categories.filter(c => c.type === transactionType && c.name.toLocaleLowerCase().includes(categoryQuery.trim().toLocaleLowerCase()))
       .sort((a, b) => (latest.get(b.id) || 0) - (latest.get(a.id) || 0));
   }, [categories, transactions, transactionType, categoryQuery]);
+  const recentCategories = categoryOptions.slice(0, 4);
+  const visibleCategories = showAllCategories ? categoryOptions : selectedCategory && !recentCategories.some(c => c.id === selectedCategory)
+    ? [...recentCategories.slice(0, 3), ...categoryOptions.filter(c => c.id === selectedCategory)] : recentCategories;
   const changeType = (type: TransactionType) => { setTransactionType(type); setSelectedCategory(null); setCategoryQuery(''); setFormError(''); };
 
   useEffect(() => {
@@ -146,15 +149,14 @@ const EntryForm: React.FC<{ initialDraft: EntryDraft | null }> = ({ initialDraft
   return (
     <div className="sf-entry-page min-h-screen bg-background flex flex-col pt-safe-top pb-safe-bottom">
       {/* Header */}
-      <div className="px-4 py-3 flex justify-between items-center sf-topbar sticky top-0 z-10">
-        <button onClick={() => navigate(-1)} className="text-primary text-base">取消</button>
+      <div className="px-4 py-3 grid grid-cols-[1fr_auto_1fr] items-center sf-topbar sticky top-0 z-10">
+        <button onClick={() => navigate(-1)} className="text-primary text-base justify-self-start">取消</button>
         <h2 className="text-lg font-semibold text-white">新增帳目</h2>
-        <div className="w-14" />
+        <span aria-hidden="true" />
       </div>
 
-      <fieldset disabled={saving} className="sf-entry-content p-4 space-y-6 flex-1 pb-56 min-w-0">
-        <div className="sf-draft-status"><span>{draftWarning ? '草稿暫時未能保存，請勿關閉頁面' : '草稿保存在此裝置，儲存成功後清除'}</span>
-        <button type="button" onClick={() => { void (async () => { if (transactions.some(tx => tx.id === draftId.current)) { setFormError('此帳目已提交，請先重試完成儲存，再到記錄編輯或刪除。'); return; } if (!await showAppConfirm('清除目前尚未提交的記帳內容。', { title: '清除草稿？', confirmLabel: '清除草稿', destructive: true })) return; if (!await clearEntryDraft()) { setFormError('草稿未能清除，請重試'); return; } saved.current = true; window.location.reload(); })(); }}>清除草稿</button></div>
+      <fieldset disabled={saving} className="sf-entry-content p-4 space-y-4 flex-1 pb-56 min-w-0">
+        {draftWarning && <p role="alert" className="text-sm text-amber-400">草稿暫時未能保存，請勿關閉頁面</p>}
         {/* Transaction Type Toggle */}
         <div className="flex sf-control rounded-xl p-1">
           <button
@@ -181,7 +183,7 @@ const EntryForm: React.FC<{ initialDraft: EntryDraft | null }> = ({ initialDraft
           type="button"
           aria-label="輸入金額"
           onClick={() => setIsNumPadOpen(true)}
-          className={`sf-entry-amount sf-card w-full py-8 px-4 flex flex-col items-center justify-center mb-4 transition-colors duration-300 cursor-pointer ${transactionType === TransactionType.INCOME ? 'bg-green-500/10 border border-green-500/20' : ''
+          className={`sf-entry-amount sf-card w-full py-4 px-4 flex flex-col items-center justify-center transition-colors duration-300 cursor-pointer ${transactionType === TransactionType.INCOME ? 'bg-green-500/10 border border-green-500/20' : ''
           }`}>
           <span className="sf-entry-caption">{transactionType === TransactionType.EXPENSE ? '支出金額' : '收入金額'} · {txCurrency}</span>
           <div className="sf-entry-number flex items-baseline text-white">
@@ -194,13 +196,13 @@ const EntryForm: React.FC<{ initialDraft: EntryDraft | null }> = ({ initialDraft
 
         {/* Categories Grid */}
         <div>
-          <h3 className="text-gray-400 text-sm mb-3 ml-1">
-            {transactionType === TransactionType.EXPENSE ? '支出分類' : '收入分類'}
-          </h3>
-          <input aria-label="搜尋分類" placeholder="搜尋分類" className="sf-field mb-3" value={categoryQuery} onChange={event => setCategoryQuery(event.target.value)} />
-          <p className="sf-entry-caption mb-3">最近使用的分類優先顯示</p>
+          <div className="flex items-center justify-between mb-2">
+            <h3 className="text-gray-400 text-sm ml-1">{transactionType === TransactionType.EXPENSE ? '支出分類' : '收入分類'} · 最近使用</h3>
+            <button type="button" aria-expanded={showAllCategories} onClick={() => { setShowAllCategories(value => !value); setCategoryQuery(''); }} className="text-primary text-sm min-h-11 px-2">{showAllCategories ? '收起' : '查看全部'}</button>
+          </div>
+          {showAllCategories && <input aria-label="搜尋分類" placeholder="搜尋分類" className="sf-field mb-3" value={categoryQuery} onChange={event => setCategoryQuery(event.target.value)} />}
           <div className="sf-category-grid">
-            {categoryOptions.map(cat => (
+            {visibleCategories.map(cat => (
               <button
                 key={cat.id}
                 aria-pressed={selectedCategory === cat.id}
@@ -217,12 +219,12 @@ const EntryForm: React.FC<{ initialDraft: EntryDraft | null }> = ({ initialDraft
               </button>
             ))}
             {/* Add New Category Button */}
-            <button onClick={() => navigate('/categories')} className="flex flex-col items-center gap-2">
+            {showAllCategories && <button onClick={() => navigate('/categories')} className="flex flex-col items-center gap-2">
               <div className="w-12 h-12 rounded-full sf-control text-primary flex items-center justify-center active:scale-95 transition-transform">
                 <Plus size={24} />
               </div>
               <span className="text-[10px] text-gray-500">新增</span>
-            </button>
+            </button>}
           </div>
         </div>
 
