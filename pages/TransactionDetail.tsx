@@ -179,9 +179,7 @@ const TransactionDetail: React.FC = () => {
                                  ? `${cat.color} ring-2 ring-white scale-110`
                                  : 'bg-gray-700 text-gray-400'
                               }`}>
-                              {cat.icon.startsWith('emoji:')
-                                 ? <span className="text-lg">{cat.icon.replace('emoji:', '')}</span>
-                                 : <Icon name={cat.icon} size={20} />}
+                              <Icon name={cat.icon} size={20} />
                            </div>
                            <span className={`text-xs ${cat.id === selectedCategory ? 'text-white' : 'text-gray-500'}`}>{cat.name}</span>
                         </button>

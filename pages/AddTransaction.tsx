@@ -182,7 +182,6 @@ const EntryForm: React.FC<{ initialDraft: EntryDraft | null }> = ({ initialDraft
           onClick={() => setIsNumPadOpen(true)}
           className={`sf-entry-amount sf-card w-full py-4 px-4 flex flex-col items-center justify-center transition-colors duration-300 cursor-pointer ${transactionType === TransactionType.INCOME ? 'bg-green-500/10 border border-green-500/20' : ''
           }`}>
-          <span className="sf-entry-caption">{transactionType === TransactionType.EXPENSE ? '支出金額' : '收入金額'} · {txCurrency}</span>
           <div className="sf-entry-number flex items-baseline text-white">
             <span className="text-3xl mr-2 text-gray-400">{getCurrencySymbol(txCurrency)}</span>
             <span className={`text-6xl font-light tracking-tight ${!amount || amount === '0' ? 'text-gray-600' : 'text-white'}`}>
@@ -204,9 +203,7 @@ const EntryForm: React.FC<{ initialDraft: EntryDraft | null }> = ({ initialDraft
               >
                 <div className={`w-12 h-12 rounded-full flex items-center justify-center transition-all duration-300 ${selectedCategory === cat.id ? cat.color + ' text-white scale-110 shadow-lg ring-2 ring-white/20' : 'sf-control text-gray-400 group-active:scale-95'
                   }`}>
-                  {cat.icon.startsWith('emoji:')
-                    ? <span className="text-lg">{cat.icon.replace('emoji:', '')}</span>
-                    : <Icon name={cat.icon} size={20} />}
+                  <Icon name={cat.icon} size={20} />
                 </div>
                 <span className={`sf-category-name transition-colors ${selectedCategory === cat.id ? 'text-white' : 'text-gray-500'}`}>{cat.name}</span>
               </button>

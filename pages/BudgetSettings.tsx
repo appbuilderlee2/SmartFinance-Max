@@ -98,13 +98,7 @@ const BudgetSettings: React.FC = () => {
             return (
               <div key={budget.categoryId} className="sf-panel p-4 rounded-xl">
                 <div className="flex items-center gap-3 mb-3">
-                  {cat.icon.startsWith('emoji:') ? (
-                    <span className={`text-2xl ${cat.color.replace('bg-', 'text-')}`}>
-                      {cat.icon.replace('emoji:', '')}
-                    </span>
-                  ) : (
-                    <Icon name={cat.icon} className={cat.color.replace('bg-', 'text-')} size={24} />
-                  )}
+                  <Icon name={cat.icon} className={cat.color.replace('bg-', 'text-')} size={24} />
                   <span className="font-medium flex-1">{cat.name}</span>
                   <span className="text-sm text-gray-300">{formatMoney(budget.spent, currency)} / {formatMoney(budget.limit, currency)}</span>
                 </div>

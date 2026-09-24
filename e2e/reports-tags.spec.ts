@@ -72,3 +72,17 @@ test('tag merge previews affected records and persists without changing notes', 
   await page.getByRole('button', {name:'完成選擇'}).click();
   await expect(page.getByRole('button', {name:'移除標籤 新標籤'})).toBeVisible();
 });
+
+test('deleting a tag removes it from transactions but keeps the transactions', async ({ page }) => {
+  await seed(page);
+  await page.goto('/#/settings/tags');
+  await page.getByRole('button', { name: '刪除標籤 假期' }).click();
+  await expect(page.getByRole('alertdialog', { name: '刪除標籤？' })).toContainText('交易本身不會刪除');
+  await page.getByRole('alertdialog', { name: '刪除標籤？' }).getByRole('button', { name: '刪除標籤' }).click();
+  await expect(page.getByRole('button', { name: '整理標籤 假期' })).toHaveCount(0);
+  await page.reload();
+  await expect(page.getByRole('button', { name: '整理標籤 假期' })).toHaveCount(0);
+  await page.goto('/#/records');
+  await expect(page.getByText('午餐測試')).toBeVisible();
+  await expect(page.getByText('咖啡測試')).toBeVisible();
+});

@@ -1,4 +1,5 @@
 import { readJson, writeJson } from './storage';
+import { tagKey } from './tags';
 
 const TAG_HISTORY_KEY = 'sf.tagHistory.v1';
 const MAX_TAGS_DEFAULT = 50;
@@ -46,10 +47,10 @@ export function rememberTags(tags: string[], maxTags = MAX_TAGS_DEFAULT): void {
 }
 
 export function deleteTagFromHistory(tag: string, maxTags = MAX_TAGS_DEFAULT): void {
-  const t = normalizeTag(tag);
-  if (!t) return;
+  const key = tagKey(tag);
+  if (!key) return;
   const prev = loadTagHistory(maxTags);
-  const next = prev.filter(x => x !== t);
+  const next = prev.filter(x => tagKey(x) !== key);
   writeJson(TAG_HISTORY_KEY, { mru: next.slice(0, Math.max(1, maxTags)) } satisfies TagHistory);
 }
 

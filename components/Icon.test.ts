@@ -12,5 +12,6 @@ describe('icon registry', () => {
     expect(isSupportedIcon('HelpCircle')).toBe(true);
     expect(isSupportedIcon('Image')).toBe(true);
     expect(isSupportedIcon('emoji:🍔')).toBe(true);
+    expect(isSupportedIcon('emoji-image:data:image/png;base64,AAAA')).toBe(true);
   });
 });

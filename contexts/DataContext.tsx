@@ -2,8 +2,8 @@ import { captureDeletion, restoreDeletion, type DeletedTransaction } from '../ut
 import { BACKUP_EXPORT_MARKER } from '../utils/backupReminder';
 import { clearEntryDraft } from '../utils/entryDraft';
 import { writeJson } from '../utils/storage';
-import { renameTransactionTags, tagKey, normalizeTag, uniqueTags } from '../utils/tags';
-import { loadTagHistory } from '../utils/tagHistory';
+import { renameTransactionTags, removeTransactionTag, tagKey, normalizeTag, uniqueTags } from '../utils/tags';
+import { loadTagHistory, deleteTagFromHistory } from '../utils/tagHistory';
 import { observeLocalDay } from '../utils/dayBoundary';
 
 import React, { createContext, useContext, useState, useEffect, useMemo, useRef } from 'react';
@@ -85,6 +85,7 @@ interface DataContextType {
   updateTransaction: (id: string, tx: Partial<Transaction>) => void;
   deleteTransaction: (id: string) => void;
   renameTag: (source: string, target: string) => void;
+  deleteTag: (source: string) => Promise<void>;
   addSubscription: (sub: Omit<Subscription, 'id'>) => void;
   updateSubscription: (id: string, updates: Partial<Subscription>) => void;
   deleteSubscription: (id: string) => void;
@@ -274,6 +275,11 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (!name) return;
     setTransactions(previous => renameTransactionTags(previous, source, name));
     writeJson('sf.tagHistory.v1', { mru: uniqueTags(loadTagHistory().map(tag => tagKey(tag) === tagKey(source) ? name : tag)) });
+  };
+  const deleteTag = async (source: string) => {
+    if (!tagKey(source)) return;
+    await persistCoreChange(() => setTransactions(previous => removeTransactionTag(previous, source)));
+    deleteTagFromHistory(source);
   };
 
   const updateTransaction = (id: string, updatedFields: Partial<Transaction>) => {
@@ -593,6 +599,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       deleteTransaction,
       updateTransaction,
       renameTag,
+      deleteTag,
       getCategory,
       addCategory,
       deleteCategory,
