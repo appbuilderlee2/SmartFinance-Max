@@ -1,6 +1,7 @@
 import { captureDeletion, restoreDeletion, type DeletedTransaction } from '../utils/transactionUndo';
 import { BACKUP_EXPORT_MARKER } from '../utils/backupReminder';
 import { clearEntryDraft } from '../utils/entryDraft';
+import { pinCurrency } from '../utils/ledgerCurrency';
 import { writeJson } from '../utils/storage';
 import { renameTransactionTags, removeTransactionTag, tagKey, normalizeTag, uniqueTags } from '../utils/tags';
 import { loadTagHistory, deleteTagFromHistory } from '../utils/tagHistory';
@@ -25,7 +26,7 @@ import { parseDate, isSameMonth, toLocalYMD } from '../utils/date';
 import { canUseReplacement, getCategoryUsage, reassignCategoryReferences } from '../utils/categoryIntegrity';
 import { processDueSubscriptions } from '../utils/subscriptionProcessing';
 import { fromMinorUnits, toMinorUnits } from '../utils/money';
-import { processDueRecurringTransactions, removeRecurringOccurrence } from '../utils/recurringTransactions';
+import { processDueRecurringTransactions, removeRecurringOccurrence, editRecurringTransactions } from '../utils/recurringTransactions';
 import { resetSecurityCache } from '../utils/security';
 import { loadCycles, migrateCreditCardCurrencies, saveCycles } from '../utils/creditCardCycleStorage';
 import { showAppAlert, showAppConfirm } from '../utils/appDialog';
@@ -79,7 +80,7 @@ interface DataContextType {
   storageBackend: StorageBackend;
   addTransaction: (tx: Omit<Transaction, 'id'>) => void;
   saveTransaction: (tx: Transaction) => Promise<void>;
-  saveEditedTransaction: (id: string, fields: Partial<Transaction>) => Promise<void>;
+  saveEditedTransaction: (id: string, fields: Partial<Transaction>, scope?: 'only' | 'future') => Promise<void>;
   saveBudgetLimit: (categoryId: string, limit: number) => Promise<void>;
   saveCreditCardChange: (card: CreditCard) => Promise<void>;
   updateTransaction: (id: string, tx: Partial<Transaction>) => void;
@@ -133,6 +134,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [storageReady, setStorageReady] = useState(false);
   const [storageBackend, setStorageBackend] = useState<StorageBackend>('indexeddb');
   const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [deletedIds, setDeletedIds] = useState<string[]>([]);
   const saveWaiters = useRef(new Map<string, { row: Transaction; resolve: (ok: boolean) => void }>());
   const changeWaiters = useRef<Array<(ok: boolean) => void>>([]);
   const [changeRevision, setChangeRevision] = useState(0);
@@ -163,11 +165,12 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       try { result = await initializeStorage(); }
       catch (error) { if (active) setLoadError(error instanceof Error ? error.message : '資料庫載入失敗'); return; }
       if (!active) return;
-      setTransactions(readJson<Transaction[]>('smartfinance_transactions') ?? []);
+      const loadedCurrency = (readText('smartfinance_currency') as Currency) || Currency.HKD;
+      setTransactions(pinCurrency(readJson<Transaction[]>('smartfinance_transactions') ?? [], loadedCurrency));
+      setDeletedIds(readJson<string[]>('smartfinance_deleted_transaction_ids') ?? []);
       setCategories(normalizeCategories(readJson<Category[]>('smartfinance_categories') ?? CATEGORIES));
       setBudgets(readJson<Budget[]>('smartfinance_budgets') ?? []);
-      setSubscriptions(readJson<Subscription[]>('smartfinance_subscriptions') ?? []);
-      const loadedCurrency = (readText('smartfinance_currency') as Currency) || Currency.HKD;
+      setSubscriptions(pinCurrency(readJson<Subscription[]>('smartfinance_subscriptions') ?? [], loadedCurrency));
       const migration = migrateCreditCardCurrencies(readJson<CreditCard[]>('smartfinance_creditcards') ?? [], loadCycles(), loadedCurrency);
       setCurrencyState(loadedCurrency);
       setCreditCards(migration.cards);
@@ -190,8 +193,9 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       smartfinance_subscriptions: JSON.stringify(subscriptions),
       smartfinance_creditcards: JSON.stringify(creditCards),
       smartfinance_currency: currency,
+      smartfinance_deleted_transaction_ids: JSON.stringify(deletedIds),
     }).then(ok => { for (const [id, waiter] of waiters) { if (saveWaiters.current.get(id) === waiter) { saveWaiters.current.delete(id); waiter.resolve(ok); } } changes.forEach(resolve => resolve(ok)); });
-  }, [storageReady, transactions, categories, budgets, subscriptions, creditCards, currency, changeRevision]);
+  }, [storageReady, transactions, categories, budgets, subscriptions, creditCards, currency, changeRevision, deletedIds]);
 
   // Budget Spending Logic (recalculate spent whenever transactions/categories/currency change)
   // Improvement: avoid JSON.stringify object-wide compare and reduce repeated date parsing.
@@ -260,8 +264,10 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (!await committed) throw new Error('儲存失敗，請重試。');
     await flushStorage();
   };
-  const saveEditedTransaction = (id: string, fields: Partial<Transaction>) =>
-    persistCoreChange(() => updateTransaction(id, fields));
+  const saveEditedTransaction = (id: string, fields: Partial<Transaction>, scope: 'only' | 'future' = 'only') => {
+    const next = editRecurringTransactions(transactions, id, fields, scope);
+    return persistCoreChange(() => setTransactions(next));
+  };
   const saveBudgetLimit = (id: string, limit: number) =>
     persistCoreChange(() => updateBudget(id, limit));
   const saveCreditCardChange = (card: CreditCard) =>
@@ -288,6 +294,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const deleteTransaction = (id: string) => {
+    setDeletedIds(previous => [...new Set([...previous, id])]);
     setDeleted(captureDeletion(transactions, id)); setUndoError('');
     setTransactions(prev => removeRecurringOccurrence(prev, id));
   };
@@ -303,7 +310,10 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setUndoSaving(true);
     setUndoError('');
     try {
-      await persistCoreChange(() => setTransactions(previous => restoreDeletion(previous, target)));
+      await persistCoreChange(() => {
+        setTransactions(previous => restoreDeletion(previous, target));
+        setDeletedIds(previous => previous.filter(id => id !== target.row.id));
+      });
       setDeleted(current => current === target ? null : current);
     } catch {
       setUndoError('復原未能儲存，請重試。');
@@ -452,6 +462,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // Reset in-memory state to truly empty, so "記錄" 不會殘留舊資料
     // (and avoid subscription auto-post creating new transactions immediately).
     setTransactions([]);
+    setDeletedIds([]);
     setCategories(CATEGORIES);
     setBudgets([]); // will be auto-synced to categories with limit 0
     setSubscriptions([]);
@@ -541,12 +552,12 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const existing = new Set(previous.flatMap((transaction) => {
         if (!transaction.recurrenceSourceId) return [];
         const date = parseDate(transaction.date);
-        return date ? [`${transaction.recurrenceSourceId}:${toLocalYMD(date)}`] : [];
+        return date ? [`${transaction.recurrenceSourceId}:${transaction.recurrenceOccurrenceDate || toLocalYMD(date)}`] : [];
       }));
       const missing = result.transactions.filter((transaction) => {
         const date = parseDate(transaction.date);
         const key = date && transaction.recurrenceSourceId
-          ? `${transaction.recurrenceSourceId}:${toLocalYMD(date)}`
+          ? `${transaction.recurrenceSourceId}:${transaction.recurrenceOccurrenceDate || toLocalYMD(date)}`
           : '';
         if (!key || existing.has(key)) return false;
         existing.add(key);

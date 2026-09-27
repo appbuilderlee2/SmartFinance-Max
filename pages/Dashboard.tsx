@@ -113,7 +113,7 @@ const Dashboard: React.FC = () => {
       }
     });
 
-    return Array.from(map.entries()).map(([catId, val]) => {
+    const groups = Array.from(map.entries()).map(([catId, val]) => {
       const cat = categoryById.get(catId);
       return {
         name: cat?.name || 'Unknown',
@@ -121,7 +121,8 @@ const Dashboard: React.FC = () => {
         color: getColorHex(cat?.color || ''),
         id: catId,
       };
-    }).sort((a, b) => b.value - a.value).slice(0, 5); // Top 5
+    }).sort((a, b) => b.value - a.value);
+    return groups.length > 5 ? [...groups.slice(0, 5), { id: '__other', name: '其他', color: '#64748b', value: sumMoney(groups.slice(5).map(group => group.value), selectedCurrency) }] : groups;
   }, [transactions, categoryById, selectedMonth, selectedYear, currency, selectedCurrency, periodMode]);
 
   // Helper to map Tailwind colors to Hex for Recharts

@@ -14,7 +14,7 @@ export function getCategoryUsage(
   budgets: Budget[],
 ): CategoryUsage {
   return {
-    transactionCount: transactions.filter((item) => item.categoryId === categoryId).length,
+    transactionCount: transactions.filter((item) => item.categoryId === categoryId || item.recurrenceTemplate?.categoryId === categoryId).length,
     subscriptionCount: subscriptions.filter((item) => item.categoryId === categoryId).length,
     hasBudget: budgets.some((item) => item.categoryId === categoryId && item.limit !== 0),
   };
@@ -43,9 +43,10 @@ export function reassignCategoryReferences(
     });
 
   return {
-    transactions: transactions.map((item) => item.categoryId === sourceId
-      ? { ...item, categoryId: replacementId }
-      : item),
+    transactions: transactions.map((item) => ({ ...item,
+      categoryId: item.categoryId === sourceId ? replacementId : item.categoryId,
+      ...(item.recurrenceTemplate ? { recurrenceTemplate: { ...item.recurrenceTemplate, categoryId: item.recurrenceTemplate.categoryId === sourceId ? replacementId : item.recurrenceTemplate.categoryId } } : {}),
+    })),
     subscriptions: subscriptions.map((item) => item.categoryId === sourceId
       ? { ...item, categoryId: replacementId }
       : item),

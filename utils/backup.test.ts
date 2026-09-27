@@ -115,6 +115,7 @@ describe('backup integrity', () => {
     const incoming = { smartfinance_transactions: JSON.stringify([{ ...tx, id: 'b', amount: 30 }, { ...tx, id: 'c' }]) };
     const rows = JSON.parse(mergeBackupSnapshots(current, incoming).smartfinance_transactions);
     expect(rows.map((row: { id: string }) => row.id)).toEqual(['a', 'b', 'c']);
-    expect(rows[1].amount).toBe(30);
+    expect(rows[1].amount).toBe(12);
+    expect(JSON.parse(mergeBackupSnapshots(current, incoming, { conflict: 'incoming' }).smartfinance_transactions)[1].amount).toBe(30);
   });
 });

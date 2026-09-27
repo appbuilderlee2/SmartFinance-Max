@@ -1,8 +1,10 @@
 import React, { FormEvent, useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { getActiveAppDialog, resolveAppDialog, subscribeAppDialog } from '../utils/appDialog';
+import { useVisibleViewport } from './useVisibleViewport';
 
 const AppDialogHost: React.FC = () => {
   const dialog = useSyncExternalStore(subscribeAppDialog, getActiveAppDialog);
+  const viewport = useVisibleViewport();
   const dialogRef = useRef<HTMLElement>(null);
   const [value, setValue] = useState('');
   const [validationError, setValidationError] = useState('');
@@ -48,8 +50,8 @@ const AppDialogHost: React.FC = () => {
     resolveAppDialog(value);
   };
 
-  return <div className="fixed inset-0 z-[220] flex items-end justify-center bg-black/60 p-4 backdrop-blur-sm sm:items-center" style={{ paddingBottom: 'max(1rem, env(safe-area-inset-bottom))' }} data-testid="app-dialog-backdrop">
-    <section key={dialog.id} ref={dialogRef} role={dialog.type === 'alert' || dialog.type === 'confirm' ? 'alertdialog' : 'dialog'} aria-modal="true" aria-labelledby={titleId} aria-describedby={messageId} className="sf-panel w-full max-w-md rounded-3xl border border-white/10 p-5 shadow-2xl sm:p-6">
+  return <div className="fixed inset-0 z-[220] flex items-end justify-center bg-black/60 p-4 backdrop-blur-sm sm:items-center" style={{ paddingBottom: 'max(1rem, env(safe-area-inset-bottom))', ...(viewport ? { top: viewport.top, height: viewport.height, bottom: 'auto' } : {}) }} data-testid="app-dialog-backdrop">
+    <section key={dialog.id} ref={dialogRef} role={dialog.type === 'alert' || dialog.type === 'confirm' ? 'alertdialog' : 'dialog'} aria-modal="true" aria-labelledby={titleId} aria-describedby={messageId} className="sf-panel w-full max-w-md max-h-full overflow-y-auto rounded-3xl border border-white/10 p-5 shadow-2xl sm:p-6">
       <h2 id={titleId} className="text-lg font-semibold text-white">{dialog.title}</h2>
       <p id={messageId} className="mt-2 whitespace-pre-line text-sm leading-6 text-gray-300">{dialog.message}</p>
       {dialog.type === 'prompt' ? <form onSubmit={submitPrompt} className="mt-4 space-y-3">

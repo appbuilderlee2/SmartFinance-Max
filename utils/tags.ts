@@ -16,9 +16,9 @@ export function renameTransactionTags(rows: Transaction[], source: string, targe
   const name = normalizeTag(target);
   if (!name) return rows;
   return rows.map(tx => {
-    if (!userTags(tx).some(tag => tagKey(tag) === tagKey(source))) return tx;
+    if (!userTags(tx).some(tag => tagKey(tag) === tagKey(source)) && !tx.recurrenceTemplate?.tags?.some(tag => tagKey(tag) === tagKey(source))) return tx;
     const system = tx.subscriptionId && tx.tags?.includes('subscription') ? ['subscription'] : [];
-    return { ...tx, tags: [...system, ...uniqueTags(userTags(tx).map(tag => tagKey(tag) === tagKey(source) ? name : tag))] };
+    return { ...tx, ...(tx.recurrenceTemplate ? { recurrenceTemplate: { ...tx.recurrenceTemplate, tags: uniqueTags((tx.recurrenceTemplate.tags || []).map(tag => tagKey(tag) === tagKey(source) ? name : tag)) } } : {}), tags: [...system, ...uniqueTags(userTags(tx).map(tag => tagKey(tag) === tagKey(source) ? name : tag))] };
   });
 }
 
@@ -26,8 +26,8 @@ export function removeTransactionTag(rows: Transaction[], source: string): Trans
   const key = tagKey(source);
   if (!key) return rows;
   return rows.map(tx => {
-    if (!userTags(tx).some(tag => tagKey(tag) === key)) return tx;
+    if (!userTags(tx).some(tag => tagKey(tag) === key) && !tx.recurrenceTemplate?.tags?.some(tag => tagKey(tag) === key)) return tx;
     const system = tx.subscriptionId && tx.tags?.includes('subscription') ? ['subscription'] : [];
-    return { ...tx, tags: [...system, ...userTags(tx).filter(tag => tagKey(tag) !== key)] };
+    return { ...tx, ...(tx.recurrenceTemplate ? { recurrenceTemplate: { ...tx.recurrenceTemplate, tags: tx.recurrenceTemplate.tags?.filter(tag => tagKey(tag) !== key) } } : {}), tags: [...system, ...userTags(tx).filter(tag => tagKey(tag) !== key)] };
   });
 }

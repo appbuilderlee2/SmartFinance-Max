@@ -7,11 +7,14 @@ import { useData } from '../contexts/DataContext';
 import { Icon } from '../components/Icon';
 import { getCurrencySymbol } from '../utils/currency';
 import { Currency, RecurrenceFrequency, TransactionType } from '../types';
-import { localYMDToStoredISOString, toLocalYMD } from '../utils/date';
+import { localYMDToStoredISOString, toLocalYMD, parseDate } from '../utils/date';
 import { rememberTags } from '../utils/tagHistory';
 import TagPicker from '../components/TagPicker';
 import { parseMoneyInput } from '../utils/money';
-import { showAppAlert } from '../utils/appDialog';
+import { showAppAlert, showAppConfirm } from '../utils/appDialog';
+import { chooseRecurrenceStart } from '../utils/recurrenceChoice';
+import { editRecurringTransactions, processDueRecurringTransactions } from '../utils/recurringTransactions';
+import { MAX_RECEIPT_BYTES } from '../utils/entryDraft';
 
 const TransactionDetail: React.FC = () => {
    const { id } = useParams();
@@ -26,6 +29,8 @@ const TransactionDetail: React.FC = () => {
    const fileInputRef = useRef<HTMLInputElement>(null);
 
    const tx = transactions.find(t => t.id === id);
+   const source = tx?.recurrenceSourceId ? transactions.find(t => t.id === tx.recurrenceSourceId) : tx;
+   const [scope, setScope] = useState<'only' | 'future'>('only');
 
    // Local state for editing
    const [amount, setAmount] = useState(tx?.amount?.toString() || '0');
@@ -33,8 +38,8 @@ const TransactionDetail: React.FC = () => {
    const [note, setNote] = useState(tx?.note || '');
    const [tags, setTags] = useState<string[]>(tx ? userTags(tx) : []);
    const [receiptUrl, setReceiptUrl] = useState<string | undefined>(tx?.receiptUrl);
-   const [recurrence, setRecurrence] = useState<RecurrenceFrequency | 'none'>(tx?.recurrence || 'none');
-   const [date, setDate] = useState(tx?.date ? toLocalYMD(new Date(tx.date)) : '');
+   const [recurrence, setRecurrence] = useState<RecurrenceFrequency | 'none'>(source?.recurrence || 'none');
+   const [date, setDate] = useState(tx?.date ? toLocalYMD(parseDate(tx.date)!) : '');
    const [txCurrency, setTxCurrency] = useState<Currency>((tx?.currency as Currency) || currency);
 
    // Keep local edit state in sync when route param changes.
@@ -48,8 +53,9 @@ const TransactionDetail: React.FC = () => {
       setNote(tx.note || '');
       setTags(userTags(tx));
       setReceiptUrl(tx.receiptUrl);
-      setRecurrence(tx.recurrence || 'none');
-      setDate(tx.date ? toLocalYMD(new Date(tx.date)) : '');
+      setRecurrence(source?.recurrence || 'none');
+      setScope('only');
+      setDate(tx.date ? toLocalYMD(parseDate(tx.date)!) : '');
       setTxCurrency(((tx.currency as Currency) || currency) as Currency);
    }, [id, tx?.id]);
 
@@ -86,7 +92,7 @@ const TransactionDetail: React.FC = () => {
 
       setSaving(true);
       try {
-      await saveEditedTransaction(tx.id, {
+      const changes = {
          amount: amountValue,
          categoryId: selectedCategory || tx.categoryId,
          note,
@@ -97,7 +103,19 @@ const TransactionDetail: React.FC = () => {
          date: storedDate,
          type: transactionType,
          currency: txCurrency
-      });
+      };
+      let recurrenceFrom: string | undefined;
+      if (source?.recurrence && scope === 'future') {
+         const next = editRecurringTransactions(transactions, tx.id, changes, scope);
+         const removed = transactions.length - next.length;
+         const generated = processDueRecurringTransactions({ transactions: next, makeTransactionId: () => 'preview' }).transactions;
+         if (!await showAppConfirm(`將更新本次，並重建同系列之後的 ${removed} 筆已生成帳目（包括對它們的個別修改）。按新設定會補建 ${generated.length} 筆；更早的帳目保留。`, { title: '修改本次及以後', confirmLabel: '確認更新' })) return;
+      } else if (!source?.recurrence) {
+         const start = await chooseRecurrenceStart({ ...tx, ...changes }, transactions.filter(item => item.id !== tx.id));
+         if (start === null) return;
+         recurrenceFrom = start;
+      }
+      await saveEditedTransaction(tx.id, { ...changes, recurrenceFrom }, scope);
       navigate(-1);
       } catch (error) {
          setSaveError(error instanceof Error ? error.message : '儲存失敗，請重試');
@@ -107,10 +125,12 @@ const TransactionDetail: React.FC = () => {
    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
       const file = e.target.files?.[0];
       if (file) {
+         if (!file.type.startsWith('image/') || file.size > MAX_RECEIPT_BYTES) { setSaveError('請選擇不超過 5 MB 的圖片收據'); return; }
          const reader = new FileReader();
          reader.onloadend = () => {
             setReceiptUrl(reader.result as string);
          };
+         reader.onerror = () => setSaveError('收據讀取失敗，請重試');
          reader.readAsDataURL(file);
       }
    };
@@ -214,6 +234,7 @@ const TransactionDetail: React.FC = () => {
 
                <div className="p-4 space-y-2">
                   <span className="text-white text-base">週期性帳目</span>
+                  {source?.recurrence && <label className="block text-sm text-gray-400">修改範圍<select aria-label="週期修改範圍" value={scope} onChange={event => setScope(event.target.value as 'only' | 'future')} className="sf-control block w-full p-3 rounded-xl mt-2"><option value="only">只改本次</option><option value="future">本次及以後</option></select></label>}
                   <div className="flex sf-control rounded-xl p-1">
                      {([
                         ['none', '無'],
@@ -224,6 +245,7 @@ const TransactionDetail: React.FC = () => {
                         <button
                            key={value}
                            type="button"
+                           disabled={Boolean(source?.recurrence && scope === 'only')}
                            onClick={() => setRecurrence(value)}
                            className={`flex-1 py-2 rounded-lg text-sm ${recurrence === value ? 'bg-primary text-white' : 'text-gray-400'}`}
                         >
@@ -231,7 +253,7 @@ const TransactionDetail: React.FC = () => {
                         </button>
                      ))}
                   </div>
-                  {tx.recurrenceSourceId && <p className="text-xs text-gray-500">此帳目由週期設定自動建立；修改只影響本次。</p>}
+                  {source?.recurrence && <p className="text-xs text-gray-500">{scope === 'only' ? '只更新本次內容，保留原本週期、金額及分類設定供之後期數使用。' : '更早帳目保留；本次及之後會按新日期、金額及週期重新建立。'}</p>}
                </div>
 
                {/* Receipt Editing */}

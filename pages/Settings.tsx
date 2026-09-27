@@ -8,7 +8,7 @@ import { useData } from '../contexts/DataContext';
 import { toLocalYMD } from '../utils/date';
 import { forceReloadPwa } from '../utils/pwa';
 import {
-  backupToCsv, mergeBackupSnapshots, validateBackupSnapshot,
+  backupToCsv, mergeBackupSnapshots, previewBackupMerge, validateBackupSnapshot,
   createBackupFromSnapshot,
   parseBackupCsv,
   parseBackupJson,
@@ -20,6 +20,7 @@ import { ALL_CURRENCIES, loadPreferences, savePreferences, type AppPreferences }
 import { Currency } from '../types';
 import { createPinSecurity, disablePinSecurity, loadSecuritySettings, saveSecuritySettings, verifyPin, type SecuritySettings } from '../utils/security';
 import { showAppAlert, showAppChoice, showAppConfirm, showAppPrompt } from '../utils/appDialog';
+import { pinSnapshotCurrencies } from '../utils/ledgerCurrency';
 
 type Notice = { tone: 'success' | 'warning' | 'info'; text: string } | null;
 
@@ -203,11 +204,31 @@ const Settings: React.FC = () => {
       return;
     }
 
+    await flushStorage();
+    const current = getStorageSnapshot();
+    let conflict: 'current' | 'incoming' = 'current';
+    let restoreDeleted = false;
+    if (mode === 'merge') {
+      const preview = previewBackupMerge(current, backup.storage);
+      const choice = await showAppChoice(`新增 ${preview.added} 項；內容衝突 ${preview.conflicts} 項；已刪除交易 ${preview.deleted} 筆。\n新增項目可能包含舊版未記錄刪除狀態的帳目，請確認備份日期。\n現有偏好及安全設定會保留。`, [
+        { label: '保留現有版本並合併', value: 'current' },
+        { label: '衝突項目使用備份版本', value: 'incoming', destructive: true },
+      ], '預覽合併');
+      if (choice !== 'current' && choice !== 'incoming') return;
+      conflict = choice;
+      if (preview.deleted) {
+        const deletedChoice = await showAppChoice(`備份含有 ${preview.deleted} 筆你已刪除的交易。`, [
+          { label: '維持刪除', value: 'skip' }, { label: '恢復這些交易', value: 'restore', destructive: true },
+        ], '已刪除交易');
+        if (!deletedChoice) return;
+        restoreDeleted = deletedChoice === 'restore';
+      }
+    }
     // Always give the user a recovery file before any destructive replacement.
     if (!await exportBackup('json', 'smartfinance_還原前自動備份')) return;
     const next = mode === 'merge'
-      ? mergeBackupSnapshots(getStorageSnapshot(), backup.storage)
-      : backup.storage;
+      ? mergeBackupSnapshots(current, backup.storage, { conflict, restoreDeleted })
+      : pinSnapshotCurrencies(backup.storage);
     validateBackupSnapshot(next);
     await replaceStorageSnapshot(next);
     await showAppAlert(`${mode === 'merge' ? '合併' : '取代'}完成，App 將重新載入。`);
