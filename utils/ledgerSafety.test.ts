@@ -29,6 +29,8 @@ test('merge preserves conflicts and deleted rows unless explicitly requested', (
   expect(JSON.parse(restored.smartfinance_transactions)).toHaveLength(3);
   expect(JSON.parse(restored.smartfinance_transactions)[0].amount).toBe(10);
   expect(restored.smartfinance_deleted_transaction_ids).toBe('[]');
+  const migrated = mergeBackupSnapshots({}, { ...incoming, smartfinance_deleted_transaction_ids: '["past-deletion","new"]' });
+  expect(JSON.parse(migrated.smartfinance_deleted_transaction_ids)).toEqual(['past-deletion']);
 });
 
 test('next-only recurring source does not backfill earlier months after single edit', () => {

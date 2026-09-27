@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 
-const row = { id: 'old', amount: 100, date: '2025-01-10', type: 'EXPENSE', categoryId: 'food', note: '原有帳目', tags: ['舊標籤'] };
+const row = { id: 'old', amount: 100, date: '2025-01-10', type: 'EXPENSE', categoryId: '1', note: '原有帳目', tags: ['舊標籤'] };
 async function seed(page: Page) {
   await page.addInitScript(value => {
     if (localStorage.getItem('safety_seed')) return;

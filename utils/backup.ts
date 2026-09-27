@@ -320,6 +320,11 @@ export function mergeBackupSnapshots(current: Record<string, string>, incoming: 
     });
     result[key] = JSON.stringify([...rows.values()]);
   });
+  // Retain deletion history from an imported device without deleting live rows.
+  const liveIds = new Set(JSON.parse(result.smartfinance_transactions || '[]').map((row: { id: string }) => row.id));
+  for (const id of JSON.parse(incoming.smartfinance_deleted_transaction_ids || '[]')) {
+    if (!liveIds.has(id)) removed.add(id);
+  }
   result.smartfinance_deleted_transaction_ids = JSON.stringify([...removed]);
   validateBackupSnapshot(result);
   return result;
