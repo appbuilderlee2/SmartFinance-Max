@@ -38,6 +38,7 @@ function advanceOccurrence(date: Date, frequency: RecurrenceFrequency, anchorDay
 }
 
 function transactionYmd(transaction: Transaction): string | null {
+  if (transaction.recurrenceOccurrenceDate) return transaction.recurrenceOccurrenceDate;
   const date = parseDate(transaction.date);
   return date ? toLocalYMD(date) : null;
 }
@@ -58,7 +59,8 @@ export function processDueRecurringTransactions(input: ProcessInput): ProcessRes
   );
 
   sources.forEach((source) => {
-    const start = parseDate(source.date);
+    const template = { ...source, ...source.recurrenceTemplate };
+    const start = parseDate(template.date);
     if (!start || !source.recurrence) return;
 
     const anchorDay = start.getDate();
@@ -67,16 +69,21 @@ export function processDueRecurringTransactions(input: ProcessInput): ProcessRes
 
     while (toLocalYMD(occurrence) <= todayYmd && steps < MAX_STEPS_PER_SOURCE) {
       const dueYmd = toLocalYMD(occurrence);
+      if (source.recurrenceUntil && dueYmd >= source.recurrenceUntil) break;
       const key = `${source.id}:${dueYmd}`;
-      if (!existingOccurrences.has(key) && !source.skippedDates?.includes(dueYmd)) {
+      if ((!source.recurrenceFrom || dueYmd >= source.recurrenceFrom) && !existingOccurrences.has(key) && !source.skippedDates?.includes(dueYmd)) {
         generated.push({
-          ...source,
+          ...template,
           id: input.makeTransactionId(),
           date: dueYmd,
           isRecurring: true,
           recurrence: undefined,
           skippedDates: undefined,
           recurrenceSourceId: source.id,
+          recurrenceOccurrenceDate: dueYmd,
+          recurrenceTemplate: undefined,
+          recurrenceFrom: undefined,
+          recurrenceUntil: undefined,
           receiptUrl: undefined,
           subscriptionId: undefined,
         });
@@ -88,6 +95,36 @@ export function processDueRecurringTransactions(input: ProcessInput): ProcessRes
   });
 
   return { transactions: generated, changed: generated.length > 0 };
+}
+
+export function editRecurringTransactions(rows: Transaction[], id: string, changes: Partial<Transaction>, scope: 'only' | 'future'): Transaction[] {
+  const row = rows.find(tx => tx.id === id);
+  if (!row) return rows;
+  const source = row.recurrenceSourceId ? rows.find(tx => tx.id === row.recurrenceSourceId) : row;
+  if (!source?.recurrence) return rows.map(tx => tx.id === id ? { ...tx, ...changes, ...(changes.recurrence ? { recurrenceSourceId: undefined, recurrenceOccurrenceDate: undefined } : {}) } : tx);
+  const template = source.recurrenceTemplate || {
+    amount: source.amount, date: source.date, note: source.note, categoryId: source.categoryId,
+    type: source.type, currency: source.currency, tags: source.tags,
+  };
+  if (scope === 'only') return rows.map(tx => tx.id !== id ? tx : {
+    ...tx, ...changes, recurrence: tx.recurrence,
+    isRecurring: true,
+    recurrenceFrom: tx.recurrenceFrom,
+    recurrenceUntil: tx.recurrenceUntil,
+    recurrenceTemplate: row.id === source.id ? template : undefined,
+    recurrenceOccurrenceDate: row.recurrenceSourceId ? transactionYmd(row)! : undefined,
+  });
+  const boundary = row.id === source.id ? toLocalYMD(parseDate(template.date)!) : transactionYmd(row)!;
+  if (toLocalYMD(parseDate(changes.date || row.date)!) < boundary) throw new Error('修改本次及以後時，日期不可早於原本期數；如只需移動單次日期，請選「只改本次」。');
+  return rows.filter(tx => !(tx.id !== id && tx.recurrenceSourceId === source.id && (transactionYmd(tx) || '') >= boundary)).map(tx => {
+    if (tx.id === id) return {
+      ...tx, ...changes, recurrenceSourceId: undefined, recurrenceOccurrenceDate: undefined,
+      recurrenceTemplate: undefined, recurrenceUntil: source.recurrenceUntil,
+      recurrenceFrom: changes.recurrenceFrom,
+      skippedDates: source.skippedDates?.filter(day => day >= boundary),
+    };
+    return tx.id === source.id ? { ...tx, recurrenceUntil: boundary } : tx;
+  });
 }
 
 export function removeRecurringOccurrence(transactions: Transaction[], id: string): Transaction[] {

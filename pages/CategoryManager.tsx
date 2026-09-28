@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { ChevronLeft, GripVertical, Plus, Trash2, Edit2, X } from 'lucide-react';
 import { useData } from '../contexts/DataContext';
 import { CATEGORY_ICON_NAMES, EMOJI_IMAGE_PREFIX, Icon, isEmojiImageIcon } from '../components/Icon';
+import { useVisibleViewport } from '../components/useVisibleViewport';
 import { TransactionType, Category } from '../types';
 import { makeId } from '../utils/id';
 import { getCategoryUsage } from '../utils/categoryIntegrity';
@@ -21,6 +22,7 @@ const AVAILABLE_EMOJIS = [
 ];
 
 const CategoryManager: React.FC = () => {
+   const viewport = useVisibleViewport();
    const navigate = useNavigate();
    const { categories, transactions, subscriptions, budgets, deleteCategory, addCategory, updateCategory, reorderCategories } = useData();
    const [activeTab, setActiveTab] = useState<TransactionType>(TransactionType.EXPENSE);
@@ -349,8 +351,8 @@ const CategoryManager: React.FC = () => {
 
          {/* Add/Edit Modal */}
          {showModal && (
-            <div role="dialog" aria-modal="true" aria-label={editingCategory ? '編輯分類' : '新增分類'} className="fixed inset-0 bg-black/70 z-50 flex items-end">
-               <div className="sf-panel w-full max-h-[90dvh] overflow-y-auto rounded-t-3xl p-6 pb-safe-bottom animate-slide-up">
+            <div role="dialog" aria-modal="true" aria-label={editingCategory ? '編輯分類' : '新增分類'} style={viewport ? { top: viewport.top, height: viewport.height, bottom: 'auto' } : undefined} className="fixed inset-0 bg-black/70 z-50 flex items-end">
+               <div className="sf-panel w-full max-h-[90%] overflow-y-auto rounded-t-3xl p-6 pb-safe-bottom animate-slide-up">
                   <div className="flex justify-between items-center mb-6">
                      <h3 className="text-lg font-semibold text-white">
                         {editingCategory ? '編輯分類' : '新增分類'}

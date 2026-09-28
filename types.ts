@@ -24,6 +24,10 @@ export interface Transaction {
   isRecurring?: boolean;
   recurrence?: RecurrenceFrequency;
   recurrenceSourceId?: string;
+  recurrenceOccurrenceDate?: string;
+  recurrenceFrom?: string;
+  recurrenceUntil?: string;
+  recurrenceTemplate?: Pick<Transaction, 'amount' | 'date' | 'note' | 'categoryId' | 'type' | 'currency' | 'tags'>;
   skippedDates?: string[]; // Deliberately deleted occurrences, retained on the source
   receiptUrl?: string;
   tags?: string[];

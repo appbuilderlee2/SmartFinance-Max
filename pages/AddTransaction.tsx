@@ -13,6 +13,7 @@ import { rememberTags } from '../utils/tagHistory';
 import TagPicker from '../components/TagPicker';
 import { localYMDToStoredISOString, toLocalYMD, parseDate } from '../utils/date';
 import { parseMoneyInput } from '../utils/money';
+import { chooseRecurrenceStart } from '../utils/recurrenceChoice';
 
 const AddTransaction: React.FC = () => {
   const { transactions } = useData();
@@ -103,7 +104,7 @@ const EntryForm: React.FC<{ initialDraft: EntryDraft | null }> = ({ initialDraft
 
     savingRef.current = true; setSaving(true);
     try {
-    await saveTransaction({
+    const row = {
       id: draftId.current,
       amount: amountValue,
       categoryId: selectedCategory!,
@@ -116,7 +117,10 @@ const EntryForm: React.FC<{ initialDraft: EntryDraft | null }> = ({ initialDraft
       receiptUrl: receiptPreview || undefined,
       tags: tags,
       currency: txCurrency
-    });
+    };
+    const recurrenceFrom = await chooseRecurrenceStart(row, transactions);
+    if (recurrenceFrom === null) return;
+    await saveTransaction({ ...row, recurrenceFrom });
 
     saved.current = true;
     if (!await clearEntryDraft()) setDraftWarning(true);

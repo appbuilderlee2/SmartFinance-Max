@@ -6,7 +6,7 @@ export function captureDeletion(rows: Transaction[], id: string): DeletedTransac
   if (!row) return null;
   const source = rows.find(tx => tx.id === row.recurrenceSourceId);
   const date = parseDate(row.date);
-  const ymd = date ? toLocalYMD(date) : null;
+  const ymd = row.recurrenceOccurrenceDate || (date ? toLocalYMD(date) : null);
   return { row, addedSkip: source && ymd && !source.skippedDates?.includes(ymd) ? ymd : null };
 }
 export function restoreDeletion(rows: Transaction[], deleted: DeletedTransaction): Transaction[] {

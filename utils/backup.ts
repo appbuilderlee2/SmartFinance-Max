@@ -1,4 +1,5 @@
 import { parseDate, parseLocalYMD } from './date';
+import { pinSnapshotCurrencies } from './ledgerCurrency';
 export const BACKUP_FORMAT = 'smartfinance-backup';
 export const BACKUP_VERSION = 2;
 
@@ -28,6 +29,10 @@ export function isAppStorageKey(key: string): boolean {
 }
 
 function validateStoredValue(key: string, value: string): void {
+  if (key === 'smartfinance_deleted_transaction_ids') {
+    const ids = JSON.parse(value);
+    if (!Array.isArray(ids) || ids.some(id => typeof id !== 'string')) throw new Error('已刪除交易記錄格式不正確');
+  }
   if (ARRAY_KEYS.has(key)) {
     const parsed = JSON.parse(value) as unknown;
     if (!Array.isArray(parsed)) throw new Error(`${key} 必須係陣列`);
@@ -47,6 +52,13 @@ function validateStoredValue(key: string, value: string): void {
         if (!['INCOME', 'EXPENSE'].includes(row.type)) fail('type');
         if (row.recurrence !== undefined && !['weekly', 'biweekly', 'monthly'].includes(row.recurrence)) fail('recurrence');
         string('recurrenceSourceId', false); string('subscriptionId', false); string('receiptUrl', false);
+        for (const field of ['recurrenceFrom', 'recurrenceUntil', 'recurrenceOccurrenceDate']) {
+          if (row[field] !== undefined && !parseLocalYMD(row[field])) fail(field);
+        }
+        if (row.recurrenceTemplate !== undefined) {
+          if (!row.recurrenceTemplate || typeof row.recurrenceTemplate !== 'object' || Array.isArray(row.recurrenceTemplate) || row.recurrenceTemplate.recurrenceTemplate !== undefined) fail('recurrenceTemplate');
+          validateStoredValue(key, JSON.stringify([{ ...row.recurrenceTemplate, id: 'template' }]));
+        }
         if (row.tags !== undefined && (!Array.isArray(row.tags) || row.tags.some((tag: unknown) => typeof tag !== 'string'))) fail('tags');
         if (row.skippedDates !== undefined && (!Array.isArray(row.skippedDates) || row.skippedDates.some((day: unknown) => typeof day !== 'string' || !parseLocalYMD(day)))) fail('skippedDates');
       } else if (key === 'smartfinance_categories') {
@@ -264,20 +276,56 @@ export function validateBackupSnapshot(storage: Record<string, string>): void {
         const category = byId.get(row.categoryId);
         if (!category) throw new Error(`${key}：分類 ${row.categoryId} 不存在`);
         if (row.type && row.type !== category.type) throw new Error(`${key}：分類收入／支出類型不符`);
+        if (row.recurrenceTemplate) {
+          const templateCategory = byId.get(row.recurrenceTemplate.categoryId);
+          if (!templateCategory || templateCategory.type !== row.recurrenceTemplate.type) throw new Error('週期範本分類不存在或類型不符');
+        }
       }
     }
   }
 }
 
-export function mergeBackupSnapshots(current: Record<string, string>, incoming: Record<string, string>): Record<string, string> {
-  const result = { ...current, ...incoming };
+export type MergeOptions = { conflict?: 'current' | 'incoming'; restoreDeleted?: boolean };
+export function previewBackupMerge(current: Record<string, string>, incoming: Record<string, string>) {
+  let added = 0, conflicts = 0, deleted = 0;
+  const removed = new Set<string>(JSON.parse(current.smartfinance_deleted_transaction_ids || '[]'));
   ARRAY_KEYS.forEach(key => {
-    if (!current[key] || !incoming[key]) return;
     const idKey = key === 'smartfinance_budgets' ? 'categoryId' : 'id';
-    const rows = new Map(JSON.parse(current[key]).map((row: Record<string, unknown>) => [row[idKey], row]));
-    JSON.parse(incoming[key]).forEach((row: Record<string, unknown>) => rows.set(row[idKey], row));
+    const rows = new Map(JSON.parse(current[key] || '[]').map((row: Record<string, unknown>) => [row[idKey], row]));
+    for (const row of JSON.parse(incoming[key] || '[]')) {
+      if (key === 'smartfinance_transactions' && removed.has(row.id)) { deleted++; continue; }
+      if (!rows.has(row[idKey])) added++;
+      else if (JSON.stringify(rows.get(row[idKey])) !== JSON.stringify(row)) conflicts++;
+    }
+  });
+  return { added, conflicts, deleted };
+}
+
+export function mergeBackupSnapshots(current: Record<string, string>, incoming: Record<string, string>, options: MergeOptions = {}): Record<string, string> {
+  current = pinSnapshotCurrencies(current);
+  incoming = pinSnapshotCurrencies(incoming);
+  // Merging entities does not silently replace device preferences or security settings.
+  const result = { ...incoming, ...current };
+  const removed = new Set<string>(JSON.parse(current.smartfinance_deleted_transaction_ids || '[]'));
+  ARRAY_KEYS.forEach(key => {
+    if (!incoming[key]) return;
+    const idKey = key === 'smartfinance_budgets' ? 'categoryId' : 'id';
+    const rows = new Map(JSON.parse(current[key] || '[]').map((row: Record<string, unknown>) => [row[idKey], row]));
+    JSON.parse(incoming[key]).forEach((row: Record<string, unknown>) => {
+      if (key === 'smartfinance_transactions' && removed.has(row.id as string)) {
+        if (!options.restoreDeleted) return;
+        removed.delete(row.id as string);
+      }
+      if (!rows.has(row[idKey]) || options.conflict === 'incoming') rows.set(row[idKey], row);
+    });
     result[key] = JSON.stringify([...rows.values()]);
   });
+  // Retain deletion history from an imported device without deleting live rows.
+  const liveIds = new Set(JSON.parse(result.smartfinance_transactions || '[]').map((row: { id: string }) => row.id));
+  for (const id of JSON.parse(incoming.smartfinance_deleted_transaction_ids || '[]')) {
+    if (!liveIds.has(id)) removed.add(id);
+  }
+  result.smartfinance_deleted_transaction_ids = JSON.stringify([...removed]);
   validateBackupSnapshot(result);
   return result;
 }

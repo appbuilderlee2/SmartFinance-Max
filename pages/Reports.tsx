@@ -24,9 +24,9 @@ export default function Reports() {
   const { transactions, categories, currency, budgets } = useLedger();
   const now = new Date(), thisMonth = now.getFullYear() * 12 + now.getMonth();
   const [month, setMonth] = useState(saved?.month ?? thisMonth);
-  const [preset, setPreset] = useState(saved?.preset ?? 'month');
+  const [preset, setPreset] = useState(saved?.preset ?? (params.get('tag') ? 'all' : 'month'));
   const initialTag = params.get('tag');
-  const [filter, setFilter] = useState<ReportFilter>(() => saved?.filter ?? ({ ...monthRange(thisMonth), currency, note: '', tags: initialTag ? [initialTag] : [], categories: [], min: '', max: '' }));
+  const [filter, setFilter] = useState<ReportFilter>(() => saved?.filter ?? ({ ...(initialTag ? { start: '', end: '' } : monthRange(thisMonth)), currency, note: '', tags: initialTag ? [initialTag] : [], categories: [], min: '', max: '' }));
   const [draft, setDraft] = useState(filter);
   const [draftPreset, setDraftPreset] = useState(preset);
   const [sheet, setSheet] = useState(false);
