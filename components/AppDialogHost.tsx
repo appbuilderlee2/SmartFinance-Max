@@ -1,19 +1,17 @@
 import React, { FormEvent, useEffect, useRef, useState, useSyncExternalStore } from 'react';
-import { getActiveAppDialog, resolveAppDialog, subscribeAppDialog } from '../utils/appDialog';
+import { getActiveAppDialog, resolveAppDialog, subscribeAppDialog, type AppDialogRequest } from '../utils/appDialog';
 import { useVisibleViewport } from './useVisibleViewport';
 
 const AppDialogHost: React.FC = () => {
   const dialog = useSyncExternalStore(subscribeAppDialog, getActiveAppDialog);
+  return dialog ? <ActiveDialog key={dialog.id} dialog={dialog} /> : null;
+};
+
+const ActiveDialog: React.FC<{ dialog: AppDialogRequest }> = ({ dialog }) => {
   const viewport = useVisibleViewport();
   const dialogRef = useRef<HTMLElement>(null);
-  const [value, setValue] = useState('');
+  const [value, setValue] = useState(() => dialog.type === 'prompt' ? dialog.defaultValue : '');
   const [validationError, setValidationError] = useState('');
-
-  useEffect(() => {
-    if (dialog?.type !== 'prompt') { setValue(''); setValidationError(''); return; }
-    setValue(dialog.defaultValue);
-    setValidationError('');
-  }, [dialog?.id]);
 
   useEffect(() => {
     if (!dialog) return;
