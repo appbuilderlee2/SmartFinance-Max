@@ -1,4 +1,5 @@
 import { userTags } from '../utils/tags';
+import { parseDate } from '../utils/date';
 
 import React, { useMemo } from 'react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
@@ -36,7 +37,7 @@ const TransactionView: React.FC = () => {
   const recurrence = transaction.recurrence || recurrenceSource?.recurrence;
 
   const isExpense = transaction.type === TransactionType.EXPENSE;
-  const formattedDate = new Date(transaction.date).toLocaleString('zh-TW', {
+  const formattedDate = (parseDate(transaction.date) || new Date(NaN)).toLocaleString('zh-TW', {
     year: 'numeric',
     month: 'long',
     day: 'numeric',

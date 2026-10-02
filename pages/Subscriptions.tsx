@@ -3,7 +3,7 @@ import React, { useMemo, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { ChevronLeft, Plus, Pencil } from 'lucide-react';
 import { useData } from '../contexts/DataContext';
-import { toLocalYMD } from '../utils/date';
+import { toLocalYMD, calendarDaysUntil } from '../utils/date';
 import { formatMoney, roundMoney, sumMoney } from '../utils/money';
 import { Currency } from '../types';
 
@@ -122,9 +122,7 @@ const Subscriptions: React.FC = () => {
                ) : (
                   filteredSubs.map(sub => {
                      const catName = categoryById.get(sub.categoryId || '')?.name || '未分類';
-                     const daysLeft = sub.nextBillingDate
-                        ? Math.ceil((new Date(sub.nextBillingDate).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))
-                        : null;
+                     const daysLeft = calendarDaysUntil(sub.nextBillingDate);
                      const iconEmoji = sub.icon?.startsWith('emoji:') ? sub.icon.replace('emoji:', '') : (sub.icon || getSubIcon(sub.name));
                      return (
                      <div key={sub.id} className="sf-panel p-4 flex items-center justify-between">

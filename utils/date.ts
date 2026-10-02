@@ -64,3 +64,10 @@ export function parseDate(value: unknown): Date | null {
 export function isSameMonth(d: Date, month: number, year: number): boolean {
   return d.getMonth() === month && d.getFullYear() === year;
 }
+
+/** Calendar-day difference, unaffected by daylight-saving days lasting 23/25 hours. */
+export function calendarDaysUntil(ymd: string, now = new Date()): number | null {
+  const due = parseLocalYMD(ymd);
+  if (!due) return null;
+  return (Date.UTC(due.getFullYear(), due.getMonth(), due.getDate()) - Date.UTC(now.getFullYear(), now.getMonth(), now.getDate())) / 86400000;
+}
