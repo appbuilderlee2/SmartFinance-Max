@@ -8,6 +8,7 @@ const STORE_NAME = 'draft';
 export interface EntryDraft {
   id: string; amount: string; selectedCategory: string | null; note: string;
   date: string; recurrence: RecurrenceFrequency | 'none'; receiptPreview: string | null;
+  dateMode?: 'today' | 'manual';
   tags: string[]; transactionType: TransactionType; txCurrency: Currency; showDetails: boolean;
 }
 

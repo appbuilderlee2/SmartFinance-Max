@@ -14,6 +14,8 @@ import TagPicker from '../components/TagPicker';
 import { localYMDToStoredISOString, toLocalYMD, parseDate } from '../utils/date';
 import { parseMoneyInput } from '../utils/money';
 import { chooseRecurrenceStart } from '../utils/recurrenceChoice';
+import { resolveEntryDate } from '../utils/entryDate';
+import { observeLocalDay } from '../utils/dayBoundary';
 
 const AddTransaction: React.FC = () => {
   const { transactions } = useData();
@@ -40,13 +42,15 @@ const EntryForm: React.FC<{ initialDraft: EntryDraft | null }> = ({ initialDraft
   // State for NumPad visibility
   const [isNumPadOpen, setIsNumPadOpen] = useState(false);
 
-  // Fix date initialization to account for local timezone
-  const getTodayString = () => toLocalYMD(new Date());
-
   const [amount, setAmount] = useState<string>(initialDraft?.amount || '');
   const [selectedCategory, setSelectedCategory] = useState<string | null>(initialDraft?.selectedCategory || null);
   const [note, setNote] = useState(initialDraft?.note || '');
-  const [date, setDate] = useState(initialDraft?.date || getTodayString());
+  const [dateMode, setDateMode] = useState<'today' | 'manual'>(initialDraft?.dateMode === 'manual' ? 'manual' : 'today');
+  const [date, setDate] = useState(() => resolveEntryDate(initialDraft?.date, initialDraft?.dateMode));
+  useEffect(() => observeLocalDay(today => {
+    if (dateMode === 'today' && !savingRef.current) setDate(today);
+  }), [dateMode]);
+  const changeDate = (value: string) => { setDateMode('manual'); setDate(value); };
   const [recurrence, setRecurrence] = useState<RecurrenceFrequency | 'none'>(initialDraft?.recurrence || 'none');
   const [receiptPreview, setReceiptPreview] = useState<string | null>(initialDraft?.receiptPreview || null);
   const [tags, setTags] = useState<string[]>(initialDraft?.tags || []);
@@ -70,10 +74,10 @@ const EntryForm: React.FC<{ initialDraft: EntryDraft | null }> = ({ initialDraft
   useEffect(() => {
     if (saved.current) return;
     let active = true;
-    void saveEntryDraft({ id: draftId.current, amount, selectedCategory, note, date, recurrence, receiptPreview, tags, transactionType, txCurrency, showDetails })
+    void saveEntryDraft({ id: draftId.current, amount, selectedCategory, note, date, dateMode, recurrence, receiptPreview, tags, transactionType, txCurrency, showDetails })
       .then(ok => { if (active) setDraftWarning(!ok); });
     return () => { active = false; };
-  }, [amount, selectedCategory, note, date, recurrence, receiptPreview, tags, transactionType, txCurrency, showDetails]);
+  }, [amount, selectedCategory, note, date, dateMode, recurrence, receiptPreview, tags, transactionType, txCurrency, showDetails]);
 
   const handleSave = async () => {
     if (savingRef.current) return;
@@ -91,7 +95,7 @@ const EntryForm: React.FC<{ initialDraft: EntryDraft | null }> = ({ initialDraft
       setFormError("請選擇日期");
       return;
     }
-    const storedDate = localYMDToStoredISOString(date);
+    const storedDate = localYMDToStoredISOString(resolveEntryDate(date, dateMode));
     if (!storedDate) {
       setFormError("日期格式不正確");
       return;
@@ -224,14 +228,14 @@ const EntryForm: React.FC<{ initialDraft: EntryDraft | null }> = ({ initialDraft
 
         {/* Date */}
         <div>
-          <h3 className="text-gray-400 text-sm mb-2 ml-1">日期</h3>
+          <div className="flex justify-between items-center mb-2"><h3 className="text-gray-400 text-sm ml-1">日期</h3><button type="button" className="text-primary text-sm px-2 py-1" onClick={() => { setDateMode('today'); setDate(toLocalYMD(new Date())); }}>今天</button></div>
           <div className="sf-control rounded-xl px-4 py-3">
             <input
               aria-label="交易日期"
               type="date"
               value={date}
-              onChange={e => setDate(e.target.value)}
-              onInput={e => setDate(e.currentTarget.value)}
+              onChange={e => changeDate(e.target.value)}
+              onInput={e => changeDate(e.currentTarget.value)}
               className="w-full bg-transparent text-white focus:outline-none"
             />
           </div>
