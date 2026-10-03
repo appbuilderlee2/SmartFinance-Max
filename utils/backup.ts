@@ -52,7 +52,7 @@ function validateStoredValue(key: string, value: string): void {
         if (!['INCOME', 'EXPENSE'].includes(row.type)) fail('type');
         if (row.recurrence !== undefined && !['weekly', 'biweekly', 'monthly'].includes(row.recurrence)) fail('recurrence');
         string('recurrenceSourceId', false); string('subscriptionId', false); string('receiptUrl', false);
-        for (const field of ['recurrenceFrom', 'recurrenceUntil', 'recurrenceOccurrenceDate']) {
+        for (const field of ['recurrenceFrom', 'recurrenceUntil', 'recurrenceOccurrenceDate', 'subscriptionOccurrenceDate']) {
           if (row[field] !== undefined && !parseLocalYMD(row[field])) fail(field);
         }
         if (row.recurrenceTemplate !== undefined) {
@@ -68,8 +68,14 @@ function validateStoredValue(key: string, value: string): void {
         number('limit'); number('spent');
       } else if (key === 'smartfinance_subscriptions') {
         string('name'); number('amount');
-        if (!['Monthly', 'Yearly', 'Weekly', 'BiWeekly'].includes(row.billingCycle)) fail('billingCycle');
-        if (!(row.autoRenewal === false && row.nextBillingDate === '')) date('nextBillingDate');
+        if (!['Monthly', 'Yearly', 'Weekly', 'BiWeekly', 'Custom'].includes(row.billingCycle)) fail('billingCycle');
+        if (row.status !== undefined && !['active','paused','cancelled'].includes(row.status)) fail('status');
+        if (row.recordingMode !== undefined && !['auto','track'].includes(row.recordingMode)) fail('recordingMode');
+        if (row.billingCycle === 'Custom' && (!Number.isInteger(row.intervalCount) || row.intervalCount < 1 || row.intervalCount > 365 || !['days','months'].includes(row.intervalUnit))) fail('interval');
+        for (const field of ['trialEndDate','serviceEndDate']) if (row[field] && !parseLocalYMD(row[field])) fail(field);
+        if (row.priceChange !== undefined && (!row.priceChange || typeof row.priceChange.amount !== 'number' || !Number.isFinite(row.priceChange.amount) || row.priceChange.amount <= 0 || !parseLocalYMD(row.priceChange.effectiveDate))) fail('priceChange');
+        string('cardId', false); string('managementUrl', false);
+        if (!((row.autoRenewal === false || row.status === 'paused' || row.status === 'cancelled') && row.nextBillingDate === '')) date('nextBillingDate');
         if (row.nextBillingDate && !parseLocalYMD(row.nextBillingDate)) fail('nextBillingDate');
         string('categoryId', false);
       } else if (key === 'smartfinance_creditcards') {

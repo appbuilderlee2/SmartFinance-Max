@@ -1,5 +1,6 @@
 import { Category, Currency, Subscription, Transaction, TransactionType } from '../types';
 import { parseDate, parseLocalYMD, toLocalYMD } from './date';
+import { advanceSubscriptionDate, subscriptionActive, subscriptionAmount } from './subscriptionSchedule';
 
 type ProcessInput = {
   subscriptions: Subscription[];
@@ -15,26 +16,6 @@ type ProcessResult = {
   transactions: Transaction[];
   changed: boolean;
 };
-
-function daysInMonth(year: number, month: number): number {
-  return new Date(year, month + 1, 0).getDate();
-}
-
-function advanceDate(date: Date, cycle: Subscription['billingCycle'], anchorDay: number): Date {
-  const next = new Date(date);
-  if (cycle === 'Weekly') next.setDate(next.getDate() + 7);
-  else if (cycle === 'BiWeekly') next.setDate(next.getDate() + 14);
-  else if (cycle === 'Monthly') {
-    const nextMonth = next.getMonth() + 1;
-    const year = next.getFullYear() + Math.floor(nextMonth / 12);
-    const month = nextMonth % 12;
-    return new Date(year, month, Math.min(anchorDay, daysInMonth(year, month)));
-  } else if (cycle === 'Yearly') {
-    const year = next.getFullYear() + 1;
-    return new Date(year, next.getMonth(), Math.min(anchorDay, daysInMonth(year, next.getMonth())));
-  }
-  return next;
-}
 
 function transactionYmd(transaction: Transaction): string | null {
   const parsed = parseDate(transaction.date);
@@ -58,6 +39,7 @@ export function processDueSubscriptions(input: ProcessInput): ProcessResult {
   };
 
   const updated = input.subscriptions.map((subscription) => {
+    if (!subscriptionActive(subscription) || subscription.recordingMode === 'track') return subscription;
     const initial = parseLocalYMD(subscription.nextBillingDate);
     if (!initial) return subscription;
 
@@ -70,14 +52,15 @@ export function processDueSubscriptions(input: ProcessInput): ProcessResult {
 
     while (toLocalYMD(nextDate) <= todayYmd && iterations < 500) {
       const dueYmd = toLocalYMD(nextDate);
+      if (subscription.trialEndDate && dueYmd < subscription.trialEndDate) { const trialEnd = parseLocalYMD(subscription.trialEndDate); if (!trialEnd) break; nextDate = trialEnd; continue; }
       if (!lastProcessed || lastProcessed < dueYmd) {
         const note = `訂閱：${subscription.name}`;
         const exists = [...input.transactions, ...generated].some((transaction) => {
-          const sameDate = transactionYmd(transaction) === dueYmd;
-          return sameDate && (
+          const sameDate = (transaction.subscriptionOccurrenceDate || transactionYmd(transaction)) === dueYmd;
+          return transaction.type === TransactionType.EXPENSE && sameDate && (
             transaction.subscriptionId === subscription.id
             || (
-              transaction.amount === subscription.amount
+              transaction.amount === subscriptionAmount(subscription, dueYmd)
               && transaction.note === note
               && ((transaction.currency as Currency) || input.defaultCurrency) === subscriptionCurrency
             )
@@ -86,13 +69,14 @@ export function processDueSubscriptions(input: ProcessInput): ProcessResult {
         if (!exists) {
           generated.push({
             id: input.makeTransactionId(),
-            amount: subscription.amount,
+            amount: subscriptionAmount(subscription, dueYmd),
             date: dueYmd,
             note,
             categoryId: pickCategoryId(subscription),
             type: TransactionType.EXPENSE,
             isRecurring: true,
             subscriptionId: subscription.id,
+            subscriptionOccurrenceDate: dueYmd,
             currency: subscriptionCurrency,
             tags: [],
           });
@@ -102,7 +86,7 @@ export function processDueSubscriptions(input: ProcessInput): ProcessResult {
       }
 
       if (subscription.autoRenewal === false) break;
-      nextDate = advanceDate(nextDate, subscription.billingCycle, anchorDay);
+      nextDate = advanceSubscriptionDate(nextDate, { ...subscription, billingAnchorDay: anchorDay });
       iterations += 1;
     }
 
