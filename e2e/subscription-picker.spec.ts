@@ -17,7 +17,7 @@ test('service picker filters, preserves form when returning, and saves a branded
   await expect(page.getByRole('heading', { name: '選擇服務' })).toBeVisible();
   const screenshotDir = join(process.env.RUNNER_TEMP || '/tmp', 'smartfinance-ui');
   await mkdir(screenshotDir, { recursive: true });
-  const shot = (name: string) => page.screenshot({ path: join(screenshotDir, `${info.project.name}-${name}.png`), fullPage: false });
+  const shot = (name: string) => page.screenshot({ path: join(screenshotDir, `${info.project.name}-${name}.png`), fullPage: false, animations: 'disabled' });
   await shot('picker-dark');
   await page.getByRole('button', { name: '音樂', exact: true }).click();
   await expect(page.getByRole('button', { name: 'Spotify', exact: true })).toBeVisible();
