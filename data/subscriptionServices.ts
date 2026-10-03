@@ -62,6 +62,8 @@ export const subscriptionServices: SubscriptionService[] = [
   item('mortgage', '按揭供款', '住屋', '🏡', 'mortgage home loan 房貸 樓 定期'),
   item('strata', '管理費', '住屋', '🏢', 'strata body corporate 物業 大廈 定期'),
   item('council', '市政費／差餉', '住屋', '🏘️', 'council rates 差餉 地租 定期'),
+  item('raa', 'RAA', '保險', '🛡️', 'raa insurance 保費 定期'),
+  item('medibank', 'Medibank', '保險', '🩺', 'medibank health insurance 醫療 醫保 保費 定期'),
   item('health-insurance', '醫療保險', '保險', '🩺', 'health insurance oshc ovhc 醫保 定期'),
   item('car-insurance', '汽車保險', '保險', '🚘', 'car insurance 車保 定期'),
   item('home-insurance', '家居保險', '保險', '🏠', 'home contents insurance 房屋 財物 定期'),
