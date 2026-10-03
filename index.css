@@ -612,7 +612,7 @@ textarea {
 .sf-service-groups::-webkit-scrollbar { display:none; }
 .sf-service-groups button { flex:1 0 auto; min-height:44px; padding:10px 17px; border-radius:24px; background:rgb(var(--sf-text-primary)/.08); font-size:15px; white-space:nowrap; }
 .sf-service-groups button[aria-pressed=true] { background:rgb(var(--sf-primary)); color:rgb(var(--sf-on-primary)); }
-.sf-service-list { max-height:min(360px,max(144px,calc(100dvh - 444px - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px)))); overflow-y:auto; overscroll-behavior:contain; }
+.sf-service-list { max-height:min(360px,max(144px,calc(100dvh - 344px - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px)))); overflow-y:auto; overscroll-behavior:contain; }
 .sf-service-row { width:100%; display:flex; align-items:center; gap:16px; padding:12px 16px; text-align:left; font-size:17px; min-height:72px; position:relative; }
 .sf-service-row + .sf-service-row::before { content:""; position:absolute; top:0; left:80px; right:0; border-top:1px solid rgb(var(--sf-text-primary)/.08); }
 .sf-service-row > span:nth-child(2) { flex:1; min-width:0; overflow-wrap:anywhere; }
@@ -648,6 +648,19 @@ textarea {
 .sf-sub-footer > div { max-width:520px; margin:auto; }
 .sf-sub-footer button { min-height:56px; font-size:17px; border-radius:16px; }
 .sf-sub-page :is(button,input,select):focus-visible { outline:2px solid rgb(var(--sf-primary)); outline-offset:-2px; }
+@media (max-height:740px) {
+  .sf-sub-header > div { min-height:56px; }
+  .sf-sub-form { padding-top:12px; }
+  .sf-sub-form > * + * { margin-top:12px; }
+  .sf-sub-identity { padding:8px 16px; }
+  .sf-sub-identity .sf-service-icon { width:48px; height:48px; }
+  .sf-sub-amount { padding:14px 16px; }
+  .sf-sub-amount > label { margin-bottom:6px; }
+  .sf-sub-amount-line > span, .sf-sub-amount-line > input { font-size:36px; line-height:1.15; }
+  .sf-sub-row { min-height:48px; }
+  .sf-sub-row > select, .sf-sub-row > input { min-height:44px; padding-block:6px; }
+  .sf-sub-disclosure { min-height:48px; padding-block:12px; }
+}
 @media (max-width:360px) { .sf-sub-content { padding-inline:16px; } .sf-sub-row { margin-inline:12px; font-size:15px; } .sf-sub-row > input { font-size:15px; } .sf-service-row { gap:12px; } }
 .sf-tag { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 8px 12px; border-radius: 12px; border: 1px solid #8883; overflow-wrap: anywhere; max-width: 100%; }
 .sf-primary-button { display: block; width: 100%; min-height: 48px; border-radius: 14px; color: white; background: rgb(var(--sf-primary)); font-weight: 600; }

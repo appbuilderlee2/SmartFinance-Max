@@ -34,6 +34,10 @@ test('service picker filters, preserves form when returning, and saves a branded
   await page.getByLabel('訂閱金額').fill('15.99');
   await page.getByLabel('訂閱幣別', { exact: true }).selectOption('AUD');
   await page.getByLabel('扣款日期').fill('2026-11-03');
+  await page.getByRole('heading', { name: '新增訂閱' }).click();
+  const details = await page.locator('.sf-sub-disclosure').boundingBox();
+  const footer = await page.locator('.sf-sub-footer').boundingBox();
+  expect(details!.y + details!.height).toBeLessThanOrEqual(footer!.y);
   await shot('form-dark');
   // Browser Back must return to the picker without losing the unsaved amount.
   await page.goBack();
