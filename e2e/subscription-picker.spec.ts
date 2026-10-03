@@ -2,6 +2,49 @@ import { expect, test } from '@playwright/test';
 import { mkdir } from 'node:fs/promises';
 import { join } from 'node:path';
 
+test('recurring templates filter, reset list scroll, and save a fortnightly rent item', async ({ page }, info) => {
+  const errors: string[] = [];
+  page.on('pageerror', error => errors.push(error.message));
+  page.on('console', message => { if (message.type() === 'error') errors.push(message.text()); });
+  await page.addInitScript(() => {
+    localStorage.setItem('smartfinance_themecolor', 'applefluid-system');
+    localStorage.setItem('smartfinance_has_onboarded', 'true');
+  });
+  await page.emulateMedia({ colorScheme: 'dark' });
+  await page.goto('/#/add-subscription');
+  await expect(page).toHaveTitle('SmartFinance');
+  await expect(page.getByRole('heading', { name: '選擇服務' })).toBeVisible();
+  await page.locator('.sf-service-list').evaluate(el => { el.scrollTop = el.scrollHeight; });
+  await page.getByRole('button', { name: '生活帳單', exact: true }).click();
+  await expect(page.getByRole('button', { name: '電費', exact: true })).toBeInViewport();
+  expect(await page.locator('.sf-service-list').evaluate(el => el.scrollTop)).toBe(0);
+  await page.getByRole('searchbox', { name: '搜尋服務' }).fill('NBN');
+  await expect(page.getByRole('button', { name: '寬頻上網', exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: '電費', exact: true })).toHaveCount(0);
+  await page.getByRole('button', { name: '清除搜尋' }).click();
+  const screenshotDir = join(process.env.RUNNER_TEMP || '/tmp', 'smartfinance-ui');
+  await mkdir(screenshotDir, { recursive: true });
+  await page.screenshot({ path: join(screenshotDir, `${info.project.name}-recurring-items.png`), animations: 'disabled' });
+  await page.getByRole('button', { name: '住屋', exact: true }).click();
+  await page.getByRole('button', { name: '租金', exact: true }).click();
+  await expect(page.getByLabel('訂閱金額')).toHaveValue('');
+  await expect(page.getByLabel('記帳方式')).toHaveValue('track');
+  await page.getByLabel('訂閱名稱').fill('Rostrevor 租金');
+  await page.getByLabel('訂閱金額').fill('900');
+  await page.getByLabel('扣款週期').selectOption('BiWeekly');
+  await page.getByLabel('扣款日期').fill('2026-11-10');
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  await page.getByRole('button', { name: '儲存', exact: true }).click();
+  await expect(page).toHaveURL(/#\/subscriptions$/);
+  await page.reload();
+  await page.getByRole('button', { name: '編輯', exact: true }).click();
+  await expect(page.getByLabel('訂閱名稱')).toHaveValue('Rostrevor 租金');
+  await expect(page.getByLabel('扣款週期')).toHaveValue('BiWeekly');
+  await expect(page.getByLabel('扣款日期')).toHaveValue('2026-11-10');
+  await expect(page.locator('.sf-sub-identity .sf-service-icon')).toHaveText('🏠');
+  expect(errors).toEqual([]);
+});
+
 test('service picker filters, preserves form when returning, and saves a branded subscription', async ({ page }, info) => {
   const errors: string[] = [];
   page.on('pageerror', error => errors.push(error.message));
