@@ -81,9 +81,13 @@ const Subscriptions: React.FC = () => {
                <ChevronLeft size={24} />
             </button>
             <h2 className="text-lg font-semibold">訂閱服務</h2>
-            <div className="flex gap-4">
-               {/* Sort Icon placeholder */}
-            </div>
+            <button
+               onClick={() => navigate('/add-subscription', { state: { from: fromPath, returnTo: '/subscriptions' } })}
+               aria-label="新增訂閱"
+               className="w-11 h-11 flex items-center justify-center text-primary"
+            >
+               <Plus size={24} />
+            </button>
          </div>
 
          <div className="p-4 space-y-6">
@@ -168,13 +172,6 @@ const Subscriptions: React.FC = () => {
                )}
             </div>
 
-            <button
-               onClick={() => navigate('/add-subscription', { state: { from: fromPath, returnTo: '/subscriptions' } })}
-               aria-label="新增訂閱"
-               className="fixed bottom-24 right-6 w-14 h-14 bg-green-500 rounded-full flex items-center justify-center shadow-lg text-white active:scale-95 transition-transform"
-            >
-               <Plus size={30} />
-            </button>
          </div>
       </div>
    );
