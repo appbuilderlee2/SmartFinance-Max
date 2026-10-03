@@ -18,7 +18,7 @@ describe('subscription catalogue', () => {
   it('searches English aliases, Chinese names and categories', () => {
     expect(filterSubscriptionServices('  NBN ')).toContainEqual(findSubscriptionService('internet'));
     expect(filterSubscriptionServices('房租')).toContainEqual(findSubscriptionService('rent'));
-    expect(filterSubscriptionServices('保險')).toHaveLength(5);
+    expect(filterSubscriptionServices('保險')).toHaveLength(7);
     expect(filterSubscriptionServices('OPENAI', 'AI')).toHaveLength(1);
     expect(filterSubscriptionServices('OPENAI', '住屋')).toHaveLength(0);
     expect(filterSubscriptionServices('不存在的服務')).toHaveLength(0);
