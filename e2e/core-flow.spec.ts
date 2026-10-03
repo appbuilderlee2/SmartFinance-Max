@@ -140,6 +140,7 @@ test('subscription keeps its own currency', async ({ page }) => {
   await resetAppData(page);
   await page.goto('/#/subscriptions');
   await page.getByRole('button', { name: '新增訂閱' }).click();
+  await page.getByRole('button', { name: '自訂服務' }).click();
   await page.getByRole('textbox', { name: '訂閱名稱' }).fill('E2E Australian service');
   await page.getByRole('spinbutton', { name: '訂閱金額' }).fill('12.50');
   await page.getByRole('combobox', { name: '訂閱幣別' }).selectOption('AUD');

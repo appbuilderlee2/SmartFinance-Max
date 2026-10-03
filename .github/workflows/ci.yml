@@ -19,4 +19,12 @@ jobs:
       - run: npm test
       - run: npx playwright install --with-deps chromium
       - run: npm run test:e2e
+      - name: Save UI verification screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: smartfinance-ui
+          path: ${{ runner.temp }}/smartfinance-ui
+          if-no-files-found: ignore
+          retention-days: 7
       - run: npm run build

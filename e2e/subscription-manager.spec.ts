@@ -3,11 +3,13 @@ test('subscription trial, custom billing, pause and restore persist', async ({ p
  await page.clock.setFixedTime(new Date('2026-10-02T12:00:00Z'));
  await page.goto('/#/subscriptions');
  await page.getByRole('button',{name:'新增訂閱',exact:true}).click();
+ await page.getByRole('button',{name:'自訂服務',exact:true}).click();
  await page.getByLabel('訂閱名稱').fill('Test plan');
  await page.getByLabel('訂閱金額').fill('30');
  await page.getByLabel('扣款週期',{exact:true}).selectOption('Custom');
  await page.getByLabel('週期間隔').fill('3');
  await page.getByLabel('扣款日期').fill('2026-11-02');
+ await page.getByRole('button',{name:'詳細資訊',exact:true}).click();
  await page.getByLabel('免費試用').check();
  await page.getByRole('button',{name:'儲存',exact:true}).click();
  await expect(page.getByText('Test plan',{exact:true})).toBeVisible();
