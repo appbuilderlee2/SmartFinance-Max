@@ -88,6 +88,9 @@ interface DataContextType {
   renameTag: (source: string, target: string) => void;
   deleteTag: (source: string) => Promise<void>;
   addSubscription: (sub: Omit<Subscription, 'id'>) => void;
+  saveSubscription: (sub: Subscription) => Promise<void>;
+  removeSubscription: (id: string) => Promise<void>;
+  linkSubscription: (id: string, transactionId: string, nextDate: string) => Promise<void>;
   updateSubscription: (id: string, updates: Partial<Subscription>) => void;
   deleteSubscription: (id: string) => void;
   getCategory: (id: string) => Category | undefined;
@@ -345,6 +348,17 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const updateSubscription = (id: string, updates: Partial<Subscription>) => {
     setSubscriptions(prev => prev.map(s => s.id === id ? { ...s, ...updates } : s));
+  };
+  const saveSubscription = (sub: Subscription) => persistCoreChange(() => setSubscriptions(previous => previous.some(s => s.id === sub.id) ? previous.map(s => s.id === sub.id ? sub : s) : [...previous, sub]));
+  const removeSubscription = (id: string) => persistCoreChange(() => deleteSubscription(id));
+  const linkSubscription = async (id: string, transactionId: string, nextDate: string) => {
+    const sub = subscriptions.find(s => s.id === id);
+    const tx = transactions.find(t => t.id === transactionId);
+    if (!sub || !tx || tx.type !== TransactionType.EXPENSE || tx.subscriptionId) throw new Error('帳目已連結或不存在');
+    return persistCoreChange(() => {
+    setTransactions(previous => previous.map(t => t.id === transactionId ? { ...t, subscriptionId: id, subscriptionOccurrenceDate: sub.nextBillingDate } : t));
+    setSubscriptions(previous => previous.map(s => s.id === id ? { ...s, billingAnchorDay: s.billingAnchorDay || parseDate(sub.nextBillingDate)?.getDate(), lastProcessedDate: sub.nextBillingDate, nextBillingDate: nextDate } : s));
+    });
   };
 
   const deleteSubscription = (id: string) => {
@@ -621,6 +635,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   deleteBudget,
   updateBudget,
       addSubscription,
+      saveSubscription, removeSubscription, linkSubscription,
       deleteSubscription,
       updateSubscription,
       setCurrency: setCurrencyState,

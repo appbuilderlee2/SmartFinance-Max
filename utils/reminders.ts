@@ -298,7 +298,7 @@ export function regenerateReminders(params: {
     const ahead = Math.max(0, settings.subAheadDays || 0);
 
     for (const s of params.subscriptions || []) {
-      if (!s.nextBillingDate) continue;
+      if (!s.nextBillingDate || (s.status && s.status !== 'active')) continue;
       const due = s.nextBillingDate;
       const days = daysBetweenYmd(todayYmd, due);
       if (days == null) continue;

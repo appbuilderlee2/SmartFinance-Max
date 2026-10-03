@@ -6,6 +6,8 @@ import { useData } from '../contexts/DataContext';
 import { toLocalYMD, calendarDaysUntil } from '../utils/date';
 import { formatMoney, roundMoney, sumMoney } from '../utils/money';
 import { Currency } from '../types';
+import { subscriptionMonthly, subscriptionForecast, subscriptionCycleLabel, subscriptionActive } from '../utils/subscriptionSchedule';
+import { downloadSubscriptionCalendar } from '../utils/subscriptionCalendar';
 
 const Subscriptions: React.FC = () => {
    const navigate = useNavigate();
@@ -16,6 +18,10 @@ const Subscriptions: React.FC = () => {
       return new Map(categories.map(c => [c.id, c] as const));
    }, [categories]);
    const [filterCategory, setFilterCategory] = useState<string>('all');
+   const [status, setStatus] = useState('active');
+   const [query, setQuery] = useState('');
+   const [card, setCard] = useState('');
+   const { creditCards } = useData();
    const [selectedCurrency, setSelectedCurrency] = useState<Currency>(currency);
    const fromPath = (location.state as any)?.from || '/';
 
@@ -41,31 +47,29 @@ const Subscriptions: React.FC = () => {
 
    const filteredSubs = useMemo(() => {
       const base = subscriptions.filter((subscription) => {
+         if (status !== 'all' && (subscription.status || 'active') !== status) return false;
+         if (query && !subscription.name.toLowerCase().includes(query.toLowerCase())) return false;
+         if (card && subscription.cardId !== card) return false;
          if ((subscription.currency || currency) !== selectedCurrency) return false;
          return filterCategory === 'all' || subscription.categoryId === filterCategory;
       });
-      const today = toLocalYMD(new Date());
       return [...base].sort((a, b) => {
          const ad = a.nextBillingDate || '';
          const bd = b.nextBillingDate || '';
          if (!ad && !bd) return 0;
          if (!ad) return 1;
          if (!bd) return -1;
-         // Sort by absolute proximity to today, then earlier date first
-         const aDiff = Math.abs(new Date(ad).getTime() - new Date(today).getTime());
-         const bDiff = Math.abs(new Date(bd).getTime() - new Date(today).getTime());
-         if (aDiff === bDiff) return new Date(ad).getTime() - new Date(bd).getTime();
-         return aDiff - bDiff;
+         return ad.localeCompare(bd);
       });
-   }, [subscriptions, filterCategory, selectedCurrency, currency]);
+   }, [subscriptions, filterCategory, selectedCurrency, currency, status, query, card]);
 
    const monthlyAmounts = filteredSubs.map((sub) => {
-      if (sub.billingCycle === 'Weekly') return roundMoney((sub.amount * 52) / 12, selectedCurrency);
-      if (sub.billingCycle === 'BiWeekly') return roundMoney((sub.amount * 26) / 12, selectedCurrency);
-      if (sub.billingCycle === 'Yearly') return roundMoney(sub.amount / 12, selectedCurrency);
-      return roundMoney(sub.amount, selectedCurrency);
+      return roundMoney(subscriptionMonthly(sub, toLocalYMD(new Date())), selectedCurrency);
    });
    const totalMonthly = sumMoney(monthlyAmounts, selectedCurrency);
+   const today = toLocalYMD(new Date());
+   const endDate = new Date(); endDate.setDate(endDate.getDate() + 29);
+   const upcoming = sumMoney(filteredSubs.flatMap(s => subscriptionForecast(s, today, toLocalYMD(endDate))).map(r => r.amount), selectedCurrency);
 
    return (
       <div className="min-h-screen bg-background pb-24 pt-safe-top">
@@ -77,16 +81,23 @@ const Subscriptions: React.FC = () => {
                <ChevronLeft size={24} />
             </button>
             <h2 className="text-lg font-semibold">訂閱服務</h2>
-            <div className="flex gap-4">
-               {/* Sort Icon placeholder */}
-            </div>
+            <button
+               onClick={() => navigate('/add-subscription', { state: { from: fromPath, returnTo: '/subscriptions' } })}
+               aria-label="新增訂閱"
+               className="w-11 h-11 flex items-center justify-center text-primary"
+            >
+               <Plus size={24} />
+            </button>
          </div>
 
          <div className="p-4 space-y-6">
             <div className="text-center mb-6">
-               <p className="text-gray-400 text-sm">每月總計（每週×52÷12、每2週×26÷12、每年÷12）</p>
+               <p className="text-gray-400 text-sm">每月平均開支</p>
                <h1 className="text-4xl font-bold mt-1">{formatMoney(totalMonthly, selectedCurrency)}</h1>
+               <p className="mt-4 text-sm text-gray-400">未來 30 日預計扣款</p><p className="text-2xl font-semibold">{formatMoney(upcoming, selectedCurrency)}</p>
             </div>
+            <input aria-label="搜尋訂閱" className="sf-field w-full" placeholder="搜尋訂閱" value={query} onChange={e => setQuery(e.target.value)} />
+            <div className="flex gap-2 overflow-x-auto">{[['active','使用中'],['paused','已暫停'],['cancelled','已取消'],['all','全部']].map(([key,label]) => <button key={key} className={`shrink-0 px-4 py-2 rounded-xl text-sm ${status === key ? 'bg-primary text-white' : 'sf-control'}`} onClick={() => setStatus(key)}>{label}</button>)}</div>
 
             <div className="sf-panel rounded-xl p-3 grid grid-cols-2 gap-3 text-sm">
                <label className="space-y-1">
@@ -115,6 +126,7 @@ const Subscriptions: React.FC = () => {
                   </select>
                </label>
             </div>
+            <select aria-label="付款信用卡篩選" className="sf-field w-full" value={card} onChange={e => setCard(e.target.value)}><option value="">所有付款方式</option>{creditCards.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}</select>
 
             <div className="space-y-3">
                {filteredSubs.length === 0 ? (
@@ -132,25 +144,20 @@ const Subscriptions: React.FC = () => {
                            </div>
                            <div>
                               <h3 className="font-semibold">{sub.name}</h3>
-                              <p className="text-xs text-gray-500">下次扣款: {sub.nextBillingDate || '已停用續訂'}</p>
+                              <p className="text-xs text-gray-500">{sub.status === 'paused' ? '已暫停' : sub.status === 'cancelled' ? (sub.serviceEndDate ? (sub.serviceEndDate < today ? '服務已到期' : `有效至 ${sub.serviceEndDate}`) : '已取消續訂') : `下次扣款: ${sub.nextBillingDate || '已結束'}`}</p>
                               <p className="text-xs text-gray-400">分類: {catName}</p>
-                              {daysLeft !== null && (
+                              {daysLeft !== null && subscriptionActive(sub) && (
                                  <p className="text-[11px] text-primary mt-1">
                                     {daysLeft < 0 ? `已逾期 ${Math.abs(daysLeft)} 天` : `距扣款還有 ${daysLeft} 天`}
                                  </p>
                               )}
+                              {sub.trialEndDate && sub.trialEndDate > today && <p className="text-xs text-primary">試用至 {sub.trialEndDate}</p>}
                            </div>
                         </div>
                         <div className="text-right">
                            <p className="font-bold">{formatMoney(sub.amount, sub.currency || currency)}</p>
                            <p className="text-xs text-gray-500">
-                              {sub.billingCycle === 'Weekly'
-                                 ? '每週（每月估算×52÷12）'
-                                 : sub.billingCycle === 'BiWeekly'
-                                    ? '每2週（每月估算×26÷12）'
-                                    : sub.billingCycle === 'Monthly'
-                                       ? '每月'
-                                       : '每年（約每月÷12）'}
+                              {subscriptionCycleLabel(sub)}
                            </p>
                            <button
                               onClick={() => navigate(`/subscriptions/${sub.id}/edit`, { state: { from: fromPath, returnTo: '/subscriptions' } })}
@@ -158,19 +165,13 @@ const Subscriptions: React.FC = () => {
                            >
                               <Pencil size={14} /> 編輯
                            </button>
+                           {subscriptionActive(sub) && <button className="block mt-2 text-xs text-primary" onClick={() => downloadSubscriptionCalendar(sub)}>加入日曆</button>}
                         </div>
                      </div>
                   )})
                )}
             </div>
 
-            <button
-               onClick={() => navigate('/add-subscription', { state: { from: fromPath, returnTo: '/subscriptions' } })}
-               aria-label="新增訂閱"
-               className="fixed bottom-24 right-6 w-14 h-14 bg-green-500 rounded-full flex items-center justify-center shadow-lg text-white active:scale-95 transition-transform"
-            >
-               <Plus size={30} />
-            </button>
          </div>
       </div>
    );

@@ -33,6 +33,7 @@ export interface Transaction {
   tags?: string[];
   currency?: Currency; // Optional per-transaction currency; defaults to app currency
   subscriptionId?: string;
+  subscriptionOccurrenceDate?: string;
 }
 
 export enum Currency {
@@ -50,7 +51,16 @@ export interface Subscription {
   id: string;
   name: string;
   amount: number;
-  billingCycle: 'Monthly' | 'Yearly' | 'Weekly' | 'BiWeekly';
+  billingCycle: 'Monthly' | 'Yearly' | 'Weekly' | 'BiWeekly' | 'Custom';
+  intervalCount?: number;
+  intervalUnit?: 'days' | 'months';
+  status?: 'active' | 'paused' | 'cancelled';
+  recordingMode?: 'auto' | 'track';
+  trialEndDate?: string;
+  serviceEndDate?: string;
+  cardId?: string;
+  managementUrl?: string;
+  priceChange?: { amount: number; effectiveDate: string };
   nextBillingDate: string;
   autoRenewal?: boolean;
   notes?: string;
