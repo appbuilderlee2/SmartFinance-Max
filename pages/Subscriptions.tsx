@@ -8,6 +8,7 @@ import { formatMoney, roundMoney, sumMoney } from '../utils/money';
 import { Currency } from '../types';
 import { subscriptionMonthly, subscriptionForecast, subscriptionCycleLabel, subscriptionActive } from '../utils/subscriptionSchedule';
 import { downloadSubscriptionCalendar } from '../utils/subscriptionCalendar';
+import SubscriptionServiceIcon from '../components/SubscriptionServiceIcon';
 
 const Subscriptions: React.FC = () => {
    const navigate = useNavigate();
@@ -139,9 +140,7 @@ const Subscriptions: React.FC = () => {
                      return (
                      <div key={sub.id} className="sf-panel p-4 flex items-center justify-between">
                         <div className="flex items-center gap-4">
-                           <div className="w-12 h-12 rounded-xl bg-red-500 flex items-center justify-center text-white font-bold text-lg shadow-lg uppercase">
-                              {iconEmoji || sub.name[0]}
-                           </div>
+                           <SubscriptionServiceIcon icon={sub.icon || iconEmoji || undefined} name={sub.name} />
                            <div>
                               <h3 className="font-semibold">{sub.name}</h3>
                               <p className="text-xs text-gray-500">{sub.status === 'paused' ? '已暫停' : sub.status === 'cancelled' ? (sub.serviceEndDate ? (sub.serviceEndDate < today ? '服務已到期' : `有效至 ${sub.serviceEndDate}`) : '已取消續訂') : `下次扣款: ${sub.nextBillingDate || '已結束'}`}</p>
