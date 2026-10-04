@@ -47,7 +47,7 @@ test('first-time user can complete onboarding', async ({ page }) => {
   await expect(page.getByRole('heading', { name: '歡迎使用' })).toBeVisible();
   await page.getByRole('button', { name: '開始使用' }).click();
   await expect(page).toHaveURL(/#\/$/);
-  await expect(page.getByRole('heading', { name: '統計總覽' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: '總覽', exact: true })).toBeVisible();
   await expect(page.evaluate(() => localStorage.getItem('smartfinance_has_onboarded'))).resolves.toBe('true');
 });
 
@@ -175,11 +175,11 @@ test('cached app opens immediately offline and reports reconnection', async ({ p
   await page.goto('/');
   await page.evaluate(() => localStorage.setItem('smartfinance_has_onboarded', 'true'));
   await page.reload();
-  await expect(page.getByRole('heading', { name: '統計總覽' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: '總覽', exact: true })).toBeVisible();
   await page.evaluate(async () => { await navigator.serviceWorker.ready; });
   if (!await page.evaluate(() => Boolean(navigator.serviceWorker.controller))) {
     await page.reload();
-    await expect(page.getByRole('heading', { name: '統計總覽' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: '總覽', exact: true })).toBeVisible();
   }
   const indexCached = await page.evaluate(async () => (
     Boolean(await caches.match(new URL('index.html', location.href).href))
@@ -188,7 +188,7 @@ test('cached app opens immediately offline and reports reconnection', async ({ p
 
   await context.setOffline(true);
   await page.reload({ waitUntil: 'domcontentloaded' });
-  await expect(page.getByRole('heading', { name: '統計總覽' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: '總覽', exact: true })).toBeVisible();
   await expect(page.getByRole('status').filter({ hasText: '離線模式' })).toBeVisible();
 
   await context.setOffline(false);
@@ -261,8 +261,10 @@ test('settings data centre protects IndexedDB data during cache maintenance', as
 
   await search.fill('快取');
   await page.getByRole('button', { name: '清除快取並重新載入' }).click();
-  await page.getByRole('alertdialog', { name: '清除快取？' }).getByRole('button', { name: '清除並重新載入' }).click();
-  await page.waitForLoadState('load');
+  await Promise.all([
+    page.waitForEvent('load'),
+    page.getByRole('alertdialog', { name: '清除快取？' }).getByRole('button', { name: '清除並重新載入' }).click(),
+  ]);
   await expect(page.getByRole('heading', { name: '設定', exact: true })).toBeVisible();
   const stored = await readIndexedDbJson<Array<{ id: string }>>(page, 'smartfinance_transactions');
   expect(stored).toEqual([expect.objectContaining({ id: 'cache-safe', amount: 1 })]);

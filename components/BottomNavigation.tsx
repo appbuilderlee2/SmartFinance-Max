@@ -1,15 +1,15 @@
 import React, { useLayoutEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { BarChart3, CalendarDays, Settings, CircleDollarSign, List, CreditCard } from 'lucide-react';
+import { BarChart3, CalendarDays, Settings, CircleDollarSign, Wallet, CreditCard } from 'lucide-react';
 import { triggerHaptic, HapticPatterns } from '../utils/haptics';
 import { navRoutePreloads } from '../routeModules';
 
 const items = [
   { icon: CircleDollarSign, label: '記帳', path: '/add' },
+  { icon: BarChart3, label: '總覽', path: '/' },
   { icon: CalendarDays, label: '月曆', path: '/calendar' },
-  { icon: BarChart3, label: '統計', path: '/' },
-  { icon: List, label: '記錄', path: '/records' },
   { icon: CreditCard, label: '信用卡', path: '/cards' },
+  { icon: Wallet, label: '錢包', path: '/wallet' },
   { icon: Settings, label: '設定', path: '/settings' },
 ];
 
@@ -42,7 +42,7 @@ export default function BottomNavigation({ action }: { action?: React.ReactNode 
     <nav style={keyboardInset ? { transform: `translateY(-${keyboardInset}px)` } : undefined} ref={navRef} aria-label="主要導航" className="sf-tabbar fixed bottom-0 left-0 right-0 sf-surface border-t sf-divider pb-safe-bottom pt-2 px-4 z-50">
       <div className="sf-nav-items">
         {items.map(item => {
-          const active = location.pathname === item.path || (item.path === '/cards' && location.pathname.startsWith('/cards/')) || (item.path === '/settings' && location.pathname === '/reports');
+          const active = location.pathname === item.path || (item.path === '/' && ['/records', '/reports'].includes(location.pathname)) || (item.path === '/cards' && location.pathname.startsWith('/cards/')) || (item.path === '/wallet' && (location.pathname.startsWith('/wallet/') || location.pathname.startsWith('/subscriptions') || location.pathname === '/add-subscription'));
           const Icon = item.icon, preload = navRoutePreloads[item.path];
           const prefetch = () => { void preload?.().catch(() => undefined); };
           return <button key={item.path} aria-current={active ? 'page' : undefined} onClick={() => { triggerHaptic(HapticPatterns.Light); navigate(item.path); }} onPointerEnter={prefetch} onFocus={prefetch} onTouchStart={prefetch} className={`sf-nav-item flex flex-col items-center gap-1 flex-1 min-w-0 py-1 transition-colors active:scale-95 duration-200 ${active ? 'text-primary' : 'text-gray-500'}`}>

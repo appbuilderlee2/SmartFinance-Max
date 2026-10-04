@@ -48,7 +48,7 @@ test('six entry points and management screens render with a full-sized ledger', 
   await page.reload();
 
   const screens = [
-    ['/', '統計總覽'], ['/calendar', '月曆'], ['/reports', '報告統計'],
+    ['/', '總覽'], ['/calendar', '月曆'], ['/reports', '報告統計'],
     ['/records', '帳目明細'], ['/cards', '信用卡'], ['/settings', '設定'],
     ['/add', '新增帳目'], ['/categories', '分類管理'], ['/budget', '月預算設定'],
     ['/settings/tags', '標籤管理'], ['/subscriptions', '訂閱服務'],

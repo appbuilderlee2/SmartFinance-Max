@@ -10,7 +10,8 @@ import { Currency, RecurrenceFrequency, TransactionType } from '../types';
 import { localYMDToStoredISOString, toLocalYMD, parseDate } from '../utils/date';
 import { rememberTags } from '../utils/tagHistory';
 import TagPicker from '../components/TagPicker';
-import { parseMoneyInput } from '../utils/money';
+import { walletBalance, walletStatus } from '../utils/wallet';
+import { formatMoney, parseMoneyInput } from '../utils/money';
 import { showAppAlert, showAppConfirm } from '../utils/appDialog';
 import { chooseRecurrenceStart } from '../utils/recurrenceChoice';
 import { editRecurringTransactions, processDueRecurringTransactions } from '../utils/recurringTransactions';
@@ -19,7 +20,7 @@ import { MAX_RECEIPT_BYTES } from '../utils/entryDraft';
 const TransactionDetail: React.FC = () => {
    const { id } = useParams();
    const navigate = useNavigate();
-   const { transactions, categories, saveEditedTransaction, currency } = useData();
+   const { transactions, categories, saveEditedTransaction, currency, walletItems } = useData();
    const [saving, setSaving] = useState(false);
    const [saveError, setSaveError] = useState('');
 
@@ -42,6 +43,8 @@ const TransactionDetail: React.FC = () => {
    const [date, setDate] = useState(tx?.date ? toLocalYMD(parseDate(tx.date)!) : '');
    const [txCurrency, setTxCurrency] = useState<Currency>((tx?.currency as Currency) || currency);
 
+   const [walletItemId, setWalletItemId] = useState(tx?.walletItemId || '');
+
    // Keep local edit state in sync when route param changes.
    // React Router may reuse this component instance across /edit/:id navigations,
    // and useState initializers only run on first mount. Without this, saving can
@@ -55,6 +58,7 @@ const TransactionDetail: React.FC = () => {
       setReceiptUrl(tx.receiptUrl);
       setRecurrence(source?.recurrence || 'none');
       setScope('only');
+      setWalletItemId(tx.walletItemId || '');
       setDate(tx.date ? toLocalYMD(parseDate(tx.date)!) : '');
       setTxCurrency(((tx.currency as Currency) || currency) as Currency);
    }, [id, tx?.id]);
@@ -102,6 +106,7 @@ const TransactionDetail: React.FC = () => {
          recurrence: recurrence === 'none' ? undefined : recurrence,
          date: storedDate,
          type: transactionType,
+         walletItemId: walletItemId || undefined,
          currency: txCurrency
       };
       let recurrenceFrom: string | undefined;
@@ -170,7 +175,7 @@ const TransactionDetail: React.FC = () => {
                      <span className="text-xs text-gray-400">幣別</span>
                      <select
                         value={txCurrency}
-                        onChange={(e) => setTxCurrency(e.target.value as Currency)}
+                        onChange={(e) => { setTxCurrency(e.target.value as Currency); setWalletItemId(''); }}
                         className="bg-transparent text-gray-200 focus:outline-none text-xs cursor-pointer"
                      >
                         <option value="TWD">TWD (NT$)</option>
@@ -207,6 +212,8 @@ const TransactionDetail: React.FC = () => {
                   </div>
                </div>
             </div>
+
+            {transactionType === TransactionType.EXPENSE && !source?.recurrence && !tx.subscriptionId && walletItems.some(item => item.kind === 'stored') && <label className="block text-sm">付款方式<select aria-label="付款方式" className="sf-field block w-full mt-2" value={walletItemId} onChange={e => { const item = walletItems.find(item => item.id === e.target.value); setWalletItemId(e.target.value); if (item) { setTxCurrency(item.currency); setRecurrence('none'); } }}><option value="">一般付款</option>{walletItems.filter(item => item.kind === 'stored').map(item => <option key={item.id} value={item.id} disabled={item.id !== tx.walletItemId && walletStatus(item, transactions) !== 'active'}>{item.name} · {formatMoney(walletBalance(item, transactions), item.currency)}</option>)}</select></label>}
 
             {/* Details List */}
             <div className="sf-panel overflow-hidden divide-y sf-divider">
@@ -245,7 +252,7 @@ const TransactionDetail: React.FC = () => {
                         <button
                            key={value}
                            type="button"
-                           disabled={Boolean(source?.recurrence && scope === 'only')}
+                           disabled={Boolean((source?.recurrence && scope === 'only') || (walletItemId && value !== 'none'))}
                            onClick={() => setRecurrence(value)}
                            className={`flex-1 py-2 rounded-lg text-sm ${recurrence === value ? 'bg-primary text-white' : 'text-gray-400'}`}
                         >

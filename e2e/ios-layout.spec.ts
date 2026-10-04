@@ -14,7 +14,7 @@ test('six destinations fit and calendar returns to today in both Fluid themes', 
     await expect(summary).not.toHaveAttribute('data-month-key', current!);
     await page.getByRole('button', { name: '今天', exact: true }).click();
     await expect(summary).toHaveAttribute('data-month-key', current!);
-    await expect(nav.getByRole('button')).toHaveText(['記帳', '月曆', '統計', '記錄', '信用卡', '設定']);
+    await expect(nav.getByRole('button')).toHaveText(['記帳', '總覽', '月曆', '信用卡', '錢包', '設定']);
     const boxes = await nav.getByRole('button').evaluateAll(buttons => buttons.map(button => {
       const r = button.getBoundingClientRect(); return { left:r.left, right:r.right, width:r.width, height:r.height };
     }));

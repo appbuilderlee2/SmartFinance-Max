@@ -8,7 +8,8 @@ import { loadTagHistory, deleteTagFromHistory } from '../utils/tagHistory';
 import { observeLocalDay } from '../utils/dayBoundary';
 
 import React, { createContext, useContext, useState, useEffect, useMemo, useRef } from 'react';
-import { Transaction, Category, Budget, Subscription, TransactionType, Currency } from '../types';
+import { Transaction, Category, Budget, Subscription, TransactionType, Currency, WalletItem } from '../types';
+import { WALLET_KEY, validateWalletLedger, validateWalletPayment } from '../utils/wallet';
 import { CATEGORIES } from '../constants';
 import {
   clearStorageData, flushStorage, retryStorage, getSaveStatus,
@@ -74,6 +75,9 @@ interface DataContextType {
   categories: Category[];
   budgets: Budget[];
   subscriptions: Subscription[];
+  walletItems: WalletItem[];
+  saveWalletItem: (item: WalletItem) => Promise<void>;
+  removeWalletItem: (id: string) => Promise<void>;
   currency: Currency;
   creditCards: CreditCard[];
   themeColor: ThemeName;
@@ -148,6 +152,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [categories, setCategories] = useState<Category[]>(CATEGORIES);
   const [budgets, setBudgets] = useState<Budget[]>([]);
   const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
+  const [walletItems, setWalletItems] = useState<WalletItem[]>([]);
   const [currency, setCurrencyState] = useState<Currency>(Currency.HKD);
 
   const getTxCurrency = (t: Transaction): Currency => (t.currency as Currency) || currency;
@@ -174,6 +179,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setCategories(normalizeCategories(readJson<Category[]>('smartfinance_categories') ?? CATEGORIES));
       setBudgets(readJson<Budget[]>('smartfinance_budgets') ?? []);
       setSubscriptions(pinCurrency(readJson<Subscription[]>('smartfinance_subscriptions') ?? [], loadedCurrency));
+      setWalletItems(readJson<WalletItem[]>(WALLET_KEY) ?? []);
       const migration = migrateCreditCardCurrencies(readJson<CreditCard[]>('smartfinance_creditcards') ?? [], loadCycles(), loadedCurrency);
       setCurrencyState(loadedCurrency);
       setCreditCards(migration.cards);
@@ -194,11 +200,12 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       smartfinance_categories: JSON.stringify(categories),
       smartfinance_budgets: JSON.stringify(budgets),
       smartfinance_subscriptions: JSON.stringify(subscriptions),
+      [WALLET_KEY]: JSON.stringify(walletItems),
       smartfinance_creditcards: JSON.stringify(creditCards),
       smartfinance_currency: currency,
       smartfinance_deleted_transaction_ids: JSON.stringify(deletedIds),
     }).then(ok => { for (const [id, waiter] of waiters) { if (saveWaiters.current.get(id) === waiter) { saveWaiters.current.delete(id); waiter.resolve(ok); } } changes.forEach(resolve => resolve(ok)); });
-  }, [storageReady, transactions, categories, budgets, subscriptions, creditCards, currency, changeRevision, deletedIds]);
+  }, [storageReady, transactions, categories, budgets, subscriptions, walletItems, creditCards, currency, changeRevision, deletedIds]);
 
   // Budget Spending Logic (recalculate spent whenever transactions/categories/currency change)
   // Improvement: avoid JSON.stringify object-wide compare and reduce repeated date parsing.
@@ -249,6 +256,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const saveTransaction = async (row: Transaction) => {
+    validateWalletPayment(row, walletItems, transactions, transactions.find(tx => tx.id === row.id));
     if (saveWaiters.current.has(row.id)) throw new Error('帳目正在儲存');
     if (getSaveStatus() === 'error') await retryStorage();
     await flushStorage();
@@ -269,8 +277,21 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
   const saveEditedTransaction = (id: string, fields: Partial<Transaction>, scope: 'only' | 'future' = 'only') => {
     const next = editRecurringTransactions(transactions, id, fields, scope);
+    const row = next.find(tx => tx.id === id);
+    if (row) validateWalletPayment(row, walletItems, next, transactions.find(tx => tx.id === id));
     return persistCoreChange(() => setTransactions(next));
   };
+  const saveWalletItem = (item: WalletItem) => {
+    const previous = walletItems.find(entry => entry.id === item.id);
+    if (previous && (previous.kind !== item.kind || previous.currency !== item.currency || previous.openingBalance !== item.openingBalance)) throw new Error('已有卡券不可更改類型、幣別或起始餘額');
+    const next = previous ? walletItems.map(entry => entry.id === item.id ? item : entry) : [...walletItems, item];
+    validateWalletLedger(next, transactions);
+    return persistCoreChange(() => setWalletItems(next));
+  };
+  const removeWalletItem = (id: string) => persistCoreChange(() => {
+    setWalletItems(previous => previous.filter(item => item.id !== id));
+    setTransactions(previous => previous.map(tx => tx.walletItemId === id ? { ...tx, walletItemId: undefined } : tx));
+  });
   const saveBudgetLimit = (id: string, limit: number) =>
     persistCoreChange(() => updateBudget(id, limit));
   const saveCreditCardChange = (card: CreditCard) =>
@@ -313,13 +334,14 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setUndoSaving(true);
     setUndoError('');
     try {
+      validateWalletPayment(deleted.row, walletItems, transactions);
       await persistCoreChange(() => {
         setTransactions(previous => restoreDeletion(previous, target));
         setDeletedIds(previous => previous.filter(id => id !== target.row.id));
       });
       setDeleted(current => current === target ? null : current);
-    } catch {
-      setUndoError('復原未能儲存，請重試。');
+    } catch (error) {
+      setUndoError(error instanceof Error ? error.message : '復原未能儲存，請重試。');
     } finally {
       undoSavingRef.current = false;
       setUndoSaving(false);
@@ -354,7 +376,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const linkSubscription = async (id: string, transactionId: string, nextDate: string) => {
     const sub = subscriptions.find(s => s.id === id);
     const tx = transactions.find(t => t.id === transactionId);
-    if (!sub || !tx || tx.type !== TransactionType.EXPENSE || tx.subscriptionId) throw new Error('帳目已連結或不存在');
+    if (!sub || !tx || tx.type !== TransactionType.EXPENSE || tx.subscriptionId || tx.walletItemId) throw new Error('帳目已連結或不存在');
     return persistCoreChange(() => {
     setTransactions(previous => previous.map(t => t.id === transactionId ? { ...t, subscriptionId: id, subscriptionOccurrenceDate: sub.nextBillingDate } : t));
     setSubscriptions(previous => previous.map(s => s.id === id ? { ...s, billingAnchorDay: s.billingAnchorDay || parseDate(sub.nextBillingDate)?.getDate(), lastProcessedDate: sub.nextBillingDate, nextBillingDate: nextDate } : s));
@@ -480,6 +502,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setCategories(CATEGORIES);
     setBudgets([]); // will be auto-synced to categories with limit 0
     setSubscriptions([]);
+    setWalletItems([]);
     setCurrencyState(Currency.HKD);
     setCreditCards([]);
     setThemeColorState('blue');
@@ -613,6 +636,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   return (
     <DataContext.Provider value={{
+      walletItems, saveWalletItem, removeWalletItem,
       transactions,
       categories: sortedCategories,
       budgets,

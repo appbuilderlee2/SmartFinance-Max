@@ -34,6 +34,19 @@ export interface Transaction {
   currency?: Currency; // Optional per-transaction currency; defaults to app currency
   subscriptionId?: string;
   subscriptionOccurrenceDate?: string;
+  walletItemId?: string;
+}
+
+export interface WalletItem {
+  id: string;
+  name: string;
+  kind: 'stored' | 'count' | 'voucher';
+  currency: Currency;
+  openingBalance: number;
+  faceValue?: number;
+  expiresOn?: string;
+  notes: string;
+  events: { id: string; date: string; amount: number; kind: 'add' | 'use'; note: string }[];
 }
 
 export enum Currency {

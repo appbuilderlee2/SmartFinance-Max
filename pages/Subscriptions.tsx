@@ -24,7 +24,7 @@ const Subscriptions: React.FC = () => {
    const [card, setCard] = useState('');
    const { creditCards } = useData();
    const [selectedCurrency, setSelectedCurrency] = useState<Currency>(currency);
-   const fromPath = (location.state as any)?.from || '/';
+   const fromPath = (location.state as any)?.from || '/wallet';
 
    const getSubIcon = (name: string) => {
       const lower = name.toLowerCase();

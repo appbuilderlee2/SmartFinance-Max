@@ -1,7 +1,9 @@
 import { readEntryDraft, saveEntryDraft, clearEntryDraft, MAX_RECEIPT_BYTES, type EntryDraft } from '../utils/entryDraft';
 import { makeId } from '../utils/id';
 import React, { useState, useRef, useMemo, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import { walletBalance, walletStatus } from '../utils/wallet';
+import { formatMoney } from '../utils/money';
 import { Plus, Camera, X, ChevronDown, ChevronUp } from 'lucide-react';
 import { useData } from '../contexts/DataContext';
 import { Icon } from '../components/Icon';
@@ -31,7 +33,10 @@ const AddTransaction: React.FC = () => {
 
 const EntryForm: React.FC<{ initialDraft: EntryDraft | null }> = ({ initialDraft }) => {
   const navigate = useNavigate();
-  const { saveTransaction, categories, currency, transactions } = useData();
+  const { saveTransaction, categories, currency, transactions, walletItems } = useData();
+  const [params] = useSearchParams();
+  const requestedWallet = walletItems.find(item => item.id === (params.get('wallet') || initialDraft?.walletItemId) && item.kind === 'stored');
+  const [walletItemId, setWalletItemId] = useState(requestedWallet?.id || '');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const draftId = useRef(initialDraft?.id || makeId('tx'));
@@ -43,7 +48,7 @@ const EntryForm: React.FC<{ initialDraft: EntryDraft | null }> = ({ initialDraft
   const [isNumPadOpen, setIsNumPadOpen] = useState(false);
 
   const [amount, setAmount] = useState<string>(initialDraft?.amount || '');
-  const [selectedCategory, setSelectedCategory] = useState<string | null>(initialDraft?.selectedCategory || null);
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(requestedWallet && initialDraft?.transactionType === TransactionType.INCOME ? null : initialDraft?.selectedCategory || null);
   const [note, setNote] = useState(initialDraft?.note || '');
   const [dateMode, setDateMode] = useState<'today' | 'manual'>(initialDraft?.dateMode === 'manual' ? 'manual' : 'today');
   const [date, setDate] = useState(() => resolveEntryDate(initialDraft?.date, initialDraft?.dateMode));
@@ -51,11 +56,11 @@ const EntryForm: React.FC<{ initialDraft: EntryDraft | null }> = ({ initialDraft
     if (dateMode === 'today' && !savingRef.current) setDate(today);
   }), [dateMode]);
   const changeDate = (value: string) => { setDateMode('manual'); setDate(value); };
-  const [recurrence, setRecurrence] = useState<RecurrenceFrequency | 'none'>(initialDraft?.recurrence || 'none');
+  const [recurrence, setRecurrence] = useState<RecurrenceFrequency | 'none'>(requestedWallet ? 'none' : initialDraft?.recurrence || 'none');
   const [receiptPreview, setReceiptPreview] = useState<string | null>(initialDraft?.receiptPreview || null);
   const [tags, setTags] = useState<string[]>(initialDraft?.tags || []);
-  const [transactionType, setTransactionType] = useState<TransactionType>(initialDraft?.transactionType || TransactionType.EXPENSE);
-  const [txCurrency, setTxCurrency] = useState<Currency>(initialDraft?.txCurrency || currency);
+  const [transactionType, setTransactionType] = useState<TransactionType>(requestedWallet ? TransactionType.EXPENSE : initialDraft?.transactionType || TransactionType.EXPENSE);
+  const [txCurrency, setTxCurrency] = useState<Currency>(requestedWallet?.currency || initialDraft?.txCurrency || currency);
   const [showDetails, setShowDetails] = useState(initialDraft?.showDetails || false);
 
   const [categoryQuery, setCategoryQuery] = useState('');
@@ -69,15 +74,15 @@ const EntryForm: React.FC<{ initialDraft: EntryDraft | null }> = ({ initialDraft
       .sort((a, b) => (latest.get(b.id) || 0) - (latest.get(a.id) || 0));
   }, [categories, transactions, transactionType]);
   const matchingCategories = categoryQuery.trim() ? categoryOptions.filter(c => c.name.toLocaleLowerCase().includes(categoryQuery.trim().toLocaleLowerCase())) : [];
-  const changeType = (type: TransactionType) => { setTransactionType(type); setSelectedCategory(null); setCategoryQuery(''); setFormError(''); };
+  const changeType = (type: TransactionType) => { setTransactionType(type); setSelectedCategory(null); setCategoryQuery(''); setFormError(''); if (type === TransactionType.INCOME) setWalletItemId(''); };
 
   useEffect(() => {
     if (saved.current) return;
     let active = true;
-    void saveEntryDraft({ id: draftId.current, amount, selectedCategory, note, date, dateMode, recurrence, receiptPreview, tags, transactionType, txCurrency, showDetails })
+    void saveEntryDraft({ id: draftId.current, amount, selectedCategory, note, date, dateMode, recurrence, receiptPreview, tags, transactionType, txCurrency, showDetails, walletItemId })
       .then(ok => { if (active) setDraftWarning(!ok); });
     return () => { active = false; };
-  }, [amount, selectedCategory, note, date, dateMode, recurrence, receiptPreview, tags, transactionType, txCurrency, showDetails]);
+  }, [amount, selectedCategory, note, date, dateMode, recurrence, receiptPreview, tags, transactionType, txCurrency, showDetails, walletItemId]);
 
   const handleSave = async () => {
     if (savingRef.current) return;
@@ -120,7 +125,8 @@ const EntryForm: React.FC<{ initialDraft: EntryDraft | null }> = ({ initialDraft
       recurrence: recurrence === 'none' ? undefined : recurrence,
       receiptUrl: receiptPreview || undefined,
       tags: tags,
-      currency: txCurrency
+      currency: txCurrency,
+      walletItemId: walletItemId || undefined,
     };
     const recurrenceFrom = await chooseRecurrenceStart(row, transactions);
     if (recurrenceFrom === null) return;
@@ -241,6 +247,7 @@ const EntryForm: React.FC<{ initialDraft: EntryDraft | null }> = ({ initialDraft
           </div>
         </div>
 
+        {transactionType === TransactionType.EXPENSE && walletItems.some(item => item.kind === 'stored') && <label className="block text-sm">付款方式<select aria-label="付款方式" className="sf-field w-full mt-2" value={walletItemId} onChange={e => { setWalletItemId(e.target.value); const item = walletItems.find(item => item.id === e.target.value); if (item) { setTxCurrency(item.currency); setRecurrence('none'); } }}><option value="">一般付款</option>{walletItems.filter(item => item.kind === 'stored').map(item => <option key={item.id} value={item.id} disabled={walletStatus(item, transactions) !== 'active' && item.id !== walletItemId}>{item.name} · {formatMoney(walletBalance(item, transactions), item.currency)}{walletStatus(item, transactions) === 'expired' ? ' · 已過期' : ''}</option>)}</select></label>}
         {/* Details (collapsible) */}
         <div>
           <button
@@ -270,7 +277,7 @@ const EntryForm: React.FC<{ initialDraft: EntryDraft | null }> = ({ initialDraft
                 <span className="text-gray-400 text-sm">幣別</span>
                 <select
                   value={txCurrency}
-                  onChange={(e) => setTxCurrency(e.target.value as Currency)}
+                  onChange={(e) => { setTxCurrency(e.target.value as Currency); setWalletItemId(''); }}
                   className="bg-transparent text-right text-gray-300 focus:outline-none cursor-pointer"
                 >
                   <option value="TWD">TWD (NT$)</option>
@@ -340,6 +347,7 @@ const EntryForm: React.FC<{ initialDraft: EntryDraft | null }> = ({ initialDraft
                     return (
                       <button
                         key={value}
+                        disabled={!!walletItemId && value !== 'none'}
                         onClick={() => setRecurrence(value)}
                         className={`flex-1 py-2 rounded-lg text-sm transition-all duration-200 ${recurrence === value ? 'bg-primary text-white shadow-md' : 'text-gray-400 hover:text-gray-200'
                           }`}

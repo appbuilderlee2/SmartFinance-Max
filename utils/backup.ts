@@ -1,5 +1,6 @@
 import { parseDate, parseLocalYMD } from './date';
 import { pinSnapshotCurrencies } from './ledgerCurrency';
+import { validateWalletItem, validateWalletLedger, WALLET_KEY } from './wallet';
 export const BACKUP_FORMAT = 'smartfinance-backup';
 export const BACKUP_VERSION = 2;
 
@@ -11,6 +12,7 @@ const ARRAY_KEYS = new Set([
   'smartfinance_subscriptions',
   'smartfinance_creditcards',
   'smartfinance_creditcard_cycles',
+  WALLET_KEY,
 ]);
 const CURRENCIES = new Set(['TWD', 'HKD', 'USD', 'AUD', 'CNY', 'JPY', 'EUR', 'GBP']);
 
@@ -47,11 +49,13 @@ function validateStoredValue(key: string, value: string): void {
       const number = (field: string, required = true) => { if ((required || row[field] !== undefined) && (typeof row[field] !== 'number' || !Number.isFinite(row[field]) || row[field] < 0)) fail(field); };
       const date = (field: string, required = true) => { if ((required || row[field] !== undefined) && (!row[field] || !parseDate(row[field]))) fail(field); };
       if (row.currency !== undefined && !CURRENCIES.has(row.currency)) fail('currency');
-      if (key === 'smartfinance_transactions') {
+      if (key === WALLET_KEY) {
+        validateWalletItem(row);
+      } else if (key === 'smartfinance_transactions') {
         number('amount'); date('date'); string('note'); string('categoryId');
         if (!['INCOME', 'EXPENSE'].includes(row.type)) fail('type');
         if (row.recurrence !== undefined && !['weekly', 'biweekly', 'monthly'].includes(row.recurrence)) fail('recurrence');
-        string('recurrenceSourceId', false); string('subscriptionId', false); string('receiptUrl', false);
+        string('recurrenceSourceId', false); string('subscriptionId', false); string('receiptUrl', false); string('walletItemId', false);
         for (const field of ['recurrenceFrom', 'recurrenceUntil', 'recurrenceOccurrenceDate', 'subscriptionOccurrenceDate']) {
           if (row[field] !== undefined && !parseLocalYMD(row[field])) fail(field);
         }
@@ -272,6 +276,7 @@ export function parseBackupCsv(text: string): SmartFinanceBackup {
 
 export function validateBackupSnapshot(storage: Record<string, string>): void {
   Object.entries(storage).forEach(([key, value]) => validateStoredValue(key, value));
+  validateWalletLedger(JSON.parse(storage[WALLET_KEY] || '[]'), JSON.parse(storage.smartfinance_transactions || '[]'));
   const categories = storage.smartfinance_categories ? JSON.parse(storage.smartfinance_categories) : null;
   if (categories) {
     const byId = new Map<string, { type: string }>(categories.map((row: { id: string; type: string }) => [row.id, row]));
