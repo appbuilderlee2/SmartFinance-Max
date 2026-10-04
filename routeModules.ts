@@ -1,4 +1,5 @@
 export const routeModules = {
+  planning: () => import('./pages/Planning'),
   wallet: () => import('./pages/Wallet'),
   creditCardCenter: () => import('./pages/CreditCardCenter'),
   welcome: () => import('./pages/Welcome'),

@@ -1,4 +1,5 @@
 import { userTags } from '../utils/tags';
+import IncomeSourceField from '../components/IncomeSourceField';
 
 import React, { useMemo, useState, useRef, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
@@ -44,6 +45,7 @@ const TransactionDetail: React.FC = () => {
    const [txCurrency, setTxCurrency] = useState<Currency>((tx?.currency as Currency) || currency);
 
    const [walletItemId, setWalletItemId] = useState(tx?.walletItemId || '');
+   const [incomeSource, setIncomeSource] = useState(tx?.incomeSource || '');
 
    // Keep local edit state in sync when route param changes.
    // React Router may reuse this component instance across /edit/:id navigations,
@@ -59,6 +61,7 @@ const TransactionDetail: React.FC = () => {
       setRecurrence(source?.recurrence || 'none');
       setScope('only');
       setWalletItemId(tx.walletItemId || '');
+      setIncomeSource(tx.incomeSource || '');
       setDate(tx.date ? toLocalYMD(parseDate(tx.date)!) : '');
       setTxCurrency(((tx.currency as Currency) || currency) as Currency);
    }, [id, tx?.id]);
@@ -107,6 +110,7 @@ const TransactionDetail: React.FC = () => {
          date: storedDate,
          type: transactionType,
          walletItemId: walletItemId || undefined,
+         incomeSource: transactionType === TransactionType.INCOME ? incomeSource.trim() || undefined : undefined,
          currency: txCurrency
       };
       let recurrenceFrom: string | undefined;
@@ -215,6 +219,7 @@ const TransactionDetail: React.FC = () => {
 
             {transactionType === TransactionType.EXPENSE && !source?.recurrence && !tx.subscriptionId && walletItems.some(item => item.kind === 'stored') && <label className="block text-sm">付款方式<select aria-label="付款方式" className="sf-field block w-full mt-2" value={walletItemId} onChange={e => { const item = walletItems.find(item => item.id === e.target.value); setWalletItemId(e.target.value); if (item) { setTxCurrency(item.currency); setRecurrence('none'); } }}><option value="">一般付款</option>{walletItems.filter(item => item.kind === 'stored').map(item => <option key={item.id} value={item.id} disabled={item.id !== tx.walletItemId && walletStatus(item, transactions) !== 'active'}>{item.name} · {formatMoney(walletBalance(item, transactions), item.currency)}</option>)}</select></label>}
 
+            {transactionType === TransactionType.INCOME && <IncomeSourceField value={incomeSource} onChange={setIncomeSource} transactions={transactions} />}
             {/* Details List */}
             <div className="sf-panel overflow-hidden divide-y sf-divider">
                <div className="p-4">

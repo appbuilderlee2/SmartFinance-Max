@@ -10,11 +10,13 @@ export interface EntryDraft {
   date: string; recurrence: RecurrenceFrequency | 'none'; receiptPreview: string | null;
   dateMode?: 'today' | 'manual';
   walletItemId?: string;
+  incomeSource?: string;
   tags: string[]; transactionType: TransactionType; txCurrency: Currency; showDetails: boolean;
 }
 
 export function validateEntryDraft(value: unknown): EntryDraft | null {
   const d = value as EntryDraft | null;
+  if (d?.incomeSource !== undefined && (typeof d.incomeSource !== 'string' || d.incomeSource.length > 80)) return null;
   if (!d || typeof d !== 'object' || typeof d.id !== 'string' || !d.id.startsWith('tx') ||
     typeof d.amount !== 'string' || typeof d.note !== 'string' || typeof d.date !== 'string' ||
     !(d.selectedCategory === null || typeof d.selectedCategory === 'string') ||

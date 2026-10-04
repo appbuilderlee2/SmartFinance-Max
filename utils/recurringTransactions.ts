@@ -104,7 +104,7 @@ export function editRecurringTransactions(rows: Transaction[], id: string, chang
   if (!source?.recurrence) return rows.map(tx => tx.id === id ? { ...tx, ...changes, ...(changes.recurrence ? { recurrenceSourceId: undefined, recurrenceOccurrenceDate: undefined } : {}) } : tx);
   const template = source.recurrenceTemplate || {
     amount: source.amount, date: source.date, note: source.note, categoryId: source.categoryId,
-    type: source.type, currency: source.currency, tags: source.tags,
+    type: source.type, currency: source.currency, tags: source.tags, incomeSource: source.incomeSource,
   };
   if (scope === 'only') return rows.map(tx => tx.id !== id ? tx : {
     ...tx, ...changes, recurrence: tx.recurrence,

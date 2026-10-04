@@ -278,6 +278,10 @@ const Dashboard: React.FC = () => {
         </div>
       </div>
 
+      <div className="grid grid-cols-2 gap-3" aria-label="收支規劃">
+        <button className="sf-control rounded-2xl p-4 text-primary" onClick={() => navigate('/planning?tab=income')}>收入追蹤</button>
+        <button className="sf-control rounded-2xl p-4 text-primary" onClick={() => navigate('/planning?tab=reserves')}>年度支出預留</button>
+      </div>
       <UpcomingAgenda />
 
       {/* Pie Chart Section */}

@@ -8,7 +8,8 @@ import { loadTagHistory, deleteTagFromHistory } from '../utils/tagHistory';
 import { observeLocalDay } from '../utils/dayBoundary';
 
 import React, { createContext, useContext, useState, useEffect, useMemo, useRef } from 'react';
-import { Transaction, Category, Budget, Subscription, TransactionType, Currency, WalletItem } from '../types';
+import { Transaction, Category, Budget, Subscription, TransactionType, Currency, WalletItem, AnnualReserve } from '../types';
+import { RESERVES_KEY, validateReserve } from '../utils/planning';
 import { WALLET_KEY, validateWalletLedger, validateWalletPayment } from '../utils/wallet';
 import { CATEGORIES } from '../constants';
 import {
@@ -76,6 +77,9 @@ interface DataContextType {
   budgets: Budget[];
   subscriptions: Subscription[];
   walletItems: WalletItem[];
+  annualReserves: AnnualReserve[];
+  saveAnnualReserve: (plan: AnnualReserve) => Promise<void>;
+  removeAnnualReserve: (id: string) => Promise<void>;
   saveWalletItem: (item: WalletItem) => Promise<void>;
   removeWalletItem: (id: string) => Promise<void>;
   currency: Currency;
@@ -153,6 +157,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [budgets, setBudgets] = useState<Budget[]>([]);
   const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
   const [walletItems, setWalletItems] = useState<WalletItem[]>([]);
+  const [annualReserves, setAnnualReserves] = useState<AnnualReserve[]>([]);
   const [currency, setCurrencyState] = useState<Currency>(Currency.HKD);
 
   const getTxCurrency = (t: Transaction): Currency => (t.currency as Currency) || currency;
@@ -180,6 +185,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setBudgets(readJson<Budget[]>('smartfinance_budgets') ?? []);
       setSubscriptions(pinCurrency(readJson<Subscription[]>('smartfinance_subscriptions') ?? [], loadedCurrency));
       setWalletItems(readJson<WalletItem[]>(WALLET_KEY) ?? []);
+      setAnnualReserves(readJson<AnnualReserve[]>(RESERVES_KEY) ?? []);
       const migration = migrateCreditCardCurrencies(readJson<CreditCard[]>('smartfinance_creditcards') ?? [], loadCycles(), loadedCurrency);
       setCurrencyState(loadedCurrency);
       setCreditCards(migration.cards);
@@ -201,11 +207,12 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       smartfinance_budgets: JSON.stringify(budgets),
       smartfinance_subscriptions: JSON.stringify(subscriptions),
       [WALLET_KEY]: JSON.stringify(walletItems),
+      [RESERVES_KEY]: JSON.stringify(annualReserves),
       smartfinance_creditcards: JSON.stringify(creditCards),
       smartfinance_currency: currency,
       smartfinance_deleted_transaction_ids: JSON.stringify(deletedIds),
     }).then(ok => { for (const [id, waiter] of waiters) { if (saveWaiters.current.get(id) === waiter) { saveWaiters.current.delete(id); waiter.resolve(ok); } } changes.forEach(resolve => resolve(ok)); });
-  }, [storageReady, transactions, categories, budgets, subscriptions, walletItems, creditCards, currency, changeRevision, deletedIds]);
+  }, [storageReady, transactions, categories, budgets, subscriptions, walletItems, annualReserves, creditCards, currency, changeRevision, deletedIds]);
 
   // Budget Spending Logic (recalculate spent whenever transactions/categories/currency change)
   // Improvement: avoid JSON.stringify object-wide compare and reduce repeated date parsing.
@@ -288,6 +295,11 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     validateWalletLedger(next, transactions);
     return persistCoreChange(() => setWalletItems(next));
   };
+  const saveAnnualReserve = (plan: AnnualReserve) => {
+    validateReserve(plan);
+    return persistCoreChange(() => setAnnualReserves(previous => previous.some(item => item.id === plan.id) ? previous.map(item => item.id === plan.id ? plan : item) : [...previous, plan]));
+  };
+  const removeAnnualReserve = (id: string) => persistCoreChange(() => setAnnualReserves(previous => previous.filter(item => item.id !== id)));
   const removeWalletItem = (id: string) => persistCoreChange(() => {
     setWalletItems(previous => previous.filter(item => item.id !== id));
     setTransactions(previous => previous.map(tx => tx.walletItemId === id ? { ...tx, walletItemId: undefined } : tx));
@@ -503,6 +515,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setBudgets([]); // will be auto-synced to categories with limit 0
     setSubscriptions([]);
     setWalletItems([]);
+    setAnnualReserves([]);
     setCurrencyState(Currency.HKD);
     setCreditCards([]);
     setThemeColorState('blue');
@@ -637,6 +650,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   return (
     <DataContext.Provider value={{
       walletItems, saveWalletItem, removeWalletItem,
+      annualReserves, saveAnnualReserve, removeAnnualReserve,
       transactions,
       categories: sortedCategories,
       budgets,

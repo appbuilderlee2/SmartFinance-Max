@@ -1,6 +1,7 @@
 import { parseDate, parseLocalYMD } from './date';
 import { pinSnapshotCurrencies } from './ledgerCurrency';
 import { validateWalletItem, validateWalletLedger, WALLET_KEY } from './wallet';
+import { RESERVES_KEY, validateReserve } from './planning';
 export const BACKUP_FORMAT = 'smartfinance-backup';
 export const BACKUP_VERSION = 2;
 
@@ -13,6 +14,7 @@ const ARRAY_KEYS = new Set([
   'smartfinance_creditcards',
   'smartfinance_creditcard_cycles',
   WALLET_KEY,
+  RESERVES_KEY,
 ]);
 const CURRENCIES = new Set(['TWD', 'HKD', 'USD', 'AUD', 'CNY', 'JPY', 'EUR', 'GBP']);
 
@@ -49,13 +51,17 @@ function validateStoredValue(key: string, value: string): void {
       const number = (field: string, required = true) => { if ((required || row[field] !== undefined) && (typeof row[field] !== 'number' || !Number.isFinite(row[field]) || row[field] < 0)) fail(field); };
       const date = (field: string, required = true) => { if ((required || row[field] !== undefined) && (!row[field] || !parseDate(row[field]))) fail(field); };
       if (row.currency !== undefined && !CURRENCIES.has(row.currency)) fail('currency');
-      if (key === WALLET_KEY) {
+      if (key === RESERVES_KEY) {
+        validateReserve(row);
+      } else if (key === WALLET_KEY) {
         validateWalletItem(row);
       } else if (key === 'smartfinance_transactions') {
         number('amount'); date('date'); string('note'); string('categoryId');
         if (!['INCOME', 'EXPENSE'].includes(row.type)) fail('type');
         if (row.recurrence !== undefined && !['weekly', 'biweekly', 'monthly'].includes(row.recurrence)) fail('recurrence');
         string('recurrenceSourceId', false); string('subscriptionId', false); string('receiptUrl', false); string('walletItemId', false);
+        string('incomeSource', false);
+        if (row.incomeSource !== undefined && row.incomeSource.length > 80) fail('incomeSource');
         for (const field of ['recurrenceFrom', 'recurrenceUntil', 'recurrenceOccurrenceDate', 'subscriptionOccurrenceDate']) {
           if (row[field] !== undefined && !parseLocalYMD(row[field])) fail(field);
         }

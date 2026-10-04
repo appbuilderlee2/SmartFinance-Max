@@ -848,3 +848,26 @@ html.theme-applefluid-light .sf-month-summary .text-red-500 { color:#c3282d; }
 .sf-undo-toast { position:fixed; bottom:calc(100px + env(safe-area-inset-bottom)); left:16px; right:16px; max-width:540px; margin:auto; z-index:60; display:flex; align-items:center; gap:12px; padding:10px 16px; border-radius:16px; background:rgb(var(--sf-surface-bg)); color:rgb(var(--sf-text-primary)); box-shadow:0 4px 24px #0004; border:1px solid rgb(var(--sf-text-primary)/.15); }
 .sf-undo-toast span { flex:1; font-size:14px; }
 .sf-undo-toast button { min-height:44px; color:rgb(var(--sf-primary)); padding:4px 8px; }
+/* Planning shares the existing compact surfaces and safe-area layout. */
+.sf-planning { max-width: 720px; margin: 0 auto; padding: 16px 16px 130px; }
+.sf-planning .sf-primary-button { display:flex; align-items:center; justify-content:center; gap:8px; }
+.sf-reserve-card > strong > small { display:inline; }
+.sf-planning-filters { display:flex; gap:12px; margin:20px 0; }
+.sf-planning-filters label { display:grid; gap:6px; flex:1; min-width:0; }
+.sf-planning-filters input,.sf-planning-filters select { width:100%; min-width:0; }
+.sf-plan-summary { padding:22px; display:grid; gap:8px; }
+.sf-plan-summary > strong { font-size:30px; overflow-wrap:anywhere; }
+.sf-planning small { display:block; font-size:12px; opacity:.7; }
+.sf-plan-empty { padding:24px 8px; opacity:.7; }
+.sf-income-group,.sf-reserve-card { margin-top:16px; }
+.sf-income-group summary { display:flex; justify-content:space-between; align-items:center; gap:12px; padding:18px; cursor:pointer; }
+.sf-income-group summary span { overflow-wrap:anywhere; min-width:0; }
+.sf-plan-transactions { padding:0 18px 12px; }
+.sf-plan-transactions button { width:100%; display:flex; justify-content:space-between; gap:12px; text-align:left; padding:12px 0; }
+.sf-reserve-card { padding:20px; display:grid; gap:12px; }
+.sf-reserve-card h2 { font-weight:600; overflow-wrap:anywhere; }
+.sf-reserve-card > strong { font-size:22px; }
+.sf-reserve-card progress { width:100%; height:8px; accent-color:var(--color-primary,#0781ff); }
+.sf-reserve-numbers,.sf-reserve-actions { display:flex; justify-content:space-between; gap:12px; }
+.sf-reserve-numbers b { display:block; }
+.sf-reserve-actions button { min-height:44px; }
