@@ -95,7 +95,7 @@ function WalletForm({ original, kind, currency, busy, onSave, onError }: { origi
   };
   return <form onSubmit={submit}><fieldset disabled={busy} className="sf-wallet-form">
     <label>名稱<input autoComplete="off" className="sf-field" value={name} onChange={e => setName(e.target.value)} placeholder={kind === 'stored' ? '例如超市禮品卡' : kind === 'count' ? '例如游泳十次卡' : '例如餐飲禮券'} /></label>
-    <label>幣別<select className="sf-field" disabled={!!original} value={unit} onChange={e => setUnit(e.target.value as Currency)}>{Object.values(Currency).map(code => <option key={code}>{code}</option>)}</select></label>
+    <label>幣別<select aria-label="幣別" className="sf-field" disabled={!!original} value={unit} onChange={e => setUnit(e.target.value as Currency)}>{Object.values(Currency).map(code => <option key={code}>{code}</option>)}</select></label>
     {!original && <label>{kind === 'stored' ? '現有餘額' : '現有數量'}<input className="sf-field" inputMode={kind === 'stored' ? 'decimal' : 'numeric'} value={amount} onChange={e => setAmount(e.target.value)} /></label>}
     {kind === 'voucher' && <label>每張面額（可留空）<input className="sf-field" inputMode="decimal" value={face} onChange={e => setFace(e.target.value)} /></label>}
     <label>到期日（可留空）<input className="sf-field" type="date" value={expires} onChange={e => setExpires(e.target.value)} /></label>

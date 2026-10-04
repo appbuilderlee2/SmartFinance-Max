@@ -261,8 +261,10 @@ test('settings data centre protects IndexedDB data during cache maintenance', as
 
   await search.fill('快取');
   await page.getByRole('button', { name: '清除快取並重新載入' }).click();
-  await page.getByRole('alertdialog', { name: '清除快取？' }).getByRole('button', { name: '清除並重新載入' }).click();
-  await page.waitForLoadState('load');
+  await Promise.all([
+    page.waitForEvent('load'),
+    page.getByRole('alertdialog', { name: '清除快取？' }).getByRole('button', { name: '清除並重新載入' }).click(),
+  ]);
   await expect(page.getByRole('heading', { name: '設定', exact: true })).toBeVisible();
   const stored = await readIndexedDbJson<Array<{ id: string }>>(page, 'smartfinance_transactions');
   expect(stored).toEqual([expect.objectContaining({ id: 'cache-safe', amount: 1 })]);
