@@ -24,7 +24,11 @@ test('income source persists through draft, save and edit and appears in the mon
  await page.getByRole('button',{name:'編輯',exact:true}).click();
  await page.getByLabel('收入來源').fill('私人教班');
  await page.getByRole('button',{name:'儲存',exact:true}).click();
- await page.goto('/#/planning?tab=income');await page.reload();
+ await expect(page).toHaveURL(/#\/view\//);
+ await expect(page.getByText('收入來源：私人教班',{exact:true})).toBeVisible();
+ await page.goto('/#/planning?tab=income');
+ await expect(page.getByText('私人教班',{exact:true})).toBeVisible();
+ await page.reload();
  await expect(page.getByText('私人教班',{exact:true})).toBeVisible();
  await expect(page.getByText('游泳教班',{exact:true})).toHaveCount(0);
  const dir=join(process.env.RUNNER_TEMP || '/tmp','smartfinance-ui');await mkdir(dir,{recursive:true});
