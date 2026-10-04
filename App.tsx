@@ -6,6 +6,7 @@ import { routeModules } from './routeModules';
 const Welcome = lazy(routeModules.welcome);
 const Dashboard = lazy(routeModules.dashboard);
 const WalletPage = lazy(routeModules.wallet);
+const PlanningPage = lazy(routeModules.planning);
 const AddTransaction = lazy(routeModules.addTransaction);
 const Calendar = lazy(routeModules.calendar);
 const Records = lazy(routeModules.records);
@@ -186,6 +187,7 @@ const App: React.FC = () => {
           {/* App routes (no login required) */}
           <Route path="/" element={<Suspense fallback={<Layout><Loading /></Layout>}><Layout><OverviewShell><Dashboard /></OverviewShell></Layout></Suspense>} />
           <Route path="/wallet" element={<Suspense fallback={<Layout><Loading /></Layout>}><Layout><WalletPage /></Layout></Suspense>} />
+          <Route path="/planning" element={<Suspense fallback={<Layout><Loading /></Layout>}><Layout><PlanningPage /></Layout></Suspense>} />
 
           <Route
             path="/records"

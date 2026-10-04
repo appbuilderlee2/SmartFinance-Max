@@ -18,6 +18,7 @@ import { parseMoneyInput } from '../utils/money';
 import { chooseRecurrenceStart } from '../utils/recurrenceChoice';
 import { resolveEntryDate } from '../utils/entryDate';
 import { observeLocalDay } from '../utils/dayBoundary';
+import IncomeSourceField from '../components/IncomeSourceField';
 
 const AddTransaction: React.FC = () => {
   const { transactions } = useData();
@@ -37,6 +38,7 @@ const EntryForm: React.FC<{ initialDraft: EntryDraft | null }> = ({ initialDraft
   const [params] = useSearchParams();
   const requestedWallet = walletItems.find(item => item.id === (params.get('wallet') || initialDraft?.walletItemId) && item.kind === 'stored');
   const [walletItemId, setWalletItemId] = useState(requestedWallet?.id || '');
+  const [incomeSource, setIncomeSource] = useState(initialDraft?.incomeSource || '');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const draftId = useRef(initialDraft?.id || makeId('tx'));
@@ -79,10 +81,10 @@ const EntryForm: React.FC<{ initialDraft: EntryDraft | null }> = ({ initialDraft
   useEffect(() => {
     if (saved.current) return;
     let active = true;
-    void saveEntryDraft({ id: draftId.current, amount, selectedCategory, note, date, dateMode, recurrence, receiptPreview, tags, transactionType, txCurrency, showDetails, walletItemId })
+    void saveEntryDraft({ id: draftId.current, amount, selectedCategory, note, date, dateMode, recurrence, receiptPreview, tags, transactionType, txCurrency, showDetails, walletItemId, incomeSource })
       .then(ok => { if (active) setDraftWarning(!ok); });
     return () => { active = false; };
-  }, [amount, selectedCategory, note, date, dateMode, recurrence, receiptPreview, tags, transactionType, txCurrency, showDetails, walletItemId]);
+  }, [amount, selectedCategory, note, date, dateMode, recurrence, receiptPreview, tags, transactionType, txCurrency, showDetails, walletItemId, incomeSource]);
 
   const handleSave = async () => {
     if (savingRef.current) return;
@@ -127,6 +129,7 @@ const EntryForm: React.FC<{ initialDraft: EntryDraft | null }> = ({ initialDraft
       tags: tags,
       currency: txCurrency,
       walletItemId: walletItemId || undefined,
+      incomeSource: transactionType === TransactionType.INCOME ? incomeSource.trim() || undefined : undefined,
     };
     const recurrenceFrom = await chooseRecurrenceStart(row, transactions);
     if (recurrenceFrom === null) return;
@@ -232,6 +235,7 @@ const EntryForm: React.FC<{ initialDraft: EntryDraft | null }> = ({ initialDraft
           </div>
         </div>
 
+        {transactionType === TransactionType.INCOME && <IncomeSourceField value={incomeSource} onChange={setIncomeSource} transactions={transactions} />}
         {/* Date */}
         <div>
           <div className="flex justify-between items-center mb-2"><h3 className="text-gray-400 text-sm ml-1">日期</h3><button type="button" className="text-primary text-sm px-2 py-1" onClick={() => { setDateMode('today'); setDate(toLocalYMD(new Date())); }}>今天</button></div>

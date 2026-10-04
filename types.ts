@@ -15,6 +15,7 @@ export interface Category {
 }
 
 export interface Transaction {
+  incomeSource?: string;
   id: string;
   amount: number;
   date: string; // ISO date string
@@ -27,7 +28,7 @@ export interface Transaction {
   recurrenceOccurrenceDate?: string;
   recurrenceFrom?: string;
   recurrenceUntil?: string;
-  recurrenceTemplate?: Pick<Transaction, 'amount' | 'date' | 'note' | 'categoryId' | 'type' | 'currency' | 'tags'>;
+  recurrenceTemplate?: Pick<Transaction, 'amount' | 'date' | 'note' | 'categoryId' | 'type' | 'currency' | 'tags' | 'incomeSource'>;
   skippedDates?: string[]; // Deliberately deleted occurrences, retained on the source
   receiptUrl?: string;
   tags?: string[];
@@ -47,6 +48,15 @@ export interface WalletItem {
   expiresOn?: string;
   notes: string;
   events: { id: string; date: string; amount: number; kind: 'add' | 'use'; note: string }[];
+}
+
+export interface AnnualReserve {
+  id: string;
+  name: string;
+  currency: Currency;
+  target: number;
+  reserved: number;
+  dueDate: string;
 }
 
 export enum Currency {

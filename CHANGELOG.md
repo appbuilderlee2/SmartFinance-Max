@@ -1,3 +1,10 @@
+## v2.21.0 — Income sources and annual expense reserves
+
+- Add optional income sources to entry, drafts, editing, recurring templates and backup data; show monthly totals, shares and drill-down transactions per currency.
+- Add annual reserve plans under Overview with target, manually recorded reserved amount, due date, remaining amount and currency-rounded monthly suggestion.
+- Keep reserves separate from transactions: creating, updating, deleting or rolling a plan into next year never creates spending or transfers money.
+- Preserve the six primary destinations. Add unit and mobile/desktop regression coverage for planning and data durability.
+
 ## v2.15.0 — iOS dialogs and safer billing writes
 
 - Replace browser-native alerts, confirmations and prompts with a shared iOS-style dialog system, including queued interactions, keyboard focus handling and safe-area spacing.
