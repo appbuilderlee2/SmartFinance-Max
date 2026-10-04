@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test';
 import { mkdir } from 'node:fs/promises';
 import { join } from 'node:path';
 
-test('income source persists through draft, save and edit and appears in the monthly breakdown', async ({page})=>{
+test('income source persists through draft, save and edit and appears in the monthly breakdown', async ({page},info)=>{
  const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));
  await page.clock.setFixedTime(new Date('2026-10-04T12:00:00Z'));
  await page.goto('/#/add');
@@ -27,6 +27,8 @@ test('income source persists through draft, save and edit and appears in the mon
  await page.goto('/#/planning?tab=income');await page.reload();
  await expect(page.getByText('私人教班',{exact:true})).toBeVisible();
  await expect(page.getByText('游泳教班',{exact:true})).toHaveCount(0);
+ const dir=join(process.env.RUNNER_TEMP || '/tmp','smartfinance-ui');await mkdir(dir,{recursive:true});
+ await page.screenshot({path:join(dir,`${info.project.name}-income.png`),animations:'disabled'});
  await page.getByLabel('規劃幣別').selectOption('AUD');
  await expect(page.getByTestId('income-total')).toContainText('0');
  expect(errors).toEqual([]);
