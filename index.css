@@ -850,6 +850,8 @@ html.theme-applefluid-light .sf-month-summary .text-red-500 { color:#c3282d; }
 .sf-undo-toast button { min-height:44px; color:rgb(var(--sf-primary)); padding:4px 8px; }
 /* Planning shares the existing compact surfaces and safe-area layout. */
 .sf-planning { max-width: 720px; margin: 0 auto; padding: 16px 16px 130px; }
+.sf-planning .sf-primary-button { display:flex; align-items:center; justify-content:center; gap:8px; }
+.sf-reserve-card > strong > small { display:inline; }
 .sf-planning-filters { display:flex; gap:12px; margin:20px 0; }
 .sf-planning-filters label { display:grid; gap:6px; flex:1; min-width:0; }
 .sf-planning-filters input,.sf-planning-filters select { width:100%; min-width:0; }
