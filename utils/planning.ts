@@ -1,4 +1,4 @@
-import { AnnualReserve, Currency, Transaction, TransactionType } from '../types';
+import { AnnualReserve, Category, Currency, Transaction, TransactionType } from '../types';
 import { parseDate, parseLocalYMD, toLocalYMD } from './date';
 import { fromMinorUnits, parseMoneyInput, toMinorUnits } from './money';
 
@@ -25,15 +25,16 @@ export function nextAnnualDate(value: string) {
   const year = date.getFullYear() + 1, month = date.getMonth();
   return toLocalYMD(new Date(year, month, Math.min(date.getDate(), new Date(year, month + 1, 0).getDate())));
 }
-export function incomeBySource(transactions: Transaction[], month: string, currency: Currency, fallback: Currency) {
-  const groups = new Map<string, { source: string; minor: number; rows: Transaction[] }>();
+export function incomeBySource(transactions: Transaction[], month: string, currency: Currency, fallback: Currency, categories: Category[] = []) {
+  const names = new Map(categories.map(category => [category.id, category.name]));
+  const groups = new Map<string, { categoryId: string; source: string; minor: number; rows: Transaction[] }>();
   for (const tx of transactions) {
     const date = parseDate(tx.date);
     if (tx.type !== TransactionType.INCOME || (tx.currency || fallback) !== currency || !date || toLocalYMD(date).slice(0, 7) !== month) continue;
-    const source = tx.incomeSource?.trim() || '未指定來源';
-    const group = groups.get(source) || { source, minor: 0, rows: [] };
-    group.minor += toMinorUnits(tx.amount, currency); group.rows.push(tx); groups.set(source, group);
+    const source = names.get(tx.categoryId) || '未分類';
+    const group = groups.get(tx.categoryId) || { categoryId: tx.categoryId, source, minor: 0, rows: [] };
+    group.minor += toMinorUnits(tx.amount, currency); group.rows.push(tx); groups.set(tx.categoryId, group);
   }
   const total = [...groups.values()].reduce((sum, group) => sum + group.minor, 0);
-  return { total: fromMinorUnits(total, currency), groups: [...groups.values()].sort((a, b) => b.minor - a.minor).map(group => ({ source: group.source, amount: fromMinorUnits(group.minor, currency), share: total ? group.minor / total * 100 : 0, rows: group.rows.sort((a,b) => b.date.localeCompare(a.date)) })) };
+  return { total: fromMinorUnits(total, currency), groups: [...groups.values()].sort((a, b) => b.minor - a.minor).map(group => ({ categoryId: group.categoryId, source: group.source, amount: fromMinorUnits(group.minor, currency), share: total ? group.minor / total * 100 : 0, rows: group.rows.sort((a,b) => b.date.localeCompare(a.date)) })) };
 }

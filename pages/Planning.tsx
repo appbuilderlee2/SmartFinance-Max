@@ -12,7 +12,7 @@ import { showAppConfirm } from '../utils/appDialog';
 import BottomSheet from '../components/BottomSheet';
 
 export default function Planning() {
-  const { transactions, currency, annualReserves, saveAnnualReserve, removeAnnualReserve } = useData();
+  const { transactions, categories, currency, annualReserves, saveAnnualReserve, removeAnnualReserve } = useData();
   const navigate = useNavigate(), [params, setParams] = useSearchParams();
   const reserves = params.get('tab') === 'reserves';
   const [unit, setUnit] = useState(currency);
@@ -22,7 +22,7 @@ export default function Planning() {
   const [editing, setEditing] = useState<AnnualReserve | 'new' | null>(null);
   const [error, setError] = useState(''), [busy, setBusy] = useState(false);
   const lock = useRef(false);
-  const income = useMemo(() => incomeBySource(transactions, month, unit, currency), [transactions, month, unit, currency]);
+  const income = useMemo(() => incomeBySource(transactions, month, unit, currency, categories), [transactions, month, unit, currency, categories]);
   const plans = useMemo(() => annualReserves.filter(plan => plan.currency === unit).sort((a,b) => a.dueDate.localeCompare(b.dueDate)), [annualReserves, unit]);
   const required = sumMoney(plans.map(plan => reserveProgress(plan, today).monthly), unit);
   async function run(action: () => Promise<void>) {
@@ -41,8 +41,8 @@ export default function Planning() {
     {error && !editing && <p role="alert" className="sf-entry-error">{error}</p>}
     {!reserves ? <>
       <section className="sf-sub-group sf-plan-summary"><h2>本月已記錄收入</h2><strong data-testid="income-total">{formatMoney(income.total, unit)}</strong><small>按帳目日期計算</small></section>
-      {!income.groups.length && <p className="sf-plan-empty">此月份未有收入。記帳時選「收入」，填入來源即可。</p>}
-      {income.groups.map(group => <details key={group.source} className="sf-sub-group sf-income-group"><summary><span><span>{group.source}</span><small>{group.rows.length} 筆 · {group.share.toFixed(1)}%</small></span><strong>{formatMoney(group.amount, unit)}</strong></summary><div className="sf-plan-transactions">{group.rows.map(tx => <button key={tx.id} onClick={() => navigate(`/view/${tx.id}`)}><span>{tx.note || '收入帳目'}<small>{toLocalYMD(parseDate(tx.date)!)}</small></span><b>{formatMoney(tx.amount, unit)}</b></button>)}</div></details>)}
+      {!income.groups.length && <p className="sf-plan-empty">此月份未有收入。</p>}
+      {income.groups.map(group => <details key={group.categoryId} className="sf-sub-group sf-income-group"><summary><span><span>{group.source}</span><small>{group.rows.length} 筆 · {group.share.toFixed(1)}%</small></span><strong>{formatMoney(group.amount, unit)}</strong></summary><div className="sf-plan-transactions">{group.rows.map(tx => <button key={tx.id} onClick={() => navigate(`/view/${tx.id}`)}><span>{tx.note || '收入帳目'}<small>{toLocalYMD(parseDate(tx.date)!)}</small></span><b>{formatMoney(tx.amount, unit)}</b></button>)}</div></details>)}
     </> : <>
       <section className="sf-sub-group sf-plan-summary"><h2>每月建議預留</h2><strong data-testid="reserve-monthly">{formatMoney(required, unit)}</strong><small>預留只作規劃，不會扣款或計入支出。</small></section>
       <button className="sf-primary-button w-full flex items-center justify-center gap-2 my-4" onClick={() => { setError(''); setEditing('new'); }}><Plus size={18} />新增年度項目</button>
