@@ -16,7 +16,7 @@ const TransactionView: React.FC = () => {
   const location = useLocation();
   const fromReport = Boolean(location.state?.fromReport);
   const { id } = useParams();
-  const { transactions, categories, deleteTransaction, updateTransaction, currency } = useData();
+  const { transactions, categories, deleteTransaction, updateTransaction, currency, walletItems } = useData();
 
   const categoryById = useMemo(() => {
     return new Map(categories.map(c => [c.id, c] as const));
@@ -83,6 +83,7 @@ const TransactionView: React.FC = () => {
 
           {/* Details List */}
           <div className="sf-panel rounded-xl overflow-hidden divide-y sf-divider">
+            {transaction.walletItemId && <div className="flex justify-between p-4"><span>付款方式</span><button className="text-primary" onClick={() => navigate(`/wallet?id=${encodeURIComponent(transaction.walletItemId!)}`)}>{walletItems.find(item => item.id === transaction.walletItemId)?.name || '儲值卡'}</button></div>}
             <div className="flex justify-between p-4">
               <span className="text-white">日期</span>
               <span className="text-gray-400">{formattedDate}</span>

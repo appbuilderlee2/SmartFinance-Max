@@ -9,6 +9,7 @@ export interface EntryDraft {
   id: string; amount: string; selectedCategory: string | null; note: string;
   date: string; recurrence: RecurrenceFrequency | 'none'; receiptPreview: string | null;
   dateMode?: 'today' | 'manual';
+  walletItemId?: string;
   tags: string[]; transactionType: TransactionType; txCurrency: Currency; showDetails: boolean;
 }
 
@@ -20,7 +21,7 @@ export function validateEntryDraft(value: unknown): EntryDraft | null {
     !(d.receiptPreview === null || typeof d.receiptPreview === 'string') ||
     !Array.isArray(d.tags) || !d.tags.every(t => typeof t === 'string') ||
     !Object.values(Currency).includes(d.txCurrency) || !Object.values(TransactionType).includes(d.transactionType) ||
-    !['none', 'weekly', 'biweekly', 'monthly'].includes(d.recurrence) || typeof d.showDetails !== 'boolean') return null;
+    !['none', 'weekly', 'biweekly', 'monthly'].includes(d.recurrence) || typeof d.showDetails !== 'boolean' || (d.walletItemId !== undefined && typeof d.walletItemId !== 'string')) return null;
   return d;
 }
 

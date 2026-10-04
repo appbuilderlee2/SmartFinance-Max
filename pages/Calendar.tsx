@@ -1,9 +1,11 @@
 
-import { parseDate } from '../utils/date';
+import { parseDate, toLocalYMD } from '../utils/date';
 import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ChevronLeft, ChevronRight, X, Plus } from 'lucide-react';
-import { useLedger } from '../contexts/DataContext';
+import { useLedger, useData } from '../contexts/DataContext';
+import { financialAgenda } from '../utils/financialAgenda';
+import { loadCycles } from '../utils/creditCardCycleStorage';
 import { Currency, TransactionType } from '../types';
 import { Icon } from '../components/Icon';
 import { formatMoney, formatMoneyNumber, fromMinorUnits, toMinorUnits } from '../utils/money';
@@ -12,6 +14,7 @@ import { loadPreferences } from '../utils/preferences';
 const Calendar: React.FC = () => {
     const navigate = useNavigate();
     const { transactions, currency, getCategory, byMonth } = useLedger();
+    const { subscriptions, walletItems, creditCards } = useData();
     const [visibleMonth, setVisibleMonth] = useState(() => {
         const today = new Date();
         return today.getFullYear() * 12 + today.getMonth();
@@ -29,6 +32,8 @@ const Calendar: React.FC = () => {
     // Get first day of month and number of days
     const firstDayOfMonth = new Date(year, month, 1).getDay();
     const daysInMonth = new Date(year, month + 1, 0).getDate();
+    const agenda = financialAgenda(subscriptions, walletItems, transactions, creditCards, loadCycles(), toLocalYMD(new Date(year, month, 1)), toLocalYMD(new Date(year, month + 1, 0)));
+    const visibleAgenda = agenda.filter(event => selectedDay === null || Number(event.date.slice(-2)) === selectedDay);
 
     // Build the selected month's calendar, summary and transaction list in one pass.
     // Keeping these values in one snapshot prevents the summary from doing separate
@@ -141,6 +146,7 @@ const Calendar: React.FC = () => {
                     className="sf-calendar-day"
                 >
                     <span className="sf-day-number">{day}</span>
+                    {agenda.some(event => Number(event.date.slice(-2)) === day) && <span aria-label="有扣款或到期事項" className="w-1 h-1 bg-primary rounded-full" />}
                     {(hasExpense || hasIncome) && (
                         <div className="flex flex-col items-center mt-0.5 space-y-0.5 leading-tight max-w-[64px] text-center">
                             {hasExpense && (
@@ -258,6 +264,7 @@ const Calendar: React.FC = () => {
             </div>
 
             {/* Transaction Details */}
+            {visibleAgenda.length > 0 && <section className="px-4 mb-4"><div className="sf-panel p-4"><h3 className="text-sm text-gray-400 mb-2">扣款及到期事項</h3>{visibleAgenda.map(event => <button key={event.id} onClick={() => navigate(event.path)} className="w-full flex justify-between gap-3 py-3 text-left border-b border-white/10"><span className="min-w-0 break-words">{event.name}<small className="block text-gray-400">{event.label}</small></span><span className="text-sm shrink-0">{event.date.slice(5)}</span></button>)}</div></section>}
             <div className="px-4">
                 <div className="sf-panel p-4">
                     <div className="flex justify-between items-center mb-3">

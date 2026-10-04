@@ -47,7 +47,7 @@ test('first-time user can complete onboarding', async ({ page }) => {
   await expect(page.getByRole('heading', { name: '歡迎使用' })).toBeVisible();
   await page.getByRole('button', { name: '開始使用' }).click();
   await expect(page).toHaveURL(/#\/$/);
-  await expect(page.getByRole('heading', { name: '統計總覽' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: '總覽', exact: true })).toBeVisible();
   await expect(page.evaluate(() => localStorage.getItem('smartfinance_has_onboarded'))).resolves.toBe('true');
 });
 
@@ -175,11 +175,11 @@ test('cached app opens immediately offline and reports reconnection', async ({ p
   await page.goto('/');
   await page.evaluate(() => localStorage.setItem('smartfinance_has_onboarded', 'true'));
   await page.reload();
-  await expect(page.getByRole('heading', { name: '統計總覽' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: '總覽', exact: true })).toBeVisible();
   await page.evaluate(async () => { await navigator.serviceWorker.ready; });
   if (!await page.evaluate(() => Boolean(navigator.serviceWorker.controller))) {
     await page.reload();
-    await expect(page.getByRole('heading', { name: '統計總覽' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: '總覽', exact: true })).toBeVisible();
   }
   const indexCached = await page.evaluate(async () => (
     Boolean(await caches.match(new URL('index.html', location.href).href))
@@ -188,7 +188,7 @@ test('cached app opens immediately offline and reports reconnection', async ({ p
 
   await context.setOffline(true);
   await page.reload({ waitUntil: 'domcontentloaded' });
-  await expect(page.getByRole('heading', { name: '統計總覽' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: '總覽', exact: true })).toBeVisible();
   await expect(page.getByRole('status').filter({ hasText: '離線模式' })).toBeVisible();
 
   await context.setOffline(false);

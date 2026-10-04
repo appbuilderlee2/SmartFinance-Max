@@ -193,6 +193,7 @@ const Settings: React.FC = () => {
       `交易：${countArray(backup.storage, 'smartfinance_transactions')} 筆`,
       `預算：${countArray(backup.storage, 'smartfinance_budgets')} 項`,
       `訂閱：${countArray(backup.storage, 'smartfinance_subscriptions')} 項`,
+      `卡券：${countArray(backup.storage, 'smartfinance_wallet')} 項`,
       `信用卡：${countArray(backup.storage, 'smartfinance_creditcards')} 張`,
     ].join('\n');
     const mode = await showAppChoice(`${summary}\n\n合併會保留現有資料；取代會以備份內容完整還原。`, [
@@ -337,7 +338,7 @@ const Settings: React.FC = () => {
           <h2 className="text-gray-500 text-xs ml-3 mb-2 uppercase tracking-wider">帳務管理</h2>
           <div className="sf-panel divide-y sf-divider overflow-hidden">
             {[
-              ['分類管理', '/categories'], ['月預算設定', '/budget'], ['報告統計', '/reports'], ['標籤管理', '/settings/tags'], ['通知與提醒', '/settings/notifications'],
+              ['分類管理', '/categories'], ['月預算設定', '/budget'], ['標籤管理', '/settings/tags'], ['通知與提醒', '/settings/notifications'],
               ...(rewardsUnlocked ? [['回贈助手', '/settings/creditcards2']] : []),
             ].map(([label, path]) => (
               <button key={path} onClick={() => navigate(path, path === '/subscriptions' ? { state: { from: '/settings' } } : undefined)} className="w-full p-4 flex items-center justify-between text-white hover:bg-surface/80">

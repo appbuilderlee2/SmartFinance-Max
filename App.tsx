@@ -5,6 +5,7 @@ import { routeModules } from './routeModules';
 
 const Welcome = lazy(routeModules.welcome);
 const Dashboard = lazy(routeModules.dashboard);
+const WalletPage = lazy(routeModules.wallet);
 const AddTransaction = lazy(routeModules.addTransaction);
 const Calendar = lazy(routeModules.calendar);
 const Records = lazy(routeModules.records);
@@ -27,6 +28,7 @@ const CreditCard2SwipeWhich = lazy(routeModules.creditCard2SwipeWhich);
 
 // Layout
 import Layout from './components/Layout';
+import OverviewShell from './components/OverviewShell';
 import { hasOnboarded } from './utils/firstRun';
 import { STORAGE_ERROR_EVENT, subscribeStorage, getSaveStatus, retryStorage, flushStorage, getStaleTab, subscribeStaleTab } from './utils/storage';
 import SecurityGate from './components/SecurityGate';
@@ -182,13 +184,14 @@ const App: React.FC = () => {
           <Route path="/welcome" element={<Suspense fallback={<Loading />}><Welcome /></Suspense>} />
 
           {/* App routes (no login required) */}
-          <Route path="/" element={<Suspense fallback={<Layout><Loading /></Layout>}><Layout><Dashboard /></Layout></Suspense>} />
+          <Route path="/" element={<Suspense fallback={<Layout><Loading /></Layout>}><Layout><OverviewShell><Dashboard /></OverviewShell></Layout></Suspense>} />
+          <Route path="/wallet" element={<Suspense fallback={<Layout><Loading /></Layout>}><Layout><WalletPage /></Layout></Suspense>} />
 
           <Route
             path="/records"
             element={
               <Suspense fallback={<Layout><Loading /></Layout>}>
-                <Layout><Records /></Layout>
+                <Layout><OverviewShell><Records /></OverviewShell></Layout>
               </Suspense>
             }
           />
@@ -306,7 +309,7 @@ const App: React.FC = () => {
             path="/reports"
             element={
               <Suspense fallback={<Layout><Loading /></Layout>}>
-                <Layout><Reports /></Layout>
+                <Layout><OverviewShell><Reports /></OverviewShell></Layout>
               </Suspense>
             }
           />

@@ -1,4 +1,5 @@
 export const routeModules = {
+  wallet: () => import('./pages/Wallet'),
   creditCardCenter: () => import('./pages/CreditCardCenter'),
   welcome: () => import('./pages/Welcome'),
   dashboard: () => import('./pages/Dashboard'),
@@ -22,6 +23,7 @@ export const routeModules = {
 } as const;
 
 export const navRoutePreloads: Record<string, () => Promise<unknown>> = {
+  '/wallet': routeModules.wallet,
   '/cards': routeModules.creditCardCenter,
   '/add': routeModules.addTransaction,
   '/calendar': routeModules.calendar,

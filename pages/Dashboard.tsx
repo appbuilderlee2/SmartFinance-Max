@@ -10,6 +10,7 @@ import { formatMoney, fromMinorUnits, sumMoney, toMinorUnits } from '../utils/mo
 import { parseDate } from '../utils/date';
 import { dashboardTrendPeriods } from '../utils/dashboardPeriods';
 import { expenseBudgets } from '../utils/expenseBudgets';
+import UpcomingAgenda from '../components/UpcomingAgenda';
 
 type PeriodMode = 'month' | 'year';
 
@@ -185,8 +186,8 @@ const Dashboard: React.FC = () => {
     <div className="p-4 space-y-6 pt-safe-top mt-4 max-w-5xl mx-auto">
       <header className="flex flex-col gap-3 mb-2">
         <div className="flex justify-between items-center">
-          <h1 className="sf-page-title">統計總覽</h1>
-          <button className="sf-control rounded-xl px-4 py-2 text-primary" onClick={() => navigate('/subscriptions', { state: { from: '/' } })}>訂閱服務</button>
+          <h2 className="text-lg font-semibold">收支摘要</h2>
+          <button className="sf-control rounded-xl px-4 py-2 text-primary" onClick={() => navigate('/wallet')}>錢包</button>
         </div>
         <div className="flex gap-2 flex-wrap">
           <div className="flex sf-control rounded-lg p-1">
@@ -276,6 +277,8 @@ const Dashboard: React.FC = () => {
           </p>
         </div>
       </div>
+
+      <UpcomingAgenda />
 
       {/* Pie Chart Section */}
       <div className="sf-panel p-4 space-y-3">

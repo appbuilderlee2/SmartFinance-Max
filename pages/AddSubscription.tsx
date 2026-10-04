@@ -53,7 +53,7 @@ const AddSubscription: React.FC = () => {
   const today = toLocalYMD(new Date());
   const active = !form.status || form.status === 'active';
   const expenseCategories = categories.filter(c => c.type === TransactionType.EXPENSE);
-  const candidates = original ? transactions.filter(t => t.type === TransactionType.EXPENSE && !t.subscriptionId && (t.currency || currency) === unit && t.amount === subscriptionAmount(original, original.nextBillingDate)).slice(0,50) : [];
+  const candidates = original ? transactions.filter(t => t.type === TransactionType.EXPENSE && !t.subscriptionId && !t.walletItemId && (t.currency || currency) === unit && t.amount === subscriptionAmount(original, original.nextBillingDate)).slice(0,50) : [];
   const run = async (action: () => Promise<void>) => { if (busy) return; setBusy(true); setError(''); try { await action(); } catch (e) { setError(e instanceof Error ? e.message : '未能儲存，請重試'); } finally { setBusy(false); } };
   const save = () => run(async () => {
     const value = parseMoneyInput(amount, unit);
