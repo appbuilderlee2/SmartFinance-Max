@@ -97,6 +97,85 @@ html.theme-pink {
   --sf-primary: 236 72 153;
 }
 
+
+/*
+  theme-figma: compact editor-inspired workspace.
+  Flat graphite surfaces, crisp 1px separators, restrained depth and a
+  Figma-inspired violet accent. This is a visual skin only; app behaviour is unchanged.
+*/
+html.theme-figma {
+  color-scheme: dark;
+  --sf-primary: 162 89 255;
+  --sf-danger: 242 72 72;
+  --sf-success: 20 174 92;
+  --sf-app-bg: 30 30 30;
+  --sf-surface-bg: 44 44 44;
+  --sf-text-primary: 245 245 245;
+  --sf-text-secondary: 184 184 184;
+  --sf-text-muted: 132 132 132;
+  --sf-gray-50: 245 245 245;
+  --sf-gray-100: 232 232 232;
+  --sf-gray-200: 211 211 211;
+  --sf-gray-300: 184 184 184;
+  --sf-gray-400: 150 150 150;
+  --sf-gray-500: 120 120 120;
+  --sf-gray-600: 92 92 92;
+  --sf-gray-700: 62 62 62;
+  --sf-gray-800: 44 44 44;
+  --sf-gray-900: 30 30 30;
+  --sf-divider-opacity: 0.14;
+  --sf-surface-alpha: 1;
+  --sf-surface-border-opacity: 0.14;
+  --sf-radius-xl: 8px;
+  --sf-radius-2xl: 10px;
+  --sf-radius-3xl: 12px;
+  --sf-shadow-sm: 0 1px 2px rgb(0 0 0 / 0.20);
+  --sf-shadow-md: 0 2px 8px rgb(0 0 0 / 0.22);
+  --sf-shadow-lg: 0 6px 18px rgb(0 0 0 / 0.26);
+  --sf-shadow-xl: 0 12px 30px rgb(0 0 0 / 0.30);
+  --sf-blur-sm: 0px;
+  --sf-blur-md: 0px;
+  --sf-blur-lg: 0px;
+  --sf-blur-xl: 0px;
+  --sf-hero-spot-opacity: 0.10;
+  --sf-app-bg-image: none;
+  --sf-topbar-alpha: 1;
+  --sf-topbar-shadow: 0 1px 0 rgb(255 255 255 / 0.10);
+  --sf-topbar-blur: 0px;
+  --sf-panel-alpha: 1;
+  --sf-panel-shadow: none;
+  --sf-control-alpha: 1;
+  --sf-control-shadow: none;
+}
+
+html.theme-figma body {
+  font-family: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  letter-spacing: -0.01em;
+}
+
+html.theme-figma :is(.sf-card, .sf-panel, .sf-surface) {
+  border-color: rgb(255 255 255 / 0.10);
+}
+
+html.theme-figma .sf-control {
+  border-color: rgb(255 255 255 / 0.13);
+}
+
+html.theme-figma :is(button, [role="button"]) {
+  transition: background-color var(--sf-motion-fast) var(--sf-ease-out), border-color var(--sf-motion-fast) var(--sf-ease-out), opacity var(--sf-motion-fast) linear;
+}
+
+html.theme-figma :is(button, [role="button"]):active {
+  opacity: 0.72;
+}
+
+html.theme-figma .sf-tabbar {
+  border-top: 1px solid rgb(255 255 255 / 0.12);
+  box-shadow: 0 -1px 0 rgb(0 0 0 / 0.28);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
 /*
   theme-ios26: frosted glass, blur, softer contrast, elevated surfaces
   "App enters another OS skin" vibe.
