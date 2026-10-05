@@ -2,15 +2,16 @@ import { test, expect } from '@playwright/test';
 import { mkdir } from 'node:fs/promises';
 import { join } from 'node:path';
 
-test('income source persists through draft, save and edit and appears in the monthly breakdown', async ({page},info)=>{
+test('income follows selected categories through save, edit and reload', async ({page},info)=>{
  const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));
  await page.clock.setFixedTime(new Date('2026-10-04T12:00:00Z'));
+ await page.addInitScript(() => { if (!localStorage.getItem('smartfinance_categories')) localStorage.setItem('smartfinance_categories', JSON.stringify([{id:'7',name:'工作',icon:'Briefcase',color:'bg-emerald-500',type:'INCOME'},{id:'club',name:'Adelaide Triathlon Club',icon:'Briefcase',color:'bg-blue-500',type:'INCOME'}])); });
  await page.goto('/#/add');
  await page.getByRole('button',{name:'收入',exact:true}).click();
- await page.getByLabel('收入來源').fill('游泳教班');
+ await expect(page.getByLabel('收入來源')).toHaveCount(0);
  await page.getByRole('navigation',{name:'主要導航'}).getByRole('button',{name:'總覽',exact:true}).click();
  await page.getByRole('navigation',{name:'主要導航'}).getByRole('button',{name:'記帳',exact:true}).click();
- await expect(page.getByLabel('收入來源')).toHaveValue('游泳教班');
+ await expect(page.getByLabel('收入來源')).toHaveCount(0);
  await page.getByRole('button',{name:'輸入金額'}).click();
  for(const n of ['1','0','0']) await page.getByRole('button',{name:n,exact:true}).click();
  await page.getByRole('button',{name:'完成輸入'}).click();
@@ -19,19 +20,26 @@ test('income source persists through draft, save and edit and appears in the mon
  await expect(page).toHaveURL(/#\/records$/);
  await page.goto('/#/planning?tab=income');
  await expect(page.getByTestId('income-total')).toContainText('100');
- await page.getByText('游泳教班',{exact:true}).click();
+ await page.getByText('工作',{exact:true}).click();
  await page.getByRole('button',{name:/收入帳目/}).click();
  await page.getByRole('button',{name:'編輯',exact:true}).click();
- await page.getByLabel('收入來源').fill('私人教班');
+ await page.getByRole('button',{name:'Adelaide Triathlon Club',exact:true}).click();
  await page.getByRole('button',{name:'儲存',exact:true}).click();
  await expect(page).toHaveURL(/#\/view\//);
- await expect(page.getByText('收入來源：私人教班',{exact:true})).toBeVisible();
+ await expect(page.getByText('Adelaide Triathlon Club',{exact:true})).toBeVisible();
  await page.goto('/#/planning?tab=income');
- await expect(page.getByText('私人教班',{exact:true})).toBeVisible();
+ await expect(page.getByText('Adelaide Triathlon Club',{exact:true})).toBeVisible();
  await page.reload();
- await expect(page.getByText('私人教班',{exact:true})).toBeVisible();
- await expect(page.getByText('游泳教班',{exact:true})).toHaveCount(0);
+ await expect(page.getByText('Adelaide Triathlon Club',{exact:true})).toBeVisible();
+ await expect(page.getByText('工作',{exact:true})).toHaveCount(0);
  const dir=join(process.env.RUNNER_TEMP || '/tmp','smartfinance-ui');await mkdir(dir,{recursive:true});
+ // Simulate a 59px iPhone status area without claiming real Safari coverage.
+ const css = await page.evaluate(() => [...document.styleSheets].flatMap(sheet => { try { return [...sheet.cssRules].map(rule => rule.cssText); } catch { return []; } }).find(rule => rule.startsWith('.sf-planning {')) || '');
+ expect(css).toContain('safe-area-inset-top');
+ await page.addStyleTag({content:css.replace(/env\(safe-area-inset-top,\s*0px\)/g,'59px')});
+ expect((await page.getByRole('heading',{name:'收支規劃'}).boundingBox())!.y).toBeGreaterThanOrEqual(59);
+ const monthBox=(await page.getByLabel('收入月份').boundingBox())!, currencyBox=(await page.getByLabel('規劃幣別').boundingBox())!;
+ expect(monthBox.x+monthBox.width).toBeLessThanOrEqual(currencyBox.x);
  await page.screenshot({path:join(dir,`${info.project.name}-income.png`),animations:'disabled'});
  await page.getByLabel('規劃幣別').selectOption('AUD');
  await expect(page.getByTestId('income-total')).toContainText('0');

@@ -6,14 +6,20 @@ import { editRecurringTransactions } from './recurringTransactions';
 const plan: AnnualReserve = {id:'rego',name:'Rego',currency:Currency.AUD,target:1200,reserved:200,dueDate:'2027-02-15'};
 const income: Transaction = {id:'income',type:TransactionType.INCOME,categoryId:'7',amount:100,currency:Currency.AUD,date:'2026-10-04',note:'',incomeSource:'游泳教班'};
 describe('income tracking and annual reserves',()=>{
+ it('groups old entries by category ID, follows renames and keeps same-name categories separate',()=>{
+  const categories = ['7','club'].map(id=>({id,name:'教班',icon:'',color:'',type:TransactionType.INCOME}));
+  const rows = [income,{...income,id:'old',categoryId:'club',incomeSource:undefined}];
+  expect(incomeBySource(rows,'2026-10',Currency.AUD,Currency.AUD,categories).groups.map(g=>g.categoryId)).toEqual(['7','club']);
+  expect(incomeBySource(rows,'2026-10',Currency.AUD,Currency.AUD,categories.map(c=>({...c,name:'新名稱'}))).groups[0].source).toBe('新名稱');
+ });
  it('groups actual incomes by month, source and currency without guessing old sources',()=>{
   const result = incomeBySource([income,{...income,id:'2',amount:50,incomeSource:' 私教 '},{...income,id:'3',amount:25,incomeSource:undefined},{...income,id:'4',currency:Currency.HKD},{...income,id:'5',type:TransactionType.EXPENSE},{...income,id:'6',date:'2026-09-01'}],'2026-10',Currency.AUD,Currency.HKD);
-  expect(result.total).toBe(175); expect(result.groups.map(g=>g.source)).toEqual(['游泳教班','私教','未指定來源']);
-  expect(result.groups[0].share).toBeCloseTo(100/175*100);
+  expect(result.total).toBe(175); expect(result.groups.map(g=>g.source)).toEqual(['未分類']);
+  expect(result.groups[0].share).toBe(100);
  });
  it('uses minor units and follows edits or deletions',()=>{
   expect(incomeBySource([{...income,amount:0.1},{...income,id:'2',amount:0.2}],'2026-10',Currency.AUD,Currency.AUD).total).toBe(0.3);
-  expect(incomeBySource([{...income,incomeSource:'新來源'}],'2026-10',Currency.AUD,Currency.AUD).groups[0].source).toBe('新來源');
+  expect(incomeBySource([{...income,incomeSource:'舊文字'}],'2026-10',Currency.AUD,Currency.AUD,[{id:'7',name:'Adelaide Triathlon Club',icon:'',color:'',type:TransactionType.INCOME}]).groups[0].source).toBe('Adelaide Triathlon Club');
   expect(incomeBySource([],'2026-10',Currency.AUD,Currency.AUD).total).toBe(0);
  });
  it('reserves before the due month and rounds up to currency precision',()=>{

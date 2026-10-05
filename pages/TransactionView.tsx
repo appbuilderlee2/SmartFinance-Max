@@ -55,7 +55,6 @@ const TransactionView: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
-      {transaction.type === TransactionType.INCOME && transaction.incomeSource && <p className="px-4 pt-4">收入來源：{transaction.incomeSource}</p>}
       {/* Header - Sticky with Safe Area Padding & Backdrop Blur */}
       <div className="pt-safe-top px-4 py-3 flex justify-between items-center sf-topbar sticky top-0 z-50 transition-all">
         <button onClick={() => navigate(-1)} className="flex items-center text-primary text-base active:opacity-70 transition-opacity">

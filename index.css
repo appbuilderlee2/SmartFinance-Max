@@ -849,12 +849,14 @@ html.theme-applefluid-light .sf-month-summary .text-red-500 { color:#c3282d; }
 .sf-undo-toast span { flex:1; font-size:14px; }
 .sf-undo-toast button { min-height:44px; color:rgb(var(--sf-primary)); padding:4px 8px; }
 /* Planning shares the existing compact surfaces and safe-area layout. */
-.sf-planning { max-width: 720px; margin: 0 auto; padding: 16px 16px 130px; }
+.sf-planning { max-width: 720px; margin: 0 auto; padding: calc(16px + env(safe-area-inset-top, 0px)) 16px calc(130px + env(safe-area-inset-bottom, 0px)); }
 .sf-planning .sf-primary-button { display:flex; align-items:center; justify-content:center; gap:8px; }
 .sf-reserve-card > strong > small { display:inline; }
-.sf-planning-filters { display:flex; gap:12px; margin:20px 0; }
+.sf-planning-filters { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; margin:20px 0; }
 .sf-planning-filters label { display:grid; gap:6px; flex:1; min-width:0; }
-.sf-planning-filters input,.sf-planning-filters select { width:100%; min-width:0; }
+.sf-planning-filters input,.sf-planning-filters select { box-sizing:border-box; width:100%; min-width:0; max-width:100%; }
+.sf-planning-filters input[type="month"] { appearance:none; -webkit-appearance:none; }
+.sf-planning-filters input[type="month"]::-webkit-date-and-time-value { min-width:0; text-align:left; }
 .sf-plan-summary { padding:22px; display:grid; gap:8px; }
 .sf-plan-summary > strong { font-size:30px; overflow-wrap:anywhere; }
 .sf-planning small { display:block; font-size:12px; opacity:.7; }
