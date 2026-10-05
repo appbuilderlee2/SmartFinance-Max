@@ -408,7 +408,7 @@ const Settings: React.FC = () => {
               <div className="grid grid-cols-4 gap-2">
                 {[
                   ['blue', '藍色'], ['red', '紅色'], ['green', '綠色'], ['purple', '紫色'], ['orange', '橙色'],
-                  ['pink', '粉紅'], ['ios26', '玻璃'], ['blackgold', '黑金'], ['tech', '科技'], ['light', '經典淺色'],
+                  ['pink', '粉紅'], ['figma', 'Figma'], ['ios26', '玻璃'], ['blackgold', '黑金'], ['tech', '科技'], ['light', '經典淺色'],
                 ].map(([value, label]) => (
                   <button key={value} onClick={() => setThemeColor(value)} className={`rounded-lg border px-2 py-3 text-xs ${themeColor === value ? 'border-primary text-primary bg-primary/10' : 'sf-divider text-gray-400'}`}>{label}</button>
                 ))}
