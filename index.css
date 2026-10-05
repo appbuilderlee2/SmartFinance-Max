@@ -952,3 +952,74 @@ html.theme-applefluid-light .sf-month-summary .text-red-500 { color:#c3282d; }
 .sf-reserve-numbers,.sf-reserve-actions { display:flex; justify-content:space-between; gap:12px; }
 .sf-reserve-numbers b { display:block; }
 .sf-reserve-actions button { min-height:44px; }
+
+
+/* Figma layout pass: editor-like density and hierarchy, scoped to this theme only. */
+html.theme-figma .sf-hub-header {
+  padding-top: calc(10px + env(safe-area-inset-top,0px));
+  border-bottom: 1px solid rgb(255 255 255 / .10);
+}
+html.theme-figma .sf-page-title { font-size:24px; font-weight:600; letter-spacing:-.02em; }
+html.theme-figma .sf-hub-tabs {
+  justify-content:flex-start; gap:2px; width:max-content; max-width:100%;
+  padding:0; margin-top:10px; background:transparent; border-radius:0;
+}
+html.theme-figma .sf-hub-tabs button {
+  flex:none; min-height:36px; padding:0 12px; border-radius:6px; font-size:13px;
+}
+html.theme-figma .sf-hub-tabs button[aria-current=page] {
+  background:rgb(255 255 255 / .09); box-shadow:none; color:rgb(var(--sf-text-primary));
+}
+html.theme-figma .sf-overview > .pt-safe-top { padding-top:10px; }
+html.theme-figma .sf-card,
+html.theme-figma .sf-panel { border-radius:8px; box-shadow:none; }
+html.theme-figma .sf-control { border-radius:6px !important; }
+
+/* Entry: treat the form as a compact property inspector rather than a stack of soft cards. */
+html.theme-figma .sf-entry-page :is(input,select,textarea) {
+  border-radius:6px !important; box-shadow:none !important;
+}
+html.theme-figma .sf-entry-page :is(.rounded-2xl,.rounded-3xl) { border-radius:8px !important; }
+html.theme-figma .sf-entry-page :is(.rounded-xl,.rounded-lg) { border-radius:6px !important; }
+html.theme-figma .sf-entry-page button { box-shadow:none !important; }
+
+/* Credit cards: flatter rows, segmented tabs and tighter data panels. */
+html.theme-figma .sf-credit-center { max-width:680px; padding-top:max(10px,env(safe-area-inset-top)); }
+html.theme-figma .sf-credit-header { min-height:44px; margin-bottom:10px; }
+html.theme-figma .sf-credit-header h1 { font-size:20px; font-weight:600; }
+html.theme-figma .sf-credit-tabs {
+  width:max-content; max-width:100%; padding:2px; margin-bottom:12px;
+  border-radius:7px; background:rgb(255 255 255 / .04);
+}
+html.theme-figma .sf-credit-tabs button {
+  flex:none; min-height:32px; padding:0 14px; border-radius:5px; font-size:12px;
+}
+html.theme-figma .sf-credit-tabs button[aria-pressed=true] {
+  background:rgb(255 255 255 / .12); color:rgb(var(--sf-text-primary));
+}
+html.theme-figma .sf-credit-panel {
+  padding:14px; border-radius:8px; background:rgb(var(--sf-surface-bg)); box-shadow:none;
+}
+html.theme-figma .sf-credit-summary { background:rgb(var(--sf-surface-bg)); }
+html.theme-figma .sf-credit-amount { font-size:30px; font-weight:600; }
+html.theme-figma .sf-credit-card-row {
+  padding:12px 10px; margin-bottom:8px; border-radius:7px;
+}
+html.theme-figma .sf-credit-art { border-radius:5px; }
+html.theme-figma .sf-credit-art-large { border-radius:8px; }
+
+/* Settings: remove the oversized iOS-card feel when Figma is selected. */
+html.theme-figma .sf-settings-page section { margin-bottom:18px; }
+html.theme-figma .sf-settings-page .sf-panel { border-radius:8px; }
+html.theme-figma .sf-settings-page details > summary { font-size:13px; }
+html.theme-figma .sf-settings-page button { box-shadow:none !important; }
+html.theme-figma .sf-settings-page .grid button { min-height:38px; padding-top:8px; padding-bottom:8px; border-radius:6px; }
+
+/* Navigation becomes a fixed editor toolbar instead of a floating glass pill. */
+html.theme-figma .sf-tabbar {
+  left:0; right:0; bottom:0; border-left:0; border-right:0; border-bottom:0;
+  border-radius:0; padding-bottom:env(safe-area-inset-bottom,0px);
+  background:rgb(37 37 37 / .98);
+}
+html.theme-figma .sf-tabbar button { border-radius:5px; }
+html.theme-figma .sf-tabbar button[aria-current=page] { background:rgb(255 255 255 / .08); }
