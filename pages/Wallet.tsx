@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { ChevronLeft, ChevronRight, Plus, Search, Pencil } from 'lucide-react';
+import { ArrowDown, ArrowUp, ChevronLeft, ChevronRight, ListOrdered, Plus, Search, Pencil } from 'lucide-react';
 import { useData } from '../contexts/DataContext';
 import { Currency, WalletItem } from '../types';
 import { walletBalance, walletStatus, walletLabels, walletIcons } from '../utils/wallet';
@@ -14,18 +14,19 @@ import BottomSheet from '../components/BottomSheet';
 import SubscriptionServiceIcon from '../components/SubscriptionServiceIcon';
 import { subscriptionAmount } from '../utils/subscriptionSchedule';
 import SavingsPanel from '../components/SavingsPanel';
+import { moveWalletSection, type WalletSection } from '../utils/walletSections';
 
 type Kind = WalletItem['kind'];
 export default function Wallet() {
-  const { walletItems, transactions, subscriptions, currency, saveWalletItem, removeWalletItem } = useData();
+  const { walletItems, transactions, subscriptions, currency, saveWalletItem, removeWalletItem, walletSectionOrder, saveWalletSectionOrder } = useData();
   const navigate = useNavigate(), [params, setParams] = useSearchParams();
   const selected = walletItems.find(item => item.id === params.get('id'));
   const [today, setToday] = useState(() => toLocalYMD(new Date()));
   useEffect(() => observeLocalDay(setToday), []);
   const [query, setQuery] = useState('');
-  const [filter, setFilter] = useState<'all' | 'subscription' | Kind>('all');
+  const [filter, setFilter] = useState<'all' | 'savings' | 'subscription' | Kind>('all');
   const [status, setStatus] = useState('active');
-  const [sheet, setSheet] = useState<'choose' | Kind | 'edit' | 'add' | 'use' | null>(null);
+  const [sheet, setSheet] = useState<'choose' | 'order' | Kind | 'edit' | 'add' | 'use' | null>(null);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
   const lock = useRef(false);
@@ -46,6 +47,24 @@ export default function Wallet() {
     ...selected.events.map(event => ({ id: event.id, date: event.date, label: event.kind === 'add' ? (selected.kind === 'stored' ? '增值' : '增加數量') : '使用', amount: `${event.kind === 'add' ? '+' : '−'}${selected.kind === 'stored' ? formatMoney(event.amount, selected.currency) : event.amount}`, note: event.note, transaction: false })),
     ...transactions.filter(tx => tx.walletItemId === selected.id).map(tx => ({ id: tx.id, date: toLocalYMD(parseDate(tx.date)!), label: '支出', amount: `−${formatMoney(tx.amount, selected.currency)}`, note: tx.note, transaction: true })),
   ].sort((a,b) => b.date.localeCompare(a.date)) : [];
+  const sectionLabels: Record<WalletSection, string> = { savings: '儲蓄', subscriptions: '訂閱與定期項目', cards: '卡券' };
+  async function moveSection(section: WalletSection, direction: -1 | 1) {
+    if (lock.current) return;
+    lock.current = true; setBusy(true); setError('');
+    try { await saveWalletSectionOrder(moveWalletSection(walletSectionOrder, section, direction)); }
+    catch (e) { setError(e instanceof Error ? e.message : '未能儲存順序'); }
+    finally { lock.current = false; setBusy(false); }
+  }
+  const sections: Record<WalletSection, React.ReactNode> = {
+    savings: (filter === 'all' || filter === 'savings') ? <SavingsPanel /> : null,
+    subscriptions: (filter === 'all' || filter === 'subscription') ? <section data-testid="wallet-section-subscriptions"><div className="sf-wallet-section-title"><h2>訂閱與定期項目</h2><button onClick={() => navigate('/subscriptions', { state: { from: '/wallet' } })}>管理全部 <ChevronRight size={16} /></button></div><div className="sf-sub-group">{subs.slice(0, filter === 'subscription' ? subs.length : 3).map(sub => <button className="sf-wallet-row" key={sub.id} onClick={() => navigate(`/subscriptions/${sub.id}/edit`, { state: { from: '/wallet' } })}><SubscriptionServiceIcon icon={sub.icon} name={sub.name} /><span><strong>{sub.name}</strong><small>{sub.status === 'paused' ? '已暫停' : sub.status === 'cancelled' ? '已取消續訂' : sub.nextBillingDate ? `下次 ${sub.nextBillingDate}` : '不再續訂'}</small></span><b>{formatMoney(subscriptionAmount(sub, sub.nextBillingDate), sub.currency || currency)}</b><ChevronRight size={18} /></button>)}{!subs.length && <button className="sf-wallet-empty" onClick={() => navigate('/add-subscription')}>{query ? '找不到訂閱' : '新增訂閱或定期項目'} <Plus size={18} /></button>}</div></section> : null,
+    cards: filter !== 'subscription' && filter !== 'savings' ? <section data-testid="wallet-section-cards" className="sf-wallet-cards"><div className="sf-wallet-section-title"><h2>卡券</h2><select aria-label="卡券狀態" value={status} onChange={e => setStatus(e.target.value)}><option value="active">可使用</option><option value="used">已用完</option><option value="expired">已過期</option><option value="all">全部狀態</option></select></div>
+      {(['stored','count','voucher'] as const).filter(kind => filter === 'all' || filter === kind).map(kind => {
+        const rows = visible.filter(item => item.kind === kind);
+        return rows.length ? <div className="sf-wallet-card-kind" key={kind}><h2>{walletLabels[kind]}</h2><div className="sf-sub-group">{rows.map(item => <button key={item.id} className="sf-wallet-row" onClick={() => { setParams({id:item.id}); setError(''); }}><span className="sf-wallet-icon">{walletIcons[kind]}</span><span><strong>{item.name}</strong><small>{statusLabel(item)}</small></span><b>{remaining(item)}</b><ChevronRight size={18} /></button>)}</div></div> : null;
+      })}
+      {!visible.length && <div className="sf-wallet-empty sf-sub-group">{walletItems.length ? '沒有符合條件的卡券' : '儲值卡、次數卡及禮券放喺呢度'}<button className="text-primary" onClick={() => openSheet('choose')}>新增</button></div>}</section> : null,
+  };
   return <main className="sf-wallet sf-hub-page">
     <header className="sf-wallet-header">{selected ? <><button aria-label="返回錢包" onClick={() => { setParams({}); setError(''); }}><ChevronLeft /></button><h1>{selected.name}</h1><button aria-label="編輯卡券" onClick={() => openSheet('edit')}><Pencil size={22} /></button></> : <><h1 className="sf-page-title">錢包</h1><button aria-label="新增錢包項目" onClick={() => openSheet('choose')}><Plus /></button></>}</header>
     {error && !sheet && <p role="alert" className="sf-entry-error">{error}</p>}
@@ -57,20 +76,14 @@ export default function Wallet() {
       <section><h2>使用紀錄</h2><div className="sf-sub-group">{history.length ? history.map(event => <div key={event.id} className="sf-wallet-history"><div><strong>{event.label}</strong><small>{event.date}{event.note ? ` · ${event.note}` : ''}</small></div><span>{event.amount}</span>{event.transaction ? <button aria-label="查看支出" onClick={() => navigate(`/view/${event.id}`)}><ChevronRight size={20} /></button> : <button disabled={busy} className="text-primary" onClick={() => run(async () => { if (!await showAppConfirm('移除此紀錄並重新計算餘額？', { title: '刪除紀錄', confirmLabel: '刪除', destructive: true })) return; await saveWalletItem({ ...selected, events: selected.events.filter(item => item.id !== event.id) }); })}>刪除</button>}</div>) : <p className="p-5 text-gray-400">尚未有使用紀錄</p>}</div></section>
       <button disabled={busy} className="sf-wallet-delete" onClick={() => run(async () => { if (!await showAppConfirm('將移除卡券及使用紀錄，已有支出會保留。', { title: '刪除卡券？', confirmLabel: '刪除卡券', destructive: true })) return; await removeWalletItem(selected.id); setParams({}); })}>刪除卡券</button>
     </> : <>
-      <SavingsPanel />
       <label className="sf-service-search"><Search size={20} /><input aria-label="搜尋錢包" value={query} onChange={e => setQuery(e.target.value)} placeholder="搜尋名稱" type="search" /></label>
-      <nav className="sf-service-groups" aria-label="錢包分類">{([['all','全部'],['subscription','訂閱／定期'],['stored','儲值卡'],['count','次數卡'],['voucher','禮券']] as const).map(([key,label]) => <button key={key} aria-pressed={filter === key} onClick={() => setFilter(key)}>{label}</button>)}</nav>
-      {(filter === 'all' || filter === 'subscription') && <section><div className="sf-wallet-section-title"><h2>訂閱與定期項目</h2><button onClick={() => navigate('/subscriptions', { state: { from: '/wallet' } })}>管理全部 <ChevronRight size={16} /></button></div><div className="sf-sub-group">{subs.slice(0, filter === 'subscription' ? subs.length : 3).map(sub => <button className="sf-wallet-row" key={sub.id} onClick={() => navigate(`/subscriptions/${sub.id}/edit`, { state: { from: '/wallet' } })}><SubscriptionServiceIcon icon={sub.icon} name={sub.name} /><span><strong>{sub.name}</strong><small>{sub.status === 'paused' ? '已暫停' : sub.status === 'cancelled' ? '已取消續訂' : sub.nextBillingDate ? `下次 ${sub.nextBillingDate}` : '不再續訂'}</small></span><b>{formatMoney(subscriptionAmount(sub, sub.nextBillingDate), sub.currency || currency)}</b><ChevronRight size={18} /></button>)}{!subs.length && <button className="sf-wallet-empty" onClick={() => navigate('/add-subscription')}>{query ? '找不到訂閱' : '新增訂閱或定期項目'} <Plus size={18} /></button>}</div></section>}
-      {filter !== 'subscription' && <><div className="sf-wallet-section-title"><h2>卡券</h2><select aria-label="卡券狀態" value={status} onChange={e => setStatus(e.target.value)}><option value="active">可使用</option><option value="used">已用完</option><option value="expired">已過期</option><option value="all">全部狀態</option></select></div>
-      {(['stored','count','voucher'] as const).filter(kind => filter === 'all' || filter === kind).map(kind => {
-        const rows = visible.filter(item => item.kind === kind);
-        return rows.length ? <section key={kind}><h2>{walletLabels[kind]}</h2><div className="sf-sub-group">{rows.map(item => <button key={item.id} className="sf-wallet-row" onClick={() => { setParams({id:item.id}); setError(''); }}><span className="sf-wallet-icon">{walletIcons[kind]}</span><span><strong>{item.name}</strong><small>{statusLabel(item)}</small></span><b>{remaining(item)}</b><ChevronRight size={18} /></button>)}</div></section> : null;
-      })}
-      {!visible.length && <div className="sf-wallet-empty sf-sub-group">{walletItems.length ? '沒有符合條件的卡券' : '儲值卡、次數卡及禮券放喺呢度'}<button className="text-primary" onClick={() => openSheet('choose')}>新增</button></div>}</>}
+      <div className="sf-wallet-filter-row"><nav className="sf-service-groups" aria-label="錢包分類">{([['all','全部'],['savings','儲蓄'],['subscription','訂閱／定期'],['stored','儲值卡'],['count','次數卡'],['voucher','禮券']] as const).map(([key,label]) => <button key={key} aria-pressed={filter === key} onClick={() => setFilter(key)}>{label}</button>)}</nav><button className="sf-wallet-order-button" aria-label="調整錢包區塊順序" onClick={() => openSheet('order')}><ListOrdered size={18} />調整順序</button></div>
+      {walletSectionOrder.map(section => <div key={section} className="sf-wallet-section-slot">{sections[section]}</div>)}
     </>}
-    {sheet && <BottomSheet title={sheet === 'choose' ? '新增錢包項目' : sheet === 'edit' ? '編輯卡券' : sheet === 'add' ? (selected?.kind === 'stored' ? '增值' : '增加數量') : sheet === 'use' ? '使用卡券' : `新增${walletLabels[sheet]}`} onClose={() => { if (!busy) { setSheet(null); setError(''); } }}>
+    {sheet && <BottomSheet title={sheet === 'choose' ? '新增錢包項目' : sheet === 'order' ? '調整顯示順序' : sheet === 'edit' ? '編輯卡券' : sheet === 'add' ? (selected?.kind === 'stored' ? '增值' : '增加數量') : sheet === 'use' ? '使用卡券' : `新增${walletLabels[sheet]}`} onClose={() => { if (!busy) { setSheet(null); setError(''); } }}>
       {error && <p role="alert" className="sf-entry-error">{error}</p>}
-      {sheet === 'choose' ? <div className="sf-wallet-choices"><button onClick={() => navigate('/add-subscription')}>訂閱／定期項目<ChevronRight /></button>{(['stored','count','voucher'] as const).map(kind => <button key={kind} onClick={() => openSheet(kind)}>{walletIcons[kind]} {walletLabels[kind]}<ChevronRight /></button>)}</div>
+      {sheet === 'order' ? <div className="sf-wallet-order-list">{walletSectionOrder.map((section, index) => <div className="sf-wallet-order-row" key={section}><strong>{sectionLabels[section]}</strong><div><button type="button" disabled={busy || index === 0} aria-label={`上移${sectionLabels[section]}`} onClick={() => void moveSection(section, -1)}><ArrowUp size={20} /></button><button type="button" disabled={busy || index === walletSectionOrder.length - 1} aria-label={`下移${sectionLabels[section]}`} onClick={() => void moveSection(section, 1)}><ArrowDown size={20} /></button></div></div>)}</div>
+      : sheet === 'choose' ? <div className="sf-wallet-choices"><button onClick={() => navigate('/add-subscription')}>訂閱／定期項目<ChevronRight /></button>{(['stored','count','voucher'] as const).map(kind => <button key={kind} onClick={() => openSheet(kind)}>{walletIcons[kind]} {walletLabels[kind]}<ChevronRight /></button>)}</div>
       : (sheet === 'add' || sheet === 'use') && selected ? <WalletAction key={sheet} item={selected} action={sheet} busy={busy} onSave={(amount, date, note, eventId) => run(async () => {
         if (sheet === 'use' && selected.expiresOn && date > selected.expiresOn) throw new Error('使用日期已超過到期日');
         await saveWalletItem({ ...selected, events: [...selected.events.filter(event => event.id !== eventId), { id: eventId, kind: sheet, amount, date, note }] });

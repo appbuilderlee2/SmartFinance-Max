@@ -1,3 +1,9 @@
+## v2.22.1 — Wallet section ordering
+
+- Let users move Savings, Subscriptions and Cards up or down from a dedicated Wallet order panel.
+- Save the chosen order in the local database, preserve it after reload and include it in JSON/CSV backups.
+- Add a Savings filter and mobile/desktop regression coverage for ordering and persistence.
+
 ## v2.21.0 — Income sources and annual expense reserves
 
 - Add optional income sources to entry, drafts, editing, recurring templates and backup data; show monthly totals, shares and drill-down transactions per currency.

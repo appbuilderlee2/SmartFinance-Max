@@ -33,6 +33,7 @@ import { processDueRecurringTransactions, removeRecurringOccurrence, editRecurri
 import { resetSecurityCache } from '../utils/security';
 import { loadCycles, migrateCreditCardCurrencies, saveCycles } from '../utils/creditCardCycleStorage';
 import { showAppAlert, showAppConfirm } from '../utils/appDialog';
+import { DEFAULT_WALLET_SECTION_ORDER, isWalletSectionOrder, normalizeWalletSectionOrder, WALLET_SECTION_ORDER_KEY, type WalletSection } from '../utils/walletSections';
 
 export interface CreditCard {
   id: string;
@@ -80,6 +81,8 @@ interface DataContextType {
   walletItems: WalletItem[];
   annualReserves: AnnualReserve[];
   savingsAccounts: SavingsAccount[];
+  walletSectionOrder: WalletSection[];
+  saveWalletSectionOrder: (order: WalletSection[]) => Promise<void>;
   saveSavingsAccount: (account: SavingsAccount) => Promise<void>;
   addSavingsEvent: (id:string,event:SavingsEvent) => Promise<void>;
   saveAnnualReserve: (plan: AnnualReserve) => Promise<void>;
@@ -163,6 +166,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [walletItems, setWalletItems] = useState<WalletItem[]>([]);
   const [annualReserves, setAnnualReserves] = useState<AnnualReserve[]>([]);
   const [savingsAccounts, setSavingsAccounts] = useState<SavingsAccount[]>([]);
+  const [walletSectionOrder, setWalletSectionOrder] = useState<WalletSection[]>(DEFAULT_WALLET_SECTION_ORDER);
   const [currency, setCurrencyState] = useState<Currency>(Currency.HKD);
 
   const getTxCurrency = (t: Transaction): Currency => (t.currency as Currency) || currency;
@@ -192,6 +196,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setWalletItems(readJson<WalletItem[]>(WALLET_KEY) ?? []);
       setAnnualReserves(readJson<AnnualReserve[]>(RESERVES_KEY) ?? []);
       setSavingsAccounts(readJson<SavingsAccount[]>(SAVINGS_KEY) ?? []);
+      setWalletSectionOrder(normalizeWalletSectionOrder(readJson<unknown>(WALLET_SECTION_ORDER_KEY)));
       const migration = migrateCreditCardCurrencies(readJson<CreditCard[]>('smartfinance_creditcards') ?? [], loadCycles(), loadedCurrency);
       setCurrencyState(loadedCurrency);
       setCreditCards(migration.cards);
@@ -215,11 +220,12 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       [WALLET_KEY]: JSON.stringify(walletItems),
       [RESERVES_KEY]: JSON.stringify(annualReserves),
       [SAVINGS_KEY]: JSON.stringify(savingsAccounts),
+      [WALLET_SECTION_ORDER_KEY]: JSON.stringify(walletSectionOrder),
       smartfinance_creditcards: JSON.stringify(creditCards),
       smartfinance_currency: currency,
       smartfinance_deleted_transaction_ids: JSON.stringify(deletedIds),
     }).then(ok => { for (const [id, waiter] of waiters) { if (saveWaiters.current.get(id) === waiter) { saveWaiters.current.delete(id); waiter.resolve(ok); } } changes.forEach(resolve => resolve(ok)); });
-  }, [storageReady, transactions, categories, budgets, subscriptions, walletItems, annualReserves, savingsAccounts, creditCards, currency, changeRevision, deletedIds]);
+  }, [storageReady, transactions, categories, budgets, subscriptions, walletItems, annualReserves, savingsAccounts, walletSectionOrder, creditCards, currency, changeRevision, deletedIds]);
 
   // Budget Spending Logic (recalculate spent whenever transactions/categories/currency change)
   // Improvement: avoid JSON.stringify object-wide compare and reduce repeated date parsing.
@@ -314,6 +320,10 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if(old && (old.currency!==account.currency || old.openingBalance!==account.openingBalance || JSON.stringify(old.events)!==JSON.stringify(account.events))) throw new Error('請使用存入、提取或利息操作更新餘額');
     if(!old && account.events.length) throw new Error('新戶口不可包含紀錄');
     return persistCoreChange(()=>setSavingsAccounts(prev=>old?prev.map(a=>a.id===account.id?account:a):[...prev,account]));
+  };
+  const saveWalletSectionOrder = (order: WalletSection[]) => {
+    if (!isWalletSectionOrder(order)) throw new Error('錢包顯示順序不正確');
+    return persistCoreChange(() => setWalletSectionOrder([...order]));
   };
   const addSavingsEvent = (id:string,event:SavingsEvent) => {
     const account=savingsAccounts.find(a=>a.id===id);
@@ -553,6 +563,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setWalletItems([]);
     setAnnualReserves([]);
     setSavingsAccounts([]);
+    setWalletSectionOrder([...DEFAULT_WALLET_SECTION_ORDER]);
     setCurrencyState(Currency.HKD);
     setCreditCards([]);
     setThemeColorState('blue');
@@ -689,6 +700,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       walletItems, saveWalletItem, removeWalletItem,
       annualReserves, saveAnnualReserve, removeAnnualReserve,
       savingsAccounts, saveSavingsAccount, addSavingsEvent,
+      walletSectionOrder, saveWalletSectionOrder,
       transactions,
       categories: sortedCategories,
       budgets,

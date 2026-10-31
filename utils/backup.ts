@@ -3,6 +3,7 @@ import { pinSnapshotCurrencies } from './ledgerCurrency';
 import { validateWalletItem, validateWalletLedger, WALLET_KEY } from './wallet';
 import { RESERVES_KEY, validateReserve } from './planning';
 import { SAVINGS_KEY, validateSavings } from './savings';
+import { isWalletSectionOrder, WALLET_SECTION_ORDER_KEY } from './walletSections';
 export const BACKUP_FORMAT = 'smartfinance-backup';
 export const BACKUP_VERSION = 2;
 
@@ -35,6 +36,9 @@ export function isAppStorageKey(key: string): boolean {
 }
 
 function validateStoredValue(key: string, value: string): void {
+  if (key === WALLET_SECTION_ORDER_KEY && !isWalletSectionOrder(JSON.parse(value))) {
+    throw new Error('錢包顯示順序格式不正確');
+  }
   if (key === 'smartfinance_deleted_transaction_ids') {
     const ids = JSON.parse(value);
     if (!Array.isArray(ids) || ids.some(id => typeof id !== 'string')) throw new Error('已刪除交易記錄格式不正確');
