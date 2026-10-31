@@ -716,6 +716,16 @@ textarea {
 .sf-wallet-form .sf-field { display:block; width:100%; margin-top:8px; min-width:0; }
 .sf-wallet-form input[type=date] { appearance:none; min-height:48px; }
 .sf-wallet-choices button { display:flex; align-items:center; justify-content:space-between; width:100%; min-height:60px; border-bottom:1px solid rgb(var(--sf-text-primary)/.08); }
+.sf-wallet-filter-row { display:flex; align-items:center; gap:8px; }
+.sf-wallet-filter-row .sf-service-groups { flex:1; min-width:0; }
+.sf-wallet-order-button { display:flex; align-items:center; justify-content:center; flex-shrink:0; min-height:44px; padding:0 12px; border-radius:12px; color:rgb(var(--sf-primary)); background:rgb(var(--sf-primary)/.1); font-size:14px; }
+.sf-wallet-card-kind { margin-bottom:24px; }
+.sf-wallet-order-list { overflow:hidden; border-radius:18px; background:rgb(var(--sf-text-primary)/.06); }
+.sf-wallet-order-row { display:flex; align-items:center; justify-content:space-between; gap:16px; min-height:68px; padding:10px 12px 10px 16px; }
+.sf-wallet-order-row + .sf-wallet-order-row { border-top:1px solid rgb(var(--sf-text-primary)/.08); }
+.sf-wallet-order-row > div { display:flex; gap:4px; }
+.sf-wallet-order-row button { display:flex; align-items:center; justify-content:center; width:44px; height:44px; border-radius:12px; color:rgb(var(--sf-primary)); background:rgb(var(--sf-primary)/.1); }
+.sf-wallet-order-row button:disabled { color:rgb(var(--sf-text-secondary)); background:transparent; }
 @media (max-width:360px) { .sf-wallet-row { padding:12px; gap:8px; } .sf-wallet-row b { font-size:14px; } .sf-wallet-row strong { font-size:15px; } }
 .sf-sub-page { color:rgb(var(--sf-text-primary)); font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text",system-ui,sans-serif; }
 .sf-sub-header { position:sticky; top:0; z-index:30; padding-top:env(safe-area-inset-top,0px); }

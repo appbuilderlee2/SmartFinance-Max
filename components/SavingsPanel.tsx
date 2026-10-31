@@ -30,7 +30,7 @@ export default function SavingsPanel(){
    setSheet(null);
   }catch(e){setError(e instanceof Error?e.message:'未能儲存');}finally{lock.current=false;setBusy(false);}
  }
- return <section aria-label="儲蓄戶口">
+ return <section aria-label="儲蓄戶口" data-testid="wallet-section-savings">
   <div className="sf-wallet-section-title"><h2>儲蓄</h2><button onClick={()=>open('new')}>＋ 新增戶口</button></div>
   {!account ? <>
    {[...new Set(accounts.map(a=>a.currency))].map(code=><div className="sf-sub-group p-4 mb-3" key={code}><small>{code} 儲蓄總額</small><h3 className="text-2xl font-bold">{formatMoney(sumMoney(accounts.filter(a=>a.currency===code).map(a=>savingsBalance(a,accounts,transactions)),code),code)}</h3></div>)}

@@ -9,6 +9,7 @@ import {
   stringifyCsv,
   parseCsv, mergeBackupSnapshots,
 } from './backup';
+import { WALLET_SECTION_ORDER_KEY } from './walletSections';
 
 const tx = { amount: 12, date: '2026-09-01', categoryId: 'food', type: 'EXPENSE', note: '' };
 
@@ -63,6 +64,13 @@ describe('SmartFinance backup', () => {
     source.setItem('smartfinance_currency', 'AUD');
     const backup = createBackup(source, '1.2.0');
     expect(parseBackupCsv(backupToCsv(backup)).storage).toEqual(backup.storage);
+  });
+
+  it('preserves a valid wallet section order and rejects a damaged one', () => {
+    const valid = JSON.stringify({ format: 'smartfinance-backup', storage: { [WALLET_SECTION_ORDER_KEY]: JSON.stringify(['cards', 'savings', 'subscriptions']) } });
+    expect(parseBackupJson(valid).storage[WALLET_SECTION_ORDER_KEY]).toBe(JSON.stringify(['cards', 'savings', 'subscriptions']));
+    const invalid = JSON.stringify({ format: 'smartfinance-backup', storage: { [WALLET_SECTION_ORDER_KEY]: JSON.stringify(['cards', 'cards']) } });
+    expect(() => parseBackupJson(invalid)).toThrow('顯示順序');
   });
 
   it('rejects invalid known data instead of overwriting current data', () => {

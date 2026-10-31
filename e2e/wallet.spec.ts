@@ -104,3 +104,23 @@ test('count cards, free vouchers, six destinations and overview tabs work in bot
  await expect(page.getByRole('button',{name:/咖啡禮券/})).toBeVisible();
  expect(errors).toEqual([]);
 });
+
+test('wallet sections can be reordered and keep their order after reload', async ({page}) => {
+ await page.goto('/#/wallet');
+ await page.getByRole('button',{name:'調整錢包區塊順序'}).click();
+ const dialog=page.getByRole('dialog',{name:'調整顯示順序'});
+ await expect(dialog.locator('.sf-wallet-order-row strong')).toHaveText(['儲蓄','訂閱與定期項目','卡券']);
+ await dialog.getByRole('button',{name:'下移儲蓄'}).click();
+ await expect(dialog.locator('.sf-wallet-order-row strong')).toHaveText(['訂閱與定期項目','儲蓄','卡券']);
+ await dialog.getByRole('button',{name:'下移儲蓄'}).click();
+ await expect(dialog.locator('.sf-wallet-order-row strong')).toHaveText(['訂閱與定期項目','卡券','儲蓄']);
+ await dialog.getByRole('button',{name:'關閉面板'}).click();
+ await expect(page.locator('[data-testid^="wallet-section-"]')).toHaveCount(3);
+ expect(await page.locator('[data-testid^="wallet-section-"]').evaluateAll(nodes=>nodes.map(node=>node.getAttribute('data-testid')))).toEqual(['wallet-section-subscriptions','wallet-section-cards','wallet-section-savings']);
+ await page.reload();
+ await expect(page.getByRole('button',{name:'調整錢包區塊順序'})).toBeVisible();
+ expect(await page.locator('[data-testid^="wallet-section-"]').evaluateAll(nodes=>nodes.map(node=>node.getAttribute('data-testid')))).toEqual(['wallet-section-subscriptions','wallet-section-cards','wallet-section-savings']);
+ await page.getByRole('button',{name:'儲蓄',exact:true}).click();
+ await expect(page.locator('[data-testid="wallet-section-savings"]')).toBeVisible();
+ await expect(page.locator('[data-testid="wallet-section-cards"]')).toHaveCount(0);
+});
