@@ -2,6 +2,7 @@ import { parseDate, parseLocalYMD } from './date';
 import { pinSnapshotCurrencies } from './ledgerCurrency';
 import { validateWalletItem, validateWalletLedger, WALLET_KEY } from './wallet';
 import { RESERVES_KEY, validateReserve } from './planning';
+import { SAVINGS_KEY, validateSavings } from './savings';
 export const BACKUP_FORMAT = 'smartfinance-backup';
 export const BACKUP_VERSION = 2;
 
@@ -15,6 +16,7 @@ const ARRAY_KEYS = new Set([
   'smartfinance_creditcard_cycles',
   WALLET_KEY,
   RESERVES_KEY,
+  SAVINGS_KEY,
 ]);
 const CURRENCIES = new Set(['TWD', 'HKD', 'USD', 'AUD', 'CNY', 'JPY', 'EUR', 'GBP']);
 
@@ -51,7 +53,9 @@ function validateStoredValue(key: string, value: string): void {
       const number = (field: string, required = true) => { if ((required || row[field] !== undefined) && (typeof row[field] !== 'number' || !Number.isFinite(row[field]) || row[field] < 0)) fail(field); };
       const date = (field: string, required = true) => { if ((required || row[field] !== undefined) && (!row[field] || !parseDate(row[field]))) fail(field); };
       if (row.currency !== undefined && !CURRENCIES.has(row.currency)) fail('currency');
-      if (key === RESERVES_KEY) {
+      if (key === SAVINGS_KEY) {
+        validateSavings(row);
+      } else if (key === RESERVES_KEY) {
         validateReserve(row);
       } else if (key === WALLET_KEY) {
         validateWalletItem(row);

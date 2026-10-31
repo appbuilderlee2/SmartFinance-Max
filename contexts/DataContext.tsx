@@ -10,6 +10,7 @@ import { observeLocalDay } from '../utils/dayBoundary';
 import React, { createContext, useContext, useState, useEffect, useMemo, useRef } from 'react';
 import { Transaction, Category, Budget, Subscription, TransactionType, Currency, WalletItem, AnnualReserve } from '../types';
 import { RESERVES_KEY, validateReserve } from '../utils/planning';
+import { SAVINGS_KEY, SavingsAccount, SavingsEvent, validateSavings, savingsBalance } from '../utils/savings';
 import { WALLET_KEY, validateWalletLedger, validateWalletPayment } from '../utils/wallet';
 import { CATEGORIES } from '../constants';
 import {
@@ -78,6 +79,9 @@ interface DataContextType {
   subscriptions: Subscription[];
   walletItems: WalletItem[];
   annualReserves: AnnualReserve[];
+  savingsAccounts: SavingsAccount[];
+  saveSavingsAccount: (account: SavingsAccount) => Promise<void>;
+  addSavingsEvent: (id:string,event:SavingsEvent) => Promise<void>;
   saveAnnualReserve: (plan: AnnualReserve) => Promise<void>;
   removeAnnualReserve: (id: string) => Promise<void>;
   saveWalletItem: (item: WalletItem) => Promise<void>;
@@ -158,6 +162,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
   const [walletItems, setWalletItems] = useState<WalletItem[]>([]);
   const [annualReserves, setAnnualReserves] = useState<AnnualReserve[]>([]);
+  const [savingsAccounts, setSavingsAccounts] = useState<SavingsAccount[]>([]);
   const [currency, setCurrencyState] = useState<Currency>(Currency.HKD);
 
   const getTxCurrency = (t: Transaction): Currency => (t.currency as Currency) || currency;
@@ -186,6 +191,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setSubscriptions(pinCurrency(readJson<Subscription[]>('smartfinance_subscriptions') ?? [], loadedCurrency));
       setWalletItems(readJson<WalletItem[]>(WALLET_KEY) ?? []);
       setAnnualReserves(readJson<AnnualReserve[]>(RESERVES_KEY) ?? []);
+      setSavingsAccounts(readJson<SavingsAccount[]>(SAVINGS_KEY) ?? []);
       const migration = migrateCreditCardCurrencies(readJson<CreditCard[]>('smartfinance_creditcards') ?? [], loadCycles(), loadedCurrency);
       setCurrencyState(loadedCurrency);
       setCreditCards(migration.cards);
@@ -208,11 +214,12 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       smartfinance_subscriptions: JSON.stringify(subscriptions),
       [WALLET_KEY]: JSON.stringify(walletItems),
       [RESERVES_KEY]: JSON.stringify(annualReserves),
+      [SAVINGS_KEY]: JSON.stringify(savingsAccounts),
       smartfinance_creditcards: JSON.stringify(creditCards),
       smartfinance_currency: currency,
       smartfinance_deleted_transaction_ids: JSON.stringify(deletedIds),
     }).then(ok => { for (const [id, waiter] of waiters) { if (saveWaiters.current.get(id) === waiter) { saveWaiters.current.delete(id); waiter.resolve(ok); } } changes.forEach(resolve => resolve(ok)); });
-  }, [storageReady, transactions, categories, budgets, subscriptions, walletItems, annualReserves, creditCards, currency, changeRevision, deletedIds]);
+  }, [storageReady, transactions, categories, budgets, subscriptions, walletItems, annualReserves, savingsAccounts, creditCards, currency, changeRevision, deletedIds]);
 
   // Budget Spending Logic (recalculate spent whenever transactions/categories/currency change)
   // Improvement: avoid JSON.stringify object-wide compare and reduce repeated date parsing.
@@ -285,6 +292,8 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const saveEditedTransaction = (id: string, fields: Partial<Transaction>, scope: 'only' | 'future' = 'only') => {
     const next = editRecurringTransactions(transactions, id, fields, scope);
     const row = next.find(tx => tx.id === id);
+    const savingsOwner=savingsAccounts.find(a=>a.events.some(e=>e.kind==='interest'&&e.transactionId===id));
+    if(savingsOwner && row && (row.type!==TransactionType.INCOME || row.currency!==savingsOwner.currency || row.recurrence)) throw new Error('儲蓄利息須保留原幣別及收入類型，不能設為週期帳目');
     if (row) validateWalletPayment(row, walletItems, next, transactions.find(tx => tx.id === id));
     return persistCoreChange(() => setTransactions(next));
   };
@@ -298,6 +307,33 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const saveAnnualReserve = (plan: AnnualReserve) => {
     validateReserve(plan);
     return persistCoreChange(() => setAnnualReserves(previous => previous.some(item => item.id === plan.id) ? previous.map(item => item.id === plan.id ? plan : item) : [...previous, plan]));
+  };
+  const saveSavingsAccount = (account: SavingsAccount) => {
+    validateSavings(account);
+    const old=savingsAccounts.find(a=>a.id===account.id);
+    if(old && (old.currency!==account.currency || old.openingBalance!==account.openingBalance || JSON.stringify(old.events)!==JSON.stringify(account.events))) throw new Error('請使用存入、提取或利息操作更新餘額');
+    if(!old && account.events.length) throw new Error('新戶口不可包含紀錄');
+    return persistCoreChange(()=>setSavingsAccounts(prev=>old?prev.map(a=>a.id===account.id?account:a):[...prev,account]));
+  };
+  const addSavingsEvent = (id:string,event:SavingsEvent) => {
+    const account=savingsAccounts.find(a=>a.id===id);
+    if(!account) throw new Error('找不到儲蓄戶口');
+    if(account.events.some(e=>e.id===event.id)) return Promise.resolve();
+    const next={...account,events:[...account.events,event]};
+    validateSavings(next);
+    if(event.date>toLocalYMD(new Date())) throw new Error('請選擇今日或之前的日期');
+    if(event.kind==='transfer' && !savingsAccounts.some(a=>a.id===event.destinationId && a.currency===account.currency)) throw new Error('請選擇同幣別的另一個戶口');
+    if((event.kind==='withdraw'||event.kind==='transfer') && event.amount>savingsBalance(account,savingsAccounts,transactions)) throw new Error('儲蓄餘額不足');
+    const interestCategory=categories.find(c=>c.type===TransactionType.INCOME && c.name==='利息收入');
+    const categoryId=interestCategory?.id || makeId('interest-category');
+    if(event.kind==='interest' && transactions.some(t=>t.id===event.transactionId)) throw new Error('利息帳目已存在');
+    return persistCoreChange(()=>{
+      setSavingsAccounts(prev=>prev.map(a=>a.id===id?next:a));
+      if(event.kind==='interest') {
+        if(!interestCategory) setCategories(prev=>[...prev,{id:categoryId,name:'利息收入',type:TransactionType.INCOME,icon:'Landmark',color:'bg-emerald-500'}]);
+        setTransactions(prev=>[{id:event.transactionId!,amount:event.amount,date:event.date,note:event.note || `${account.name} 利息`,currency:account.currency,type:TransactionType.INCOME,categoryId},...prev]);
+      }
+    });
   };
   const removeAnnualReserve = (id: string) => persistCoreChange(() => setAnnualReserves(previous => previous.filter(item => item.id !== id)));
   const removeWalletItem = (id: string) => persistCoreChange(() => {
@@ -516,6 +552,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setSubscriptions([]);
     setWalletItems([]);
     setAnnualReserves([]);
+    setSavingsAccounts([]);
     setCurrencyState(Currency.HKD);
     setCreditCards([]);
     setThemeColorState('blue');
@@ -651,6 +688,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     <DataContext.Provider value={{
       walletItems, saveWalletItem, removeWalletItem,
       annualReserves, saveAnnualReserve, removeAnnualReserve,
+      savingsAccounts, saveSavingsAccount, addSavingsEvent,
       transactions,
       categories: sortedCategories,
       budgets,
