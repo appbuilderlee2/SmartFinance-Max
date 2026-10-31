@@ -13,6 +13,7 @@ import { useEffect } from 'react';
 import BottomSheet from '../components/BottomSheet';
 import SubscriptionServiceIcon from '../components/SubscriptionServiceIcon';
 import { subscriptionAmount } from '../utils/subscriptionSchedule';
+import SavingsPanel from '../components/SavingsPanel';
 
 type Kind = WalletItem['kind'];
 export default function Wallet() {
@@ -56,6 +57,7 @@ export default function Wallet() {
       <section><h2>使用紀錄</h2><div className="sf-sub-group">{history.length ? history.map(event => <div key={event.id} className="sf-wallet-history"><div><strong>{event.label}</strong><small>{event.date}{event.note ? ` · ${event.note}` : ''}</small></div><span>{event.amount}</span>{event.transaction ? <button aria-label="查看支出" onClick={() => navigate(`/view/${event.id}`)}><ChevronRight size={20} /></button> : <button disabled={busy} className="text-primary" onClick={() => run(async () => { if (!await showAppConfirm('移除此紀錄並重新計算餘額？', { title: '刪除紀錄', confirmLabel: '刪除', destructive: true })) return; await saveWalletItem({ ...selected, events: selected.events.filter(item => item.id !== event.id) }); })}>刪除</button>}</div>) : <p className="p-5 text-gray-400">尚未有使用紀錄</p>}</div></section>
       <button disabled={busy} className="sf-wallet-delete" onClick={() => run(async () => { if (!await showAppConfirm('將移除卡券及使用紀錄，已有支出會保留。', { title: '刪除卡券？', confirmLabel: '刪除卡券', destructive: true })) return; await removeWalletItem(selected.id); setParams({}); })}>刪除卡券</button>
     </> : <>
+      <SavingsPanel />
       <label className="sf-service-search"><Search size={20} /><input aria-label="搜尋錢包" value={query} onChange={e => setQuery(e.target.value)} placeholder="搜尋名稱" type="search" /></label>
       <nav className="sf-service-groups" aria-label="錢包分類">{([['all','全部'],['subscription','訂閱／定期'],['stored','儲值卡'],['count','次數卡'],['voucher','禮券']] as const).map(([key,label]) => <button key={key} aria-pressed={filter === key} onClick={() => setFilter(key)}>{label}</button>)}</nav>
       {(filter === 'all' || filter === 'subscription') && <section><div className="sf-wallet-section-title"><h2>訂閱與定期項目</h2><button onClick={() => navigate('/subscriptions', { state: { from: '/wallet' } })}>管理全部 <ChevronRight size={16} /></button></div><div className="sf-sub-group">{subs.slice(0, filter === 'subscription' ? subs.length : 3).map(sub => <button className="sf-wallet-row" key={sub.id} onClick={() => navigate(`/subscriptions/${sub.id}/edit`, { state: { from: '/wallet' } })}><SubscriptionServiceIcon icon={sub.icon} name={sub.name} /><span><strong>{sub.name}</strong><small>{sub.status === 'paused' ? '已暫停' : sub.status === 'cancelled' ? '已取消續訂' : sub.nextBillingDate ? `下次 ${sub.nextBillingDate}` : '不再續訂'}</small></span><b>{formatMoney(subscriptionAmount(sub, sub.nextBillingDate), sub.currency || currency)}</b><ChevronRight size={18} /></button>)}{!subs.length && <button className="sf-wallet-empty" onClick={() => navigate('/add-subscription')}>{query ? '找不到訂閱' : '新增訂閱或定期項目'} <Plus size={18} /></button>}</div></section>}
