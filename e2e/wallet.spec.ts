@@ -118,6 +118,7 @@ test('wallet sections can be reordered and keep their order after reload', async
  await expect(page.locator('[data-testid^="wallet-section-"]')).toHaveCount(3);
  expect(await page.locator('[data-testid^="wallet-section-"]').evaluateAll(nodes=>nodes.map(node=>node.getAttribute('data-testid')))).toEqual(['wallet-section-subscriptions','wallet-section-cards','wallet-section-savings']);
  await page.reload();
+ await expect(page.getByRole('button',{name:'調整錢包區塊順序'})).toBeVisible();
  expect(await page.locator('[data-testid^="wallet-section-"]').evaluateAll(nodes=>nodes.map(node=>node.getAttribute('data-testid')))).toEqual(['wallet-section-subscriptions','wallet-section-cards','wallet-section-savings']);
  await page.getByRole('button',{name:'儲蓄',exact:true}).click();
  await expect(page.locator('[data-testid="wallet-section-savings"]')).toBeVisible();
