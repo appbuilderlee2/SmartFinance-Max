@@ -1,0 +1,6 @@
+{
+  "appId": "com.appbuilderlee2.smartfinancemax",
+  "appName": "SmartFinance Max",
+  "webDir": "dist",
+  "server": { "iosScheme": "capacitor" }
+}
