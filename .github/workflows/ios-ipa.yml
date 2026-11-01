@@ -1,0 +1,53 @@
+name: Build iOS IPA (unsigned)
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'capacitor.config.json'
+      - '.github/workflows/ios-ipa.yml'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'App.tsx'
+      - 'pages/**'
+      - 'components/**'
+      - 'contexts/**'
+      - 'services/**'
+      - 'utils/**'
+      - 'public/**'
+      - 'vite.config.ts'
+jobs:
+  build:
+    runs-on: macos-15
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Install and build web app
+        run: |
+          npm ci
+          npm run build
+      - name: Install Capacitor tooling
+        run: npm install --no-save --package-lock=false @capacitor/core@7 @capacitor/cli@7 @capacitor/ios@7
+      - name: Generate iOS project
+        run: |
+          npx cap add ios
+          npx cap sync ios
+      - name: Build unsigned iOS app
+        run: |
+          set -o pipefail
+          xcodebuild -project ios/App/App.xcodeproj -scheme App -configuration Release -sdk iphoneos -destination 'generic/platform=iOS' -derivedDataPath build/DerivedData CODE_SIGNING_ALLOWED=NO build
+      - name: Package IPA
+        run: |
+          mkdir -p Payload
+          cp -R build/DerivedData/Build/Products/Release-iphoneos/App.app Payload/
+          zip -qry SmartFinance-Max-unsigned.ipa Payload
+      - uses: actions/upload-artifact@v4
+        with:
+          name: SmartFinance-Max-unsigned-IPA
+          path: SmartFinance-Max-unsigned.ipa
+          retention-days: 30
