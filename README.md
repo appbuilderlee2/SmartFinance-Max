@@ -24,6 +24,7 @@ SmartFinance-Max 係一個為手機及桌面瀏覽器設計嘅 **local-first 個
 
 - 更新 React Router 至 6.30.6，修正可在現有 App 架構觸發嘅舊版路由問題；掃描器仍會列出只適用於 SSR hydration 或不受信任導航目標嘅第 6 版公告，而本 App 唔使用呢兩種路徑。
 - iOS IPA workflow 固定使用 Capacitor 7.6.10，避免同一份程式因套件浮動更新而產生唔同建置結果。
+- unsigned IPA 會由 Capacitor 產生嘅 CocoaPods workspace 建置，確保 Xcode 可以載入 Capacitor framework。
 
 ## v2.22.1 錢包顯示順序
 
