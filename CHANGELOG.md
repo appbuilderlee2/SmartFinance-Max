@@ -1,3 +1,8 @@
+## v2.22.2 — Dependency security and reproducible iOS tooling
+
+- Update React Router to 7.18.5 to resolve the current security advisories.
+- Pin the unsigned iOS IPA workflow to Capacitor 7.6.10 so repeated builds use the same top-level tooling versions.
+
 ## v2.22.1 — Wallet section ordering
 
 - Let users move Savings, Subscriptions and Cards up or down from a dedicated Wallet order panel.

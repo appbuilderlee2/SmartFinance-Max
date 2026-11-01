@@ -32,7 +32,7 @@ jobs:
           npm ci
           npm run build
       - name: Install Capacitor tooling
-        run: npm install --no-save --package-lock=false @capacitor/core@7 @capacitor/cli@7 @capacitor/ios@7
+        run: npm install --no-save --package-lock=false @capacitor/core@7.6.10 @capacitor/cli@7.6.10 @capacitor/ios@7.6.10
       - name: Generate iOS project
         run: |
           npx cap add ios
