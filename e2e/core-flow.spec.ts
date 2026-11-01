@@ -111,6 +111,8 @@ test('calendar summary follows rapid month changes immediately', async ({ page }
       return {
         heading: `${date.getFullYear()}年${date.getMonth() + 1}月摘要`,
         amount: fixture.amount,
+        year: date.getFullYear(),
+        monthIndex: date.getMonth(),
       };
     });
   });
@@ -129,8 +131,10 @@ test('calendar summary follows rapid month changes immediately', async ({ page }
   await expect(summary.getByRole('heading', { name: monthFixtures[2].heading })).toBeVisible();
   await expect(summary).toContainText(`HK$ ${monthFixtures[2].amount}`);
 
+  const yearSelect = page.getByRole('combobox').nth(0);
   const monthSelect = page.getByRole('combobox').nth(1);
-  await monthSelect.selectOption(String(new Date().getMonth()));
+  await yearSelect.selectOption(String(monthFixtures[0].year));
+  await monthSelect.selectOption(String(monthFixtures[0].monthIndex));
   await expect(summary.getByRole('heading', { name: monthFixtures[0].heading })).toBeVisible();
   await expect(summary).toHaveAttribute('data-month-key', monthFixtures[0].heading.replace('年', '-').replace('月摘要', '').replace(/-(\d)$/, '-0$1'));
   await expect(summary).toContainText(`HK$ ${monthFixtures[0].amount}`);
