@@ -1,6 +1,6 @@
 ## v2.22.2 — Dependency security and reproducible iOS tooling
 
-- Update React Router to 7.18.5 to resolve the current security advisories.
+- Update React Router to 6.30.6 to resolve advisories applicable to the current client-only app architecture. The remaining v6 audit findings require SSR hydration or untrusted navigation targets, neither of which the app uses.
 - Pin the unsigned iOS IPA workflow to Capacitor 7.6.10 so repeated builds use the same top-level tooling versions.
 
 ## v2.22.1 — Wallet section ordering
