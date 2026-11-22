@@ -53,11 +53,11 @@ final class SmartFinanceUITests: XCTestCase {
         if close.exists {
             close.tap()
         } else if dismissRegion.exists {
-            dismissRegion.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.2)).tap()
+            app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.2)).tap()
         }
-        let sheet = app.otherElements["ActivityListView"].firstMatch
+        let sheet = app.navigationBars["UIActivityContentView"].firstMatch
         if !sheet.waitForNonExistence(timeout: 3) {
-            let grabber = sheet.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.02))
+            let grabber = sheet.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.05))
             let bottom = app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.95))
             grabber.press(forDuration: 0.05, thenDragTo: bottom)
         }
