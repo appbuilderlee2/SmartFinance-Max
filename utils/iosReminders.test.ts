@@ -1,9 +1,12 @@
 import { LocalNotifications } from '@capacitor/local-notifications';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { createOpenCycle } from './creditCardCycles';
+import { loadCycles } from './creditCardCycleStorage';
 import { iosNotificationRoute, iosReminderSchedule, requestIosNotificationPermission, sendIosTestNotification, syncIosReminders } from './iosReminders';
 import { DEFAULT_REMINDER_SETTINGS, regenerateReminders, type Reminder, type ReminderType } from './reminders';
 
 vi.mock('./ios', () => ({ isNativeIos: true }));
+vi.mock('./creditCardCycleStorage', () => ({ loadCycles: vi.fn(() => []) }));
 vi.mock('@capacitor/local-notifications', () => ({ LocalNotifications: {
   checkPermissions: vi.fn(), requestPermissions: vi.fn(), getPending: vi.fn(), schedule: vi.fn(), cancel: vi.fn(),
 } }));
@@ -21,6 +24,28 @@ beforeEach(() => {
 });
 
 describe('iOS reminder schedule', () => {
+  it('schedules the statement alert even when the amount due was already entered', () => {
+    const card = {
+      id: 'card', name: 'Card', annualFee: 0, cashbackType: '', expiryDate: '',
+      statementDay: 19, remindStatement: true,
+    };
+    vi.mocked(loadCycles).mockReturnValueOnce([{
+      ...createOpenCycle(card, 2026, 0), amountDueEnteredAt: now.toISOString(),
+    }]);
+    const settings = { ...DEFAULT_REMINDER_SETTINGS, ccAdvanceDays: 2 };
+    const reminders = regenerateReminders({ ...inputs, creditCards: [card], now, scheduleAhead: true, settings });
+    expect(reminders.some(item => item.dedupeKey === 'cc_amount_due|card|2026-01')).toBe(false);
+    expect(iosReminderSchedule(settings, reminders, now)).toContainEqual(expect.objectContaining({
+      title: 'SmartFinance · 信用卡截數提醒',
+      schedule: { at: new Date(2026, 0, 17, 20) },
+      extra: expect.objectContaining({ path: '/settings/creditcard-cycles' }),
+    }));
+    const disabled = regenerateReminders({
+      ...inputs, creditCards: [{ ...card, remindStatement: false }], now, scheduleAhead: true, settings,
+    });
+    expect(disabled.some(item => item.type === 'cc_statement')).toBe(false);
+  });
+
   it('uses a daily local-time trigger and keeps unique future card reminders in order', () => {
     const soon = sample('soon', '2026-01-02');
     const later = sample('later', '2026-01-03');

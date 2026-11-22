@@ -9,6 +9,7 @@ const MAX_REMINDERS = MAX_COUNT - 1;
 const TEST_ID = 4199;
 const HISTORY_KEY = 'ios-notification-history-v1';
 const routes: Record<ReminderType, string> = {
+  cc_statement: '/settings/creditcard-cycles',
   cc_amount_due: '/settings/creditcard-cycles',
   cc_payment_due: '/settings/creditcard-cycles',
   cc_annual_fee: '/settings/creditcards',
@@ -18,6 +19,7 @@ const routes: Record<ReminderType, string> = {
   backup_export_json: '/settings',
 };
 const titles: Record<ReminderType, string> = {
+  cc_statement: '信用卡截數提醒',
   cc_amount_due: '信用卡應繳金額提醒',
   cc_payment_due: '信用卡繳費提醒',
   cc_annual_fee: '信用卡年費提醒',

@@ -8,6 +8,7 @@ import { parseLocalYMD, toLocalYMD } from './date';
 import { readJson, readText, writeJson, writeText } from './storage';
 
 export type ReminderType =
+  | 'cc_statement'
   | 'cc_amount_due'
   | 'cc_payment_due'
   | 'cc_annual_fee'
@@ -204,6 +205,16 @@ export function regenerateReminders(params: {
 
       for (const c of params.creditCards || []) {
         const { statementDate, dueDate } = getStatementAndDueForMonth(y, m0, c as any);
+
+        if (scheduleAhead && c.remindStatement !== false && statementDate) {
+          const date = parseLocalYMD(statementDate)!;
+          date.setDate(date.getDate() - Math.max(0, settings.ccAdvanceDays));
+          const dedupeKey = `cc_statement|${c.id}|${yearMonth}`;
+          out.push({
+            id: uid(), dedupeKey, type: 'cc_statement', title: `信用卡截數提醒：${c.name}`,
+            dueYmd: toLocalYMD(date), severity: 'info', status: 'open', createdAt: now.toISOString(),
+          });
+        }
 
         // statement + 1 day: amount due entry reminder
         if (settings.ccAmountEnabled && c.remindStatement !== false && statementDate) {
