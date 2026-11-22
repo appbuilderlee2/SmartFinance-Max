@@ -1,23 +1,97 @@
-import { describe, expect, it } from 'vitest';
-import { iosReminderSchedule } from './iosReminders';
+import { LocalNotifications } from '@capacitor/local-notifications';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { iosNotificationRoute, iosReminderSchedule, requestIosNotificationPermission, sendIosTestNotification, syncIosReminders } from './iosReminders';
+import { DEFAULT_REMINDER_SETTINGS, regenerateReminders, type Reminder, type ReminderType } from './reminders';
+
+vi.mock('./ios', () => ({ isNativeIos: true }));
+vi.mock('@capacitor/local-notifications', () => ({ LocalNotifications: {
+  checkPermissions: vi.fn(), requestPermissions: vi.fn(), getPending: vi.fn(), schedule: vi.fn(), cancel: vi.fn(),
+} }));
+
+const now = new Date(2026, 0, 1, 12);
+const inputs = { creditCards: [], subscriptions: [] };
+const sample = (id: string, dueYmd: string, type: ReminderType = 'cc_payment_due'): Reminder => ({
+  id, dedupeKey: id, dueYmd, type, title: 'Private details', severity: 'info', status: 'open', createdAt: now.toISOString(),
+});
+
+beforeEach(() => {
+  vi.resetAllMocks();
+  vi.mocked(LocalNotifications.checkPermissions).mockResolvedValue({ display: 'granted' });
+  vi.mocked(LocalNotifications.getPending).mockResolvedValue({ notifications: [] });
+});
 
 describe('iOS reminder schedule', () => {
-  const now = new Date(2026, 0, 1, 12);
-  const soon = new Date(2026, 0, 2, 12);
-  const later = new Date(2026, 0, 3, 12);
-
   it('uses a daily local-time trigger and keeps unique future card reminders in order', () => {
-    const notifications = iosReminderSchedule('20:30', [later, soon, now, new Date(soon)], now);
+    const soon = sample('soon', '2026-01-02');
+    const later = sample('later', '2026-01-03');
+    const notifications = iosReminderSchedule({ ...DEFAULT_REMINDER_SETTINGS, reminderTime: '20:30' }, [
+      later, soon, sample('expired', '2025-12-31'), { ...soon },
+    ], now);
     expect(notifications.map(item => item.schedule)).toEqual([
-      { on: { hour: 20, minute: 30, second: 0 } }, { at: soon }, { at: later },
+      { on: { hour: 20, minute: 30, second: 0 } },
+      { at: new Date(2026, 0, 2, 20, 30) },
+      { at: new Date(2026, 0, 3, 20, 30) },
     ]);
     expect(new Set(notifications.map(item => item.id)).size).toBe(3);
   });
 
-  it('supports clearing all reminders and reserves a slot for daily reminders when capped', () => {
-    expect(iosReminderSchedule(null, [], now)).toEqual([]);
-    const dates = Array.from({ length: 100 }, (_, i) => new Date(2026, 0, i + 2, 12));
-    expect(iosReminderSchedule('20:00', dates, now)).toHaveLength(64);
-    expect(iosReminderSchedule('25:00', [], now)).toEqual([]);
+  it('honors disabled reminders and reserves a system slot for the test notification', () => {
+    expect(iosReminderSchedule({ ...DEFAULT_REMINDER_SETTINGS, iosEnabled: false }, [], now)).toEqual([]);
+    const cards = Array.from({ length: 100 }, (_, i) => sample(String(i), '2026-01-02'));
+    expect(iosReminderSchedule(DEFAULT_REMINDER_SETTINGS, cards, now)).toHaveLength(63);
+    expect(iosReminderSchedule({ ...DEFAULT_REMINDER_SETTINGS, enabled: false, dailyEnabled: false }, cards, now)).toEqual([]);
+  });
+
+  it('schedules subscriptions before their cutoff and routes budget and backup reminders without exposing financial details', () => {
+    const reminders = regenerateReminders({
+      ...inputs, now, scheduleAhead: true,
+      subscriptions: [{ id: 's', name: 'Private service', billingCycle: 'Monthly', nextBillingDate: '2026-01-25', amount: 10 }],
+      budgets: [{ categoryId: 'food', limit: 100, spent: 110 }],
+    });
+    const notifications = iosReminderSchedule(DEFAULT_REMINDER_SETTINGS, reminders, now);
+    const subscription = notifications.find(item => item.extra?.path === '/subscriptions');
+    expect(subscription?.schedule?.at).toEqual(new Date(2026, 0, 18, 20));
+    expect(subscription?.title).not.toContain('Private service');
+    expect(notifications.map(item => item.extra?.path)).toEqual(expect.arrayContaining(['/add', '/budget', '/settings', '/subscriptions']));
+    expect(iosNotificationRoute('dismiss', '/budget')).toBeUndefined();
+    expect(iosNotificationRoute('tap', 'https://example.com')).toBeUndefined();
+    expect(iosNotificationRoute('tap', '/budget')).toBe('/budget');
+  });
+
+  it('does not recreate an already delivered budget notification, but does allow snoozing', () => {
+    const budget = sample('monthly', '2026-01-01', 'budget_over_limit');
+    const [scheduled] = iosReminderSchedule({ ...DEFAULT_REMINDER_SETTINGS, dailyEnabled: false }, [budget], now);
+    const settings = { ...DEFAULT_REMINDER_SETTINGS, dailyEnabled: false };
+    const nextDay = new Date(2026, 0, 2, 12);
+    const history = { [scheduled.extra?.key]: scheduled.schedule!.at!.getTime() };
+    expect(iosReminderSchedule(settings, [{ ...budget, dueYmd: '2026-01-02' }], nextDay, history)).toEqual([]);
+    expect(iosReminderSchedule(settings, [{ ...budget, dueYmd: '2026-01-03', snoozeUntilYmd: '2026-01-03' }], nextDay, history)).toHaveLength(1);
+  });
+});
+
+describe('iOS notification bridge', () => {
+  it('requests permission only when prompted and schedules a native test notification', async () => {
+    vi.mocked(LocalNotifications.checkPermissions).mockResolvedValueOnce({ display: 'prompt' });
+    vi.mocked(LocalNotifications.requestPermissions).mockResolvedValueOnce({ display: 'granted' });
+    expect(await requestIosNotificationPermission()).toBe(true);
+    expect(LocalNotifications.requestPermissions).toHaveBeenCalledTimes(1);
+    expect(await sendIosTestNotification()).toBe(true);
+    expect(LocalNotifications.schedule).toHaveBeenCalledWith({ notifications: [expect.objectContaining({
+      title: 'SmartFinance 測試通知', schedule: { at: expect.any(Date) }, extra: { path: '/settings/notifications' },
+    })] });
+  });
+
+  it('replaces changes, leaves unchanged requests alone, and cancels disabled requests', async () => {
+    const settings = { ...DEFAULT_REMINDER_SETTINGS, enabled: false };
+    const [daily] = iosReminderSchedule(settings, [], now);
+    vi.mocked(LocalNotifications.getPending).mockResolvedValue({ notifications: [daily] });
+    expect(await syncIosReminders(inputs, settings)).toBe(1);
+    expect(LocalNotifications.schedule).not.toHaveBeenCalled();
+    await syncIosReminders(inputs, { ...settings, reminderTime: '21:30' });
+    expect(LocalNotifications.schedule).toHaveBeenCalledWith({ notifications: [expect.objectContaining({
+      id: daily.id, schedule: { on: { hour: 21, minute: 30, second: 0 } },
+    })] });
+    await syncIosReminders(inputs, { ...settings, dailyEnabled: false });
+    expect(LocalNotifications.cancel).toHaveBeenCalledWith({ notifications: [{ id: daily.id }] });
   });
 });

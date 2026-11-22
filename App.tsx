@@ -34,7 +34,9 @@ import { hasOnboarded } from './utils/firstRun';
 import { STORAGE_ERROR_EVENT, subscribeStorage, getSaveStatus, retryStorage, flushStorage, getStaleTab, subscribeStaleTab } from './utils/storage';
 import SecurityGate from './components/SecurityGate';
 import AppDialogHost from './components/AppDialogHost';
+import IosReminders from './components/IosReminders';
 import { showAppConfirm } from './utils/appDialog';
+import { isNativeIos } from './utils/ios';
 
 const Loading: React.FC = () => <div className="p-4 text-gray-400">載入中…</div>;
 
@@ -133,6 +135,7 @@ const App: React.FC = () => {
     <DataProvider>
       <SecurityGate>
       <Router>
+        {isNativeIos && <IosReminders />}
         {stale && <div role="alertdialog" aria-modal="true" aria-label="另一分頁有更新" className="fixed inset-0 z-[110] flex items-center justify-center bg-black/75 px-5">
           <div className="sf-panel max-w-sm rounded-2xl p-6 text-gray-100 shadow-2xl space-y-4">
             <h2 className="text-lg font-semibold">另一分頁已更新資料</h2>

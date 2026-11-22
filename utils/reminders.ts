@@ -39,6 +39,9 @@ export type Reminder = {
 export type ReminderSettings = {
   // master
   enabled: boolean;
+  dailyEnabled: boolean;
+  reminderTime: string;
+  iosEnabled: boolean;
 
   // credit cards
   ccEnabled: boolean;
@@ -61,6 +64,9 @@ export type ReminderSettings = {
 
 export const DEFAULT_REMINDER_SETTINGS: ReminderSettings = {
   enabled: true,
+  dailyEnabled: true,
+  reminderTime: '20:00',
+  iosEnabled: true,
   ccEnabled: true,
   ccAdvanceDays: 0,
   ccAmountEnabled: true,
@@ -164,10 +170,13 @@ export function regenerateReminders(params: {
   categories?: Category[];
   currency?: Currency;
   now?: Date;
+  scheduleAhead?: boolean;
+  settings?: ReminderSettings;
 }): Reminder[] {
-  const settings = loadReminderSettings();
+  const settings = params.settings ?? loadReminderSettings();
+  const { scheduleAhead } = params;
   if (!settings.enabled) {
-    saveReminders([]);
+    if (!scheduleAhead) saveReminders([]);
     return [];
   }
 
@@ -185,9 +194,10 @@ export function regenerateReminders(params: {
 
     // current + next month (if near month end)
     const months: Array<{ y: number; m0: number }> = [{ y: now.getFullYear(), m0: now.getMonth() }];
-    if (now.getDate() >= 25) {
-      const n2 = new Date(now.getFullYear(), now.getMonth() + 1, 1);
-      months.push({ y: n2.getFullYear(), m0: n2.getMonth() });
+    const monthsAhead = scheduleAhead ? 12 : now.getDate() >= 25 ? 1 : 0;
+    for (let offset = 1; offset <= monthsAhead; offset++) {
+      const month = new Date(now.getFullYear(), now.getMonth() + offset, 1);
+      months.push({ y: month.getFullYear(), m0: month.getMonth() });
     }
 
     for (const { y, m0 } of months) {
@@ -302,7 +312,9 @@ export function regenerateReminders(params: {
       const due = s.nextBillingDate;
       const days = daysBetweenYmd(todayYmd, due);
       if (days == null) continue;
-      if (days < 0 || days > ahead) continue;
+      if (days < 0 || (!scheduleAhead && days > ahead)) continue;
+      const alertDate = parseLocalYMD(due)!;
+      alertDate.setDate(alertDate.getDate() - ahead);
 
       const dedupeKey = `sub_upcoming|${s.id}|${due}`;
       const prev = existingByKey.get(dedupeKey);
@@ -313,7 +325,7 @@ export function regenerateReminders(params: {
         type: 'subscription_upcoming',
         title: `訂閱即將扣款：${s.name}`,
         detail: `扣款日：${due}（尚餘 ${days} 日）`,
-        dueYmd: due,
+        dueYmd: scheduleAhead ? toLocalYMD(alertDate) : due,
         severity: sev as any,
         status: prev?.status ?? 'open',
         createdAt: prev?.createdAt ?? new Date().toISOString(),
@@ -366,22 +378,24 @@ export function regenerateReminders(params: {
       should = diff != null && diff >= every;
     }
 
-    if (should) {
+    if (should || scheduleAhead) {
       const dedupeKey = `backup_export_json|${todayYmd}`;
       const prev = existingByKey.get(dedupeKey);
+      const nextBackup = lastDt ? new Date(lastDt) : now;
+      if (lastDt) nextBackup.setDate(nextBackup.getDate() + every);
       out.push({
         id: prev?.id ?? uid(),
         type: 'backup_export_json',
         title: '備份提醒：匯出 JSON',
         detail: `建議每 ${every} 日匯出一次備份`,
-        dueYmd: todayYmd,
+        dueYmd: scheduleAhead && !should ? toLocalYMD(nextBackup) : todayYmd,
         severity: 'warn',
         status: prev?.status ?? 'open',
         createdAt: prev?.createdAt ?? new Date().toISOString(),
         doneAt: prev?.doneAt,
         snoozeUntilYmd: prev?.snoozeUntilYmd,
         action: { kind: 'navigate', to: '/settings' },
-        dedupeKey,
+        dedupeKey: scheduleAhead ? `backup_export_json|${last ?? 'none'}` : dedupeKey,
       });
     }
   }
@@ -391,7 +405,7 @@ export function regenerateReminders(params: {
   const normalized = out.map(r => {
     if (r.snoozeUntilYmd) {
       const diff = daysBetweenYmd(todayYmd, r.snoozeUntilYmd);
-      if (diff != null && diff > 0) {
+      if (diff != null && (diff > 0 || (scheduleAhead && diff === 0))) {
         return { ...r, dueYmd: r.snoozeUntilYmd };
       }
     }
@@ -405,7 +419,7 @@ export function regenerateReminders(params: {
     return ta - tb;
   });
 
-  saveReminders(normalized);
+  if (!scheduleAhead) saveReminders(normalized);
   return normalized;
 }
 

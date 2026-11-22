@@ -24,6 +24,7 @@ import { pinSnapshotCurrencies } from '../utils/ledgerCurrency';
 import { exportTextFile } from '../utils/exportFile';
 import { isNativeIos } from '../utils/ios';
 import { clearIosReminders } from '../utils/iosReminders';
+import { stampBackupExportToday } from '../utils/reminders';
 
 type Notice = { tone: 'success' | 'warning' | 'info'; text: string } | null;
 
@@ -184,6 +185,7 @@ const Settings: React.FC = () => {
     if (format === 'json') {
       const timestamp = Date.now();
       try { localStorage.setItem(BACKUP_EXPORT_MARKER, new Date(timestamp).toISOString()); setLastExport(timestamp); } catch { /* UI marker is best-effort */ }
+      if (isNativeIos) stampBackupExportToday();
     }
     setNotice({ tone: 'success', text: isNativeIos ? '已匯出備份；請確認檔案已保存。' : '已啟動備份下載；請確認檔案已存到裝置或「檔案」App。' });
     return true;

@@ -61,11 +61,14 @@ SmartFinance-Max 係一個為手機及桌面瀏覽器設計嘅 **local-first 個
 
 ### iPhone／iPad IPA
 
+需要 iOS 15 或 iPadOS 15 以上版本。
+
 - 到 [iOS IPA 建置](https://github.com/appbuilderlee2/SmartFinance-Max/actions/workflows/ios-ipa.yml) 下載成功建置的 `SmartFinance-Max-unsigned-IPA`，解壓後取得 `SmartFinance-Max-unsigned.ipa`。
 - IPA 未簽署；請用自己的 Apple ID 經 Sideloadly 或 AltStore 簽署同安裝。免費 Apple ID 的簽署一般要每七日更新一次。此版本未發佈到 TestFlight 或 App Store。
 - iOS 版內置介面同離線資源，唔需要先用 Safari 開啟。更新前建議先匯出備份；Safari PWA 同 iOS 版的資料獨立，要搬資料請匯出 JSON，再喺另一版本匯入。
 - 備份及報告會開啟 iOS 分享選單；選「儲存到檔案」即可保存。可由「檔案」選取 JSON／CSV 還原，或者開啟匯出的 `.ics` 日曆檔案。
-- 「設定 → 帳務管理 → 通知與提醒」可以套用 iPhone 通知（需要允許通知）。改動信用卡日子或提醒選項後請重新套用。信用卡網上目錄仍需連線；PIN 仍然係畫面鎖，唔係資料加密。
+- 「設定 → 帳務管理 → 通知與提醒」可啟用及試發 iPhone 本機通知。記帳、信用卡、訂閱、預算同備份提醒會自動更新；請定期開啟 App 更新後續通知。唔需要推播服務或付費 Apple 開發者帳戶。
+- 財務資料唔會自動同步去 iCloud；可喺「儲存到檔案」手動將備份存入 iCloud Drive。信用卡網上目錄仍需連線；PIN 仍然係畫面鎖，唔係資料加密。
 
 用 Node 22 及 Xcode 本機建置／測試：
 
