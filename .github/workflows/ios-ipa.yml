@@ -1,21 +1,27 @@
 name: Build iOS IPA (unsigned)
 on:
   workflow_dispatch:
-  push:
-    branches: [main]
-    paths:
+  pull_request:
+    paths: &ios-paths
+      - 'ios/**'
       - 'capacitor.config.json'
       - '.github/workflows/ios-ipa.yml'
       - 'package.json'
       - 'package-lock.json'
-      - 'App.tsx'
+      - '*.ts'
+      - '*.tsx'
+      - '*.html'
+      - '*.css'
       - 'pages/**'
       - 'components/**'
       - 'contexts/**'
       - 'services/**'
       - 'utils/**'
+      - 'data/**'
       - 'public/**'
-      - 'vite.config.ts'
+  push:
+    branches: [main]
+    paths: *ios-paths
 jobs:
   build:
     runs-on: macos-15
@@ -31,16 +37,25 @@ jobs:
         run: |
           npm ci
           npm run build
-      - name: Install Capacitor tooling
-        run: npm install --no-save --package-lock=false @capacitor/core@7.6.10 @capacitor/cli@7.6.10 @capacitor/ios@7.6.10
-      - name: Generate iOS project
+      - name: Sync web bundle and Capacitor plugins
+        run: npx cap sync ios
+      - name: Test on an iPhone simulator
         run: |
-          npx cap add ios
-          npx cap sync ios
+          set -o pipefail
+          device=$(xcrun simctl list devices available -j | node -e '
+            const devices = JSON.parse(require("node:fs").readFileSync(0, "utf8")).devices;
+            const phone = Object.entries(devices).filter(([runtime]) => runtime.includes(".iOS-"))
+              .reverse().flatMap(([, entries]) => entries).find(entry => entry.name.startsWith("iPhone"));
+            if (!phone) process.exit(1);
+            console.log(phone.udid);
+          ')
+          xcodebuild -project ios/App/App.xcodeproj -scheme App \
+            -destination "platform=iOS Simulator,id=$device" -parallel-testing-enabled NO \
+            -derivedDataPath build/DerivedData CODE_SIGNING_ALLOWED=NO test
       - name: Build unsigned iOS app
         run: |
           set -o pipefail
-          xcodebuild -workspace ios/App/App.xcworkspace -scheme App -configuration Release -sdk iphoneos -destination 'generic/platform=iOS' -derivedDataPath build/DerivedData CODE_SIGNING_ALLOWED=NO build
+          xcodebuild -project ios/App/App.xcodeproj -scheme App -configuration Release -sdk iphoneos -destination 'generic/platform=iOS' -derivedDataPath build/DerivedData CODE_SIGNING_ALLOWED=NO build
       - name: Package IPA
         run: |
           mkdir -p Payload

@@ -24,7 +24,7 @@ SmartFinance-Max 係一個為手機及桌面瀏覽器設計嘅 **local-first 個
 
 - 更新 React Router 至 6.30.6，修正可在現有 App 架構觸發嘅舊版路由問題；掃描器仍會列出只適用於 SSR hydration 或不受信任導航目標嘅第 6 版公告，而本 App 唔使用呢兩種路徑。
 - iOS IPA workflow 固定使用 Capacitor 7.6.10，避免同一份程式因套件浮動更新而產生唔同建置結果。
-- unsigned IPA 會由 Capacitor 產生嘅 CocoaPods workspace 建置，確保 Xcode 可以載入 Capacitor framework。
+- unsigned IPA 由 repo 內的 Capacitor Xcode project 及 Swift Package Manager 建置。
 
 ## v2.22.1 錢包顯示順序
 
@@ -58,6 +58,26 @@ SmartFinance-Max 係一個為手機及桌面瀏覽器設計嘅 **local-first 個
 - iPhone／iPad：Safari 分享按鈕 →「加至主畫面」。
 - Android／桌面 Chromium：使用瀏覽器選單嘅「安裝 App」。
 - 首次成功載入後可離線開啟；有新版本時 App 會提示重新載入。
+
+### iPhone／iPad IPA
+
+- 到 [iOS IPA 建置](https://github.com/appbuilderlee2/SmartFinance-Max/actions/workflows/ios-ipa.yml) 下載成功建置的 `SmartFinance-Max-unsigned-IPA`，解壓後取得 `SmartFinance-Max-unsigned.ipa`。
+- IPA 未簽署；請用自己的 Apple ID 經 Sideloadly 或 AltStore 簽署同安裝。免費 Apple ID 的簽署一般要每七日更新一次。此版本未發佈到 TestFlight 或 App Store。
+- iOS 版內置介面同離線資源，唔需要先用 Safari 開啟。更新前建議先匯出備份；Safari PWA 同 iOS 版的資料獨立，要搬資料請匯出 JSON，再喺另一版本匯入。
+- 備份及報告會開啟 iOS 分享選單；選「儲存到檔案」即可保存。可由「檔案」選取 JSON／CSV 還原，或者開啟匯出的 `.ics` 日曆檔案。
+- 「設定 → 帳務管理 → 通知與提醒」可以套用 iPhone 通知（需要允許通知）。改動信用卡日子或提醒選項後請重新套用。信用卡網上目錄仍需連線；PIN 仍然係畫面鎖，唔係資料加密。
+
+用 Node 22 及 Xcode 本機建置／測試：
+
+```bash
+npm ci
+npm run build
+npx cap sync ios
+xcrun simctl list devices available
+xcodebuild -project ios/App/App.xcodeproj -scheme App \
+  -destination 'platform=iOS Simulator,id=<simulator-UDID>' \
+  -parallel-testing-enabled NO CODE_SIGNING_ALLOWED=NO test
+```
 
 ## 開發與驗證
 

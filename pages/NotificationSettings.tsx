@@ -16,7 +16,10 @@ import {
   type ReminderSettings,
 } from '../utils/reminders';
 import { formatDisplayYmd } from '../utils/preferences';
-import { showAppConfirm } from '../utils/appDialog';
+import { showAppAlert, showAppConfirm } from '../utils/appDialog';
+import { shareOrDownloadText } from '../utils/exportFile';
+import { isNativeIos } from '../utils/ios';
+import { applyIosReminders, iosReminderSchedule } from '../utils/iosReminders';
 
 const NotificationSettings: React.FC = () => {
   const navigate = useNavigate();
@@ -24,6 +27,7 @@ const NotificationSettings: React.FC = () => {
 
   const [enabled, setEnabled] = useState(true);
   const [time, setTime] = useState("20:00");
+  const [applyingIosReminders, setApplyingIosReminders] = useState(false);
 
   const [ccEnabled, setCcEnabled] = useState(true);
   const [ccAdvanceDays, setCcAdvanceDays] = useState(0); // 0 = on the day
@@ -209,7 +213,7 @@ const NotificationSettings: React.FC = () => {
         return true;
       })
       .sort((a, b) => a.dt.getTime() - b.dt.getTime());
-  }, [creditCards, time, ccAdvanceDays]);
+  }, [creditCards, time, ccAdvanceDays, ccAmountRemindEnabled, ccFeeRemindEnabled]);
 
   // Function to generate and download ICS file for iOS Calendar
   const addToCalendar = () => {
@@ -270,14 +274,22 @@ const NotificationSettings: React.FC = () => {
       'END:VCALENDAR'
     ].join('\r\n');
 
-    const blob = new Blob([icsContent], { type: 'text/calendar;charset=utf-8' });
-    const url = window.URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.setAttribute('download', 'smartfinance-reminders.ics');
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    void shareOrDownloadText(icsContent, 'smartfinance-reminders.ics', 'text/calendar;charset=utf-8');
+  };
+
+  const saveIosReminders = async () => {
+    setApplyingIosReminders(true);
+    try {
+      const notifications = iosReminderSchedule(enabled ? time : null, ccEnabled ? creditCardEvents.map(event => event.dt) : []);
+      const applied = await applyIosReminders(notifications);
+      await showAppAlert(!applied
+        ? '未允許通知。請前往 iOS「設定」開啟 SmartFinance Max 通知。'
+        : notifications.length ? '已更新 iPhone 提醒。' : '已取消 iPhone 提醒。');
+    } catch {
+      await showAppAlert('未能更新 iPhone 提醒，請稍後再試。');
+    } finally {
+      setApplyingIosReminders(false);
+    }
   };
 
   return (
@@ -589,18 +601,22 @@ const NotificationSettings: React.FC = () => {
             </div>
          </div>
 
-         {enabled && (
+         {isNativeIos && <div className="space-y-2">
+           <button disabled={applyingIosReminders || (enabled && !time)} onClick={saveIosReminders} className="w-full sf-panel border border-primary/50 text-primary py-4 rounded-xl font-bold disabled:opacity-50">套用 iPhone 通知</button>
+           <p className="text-gray-500 text-xs px-4">會按上方選項設定記帳同信用卡通知。改動設定或信用卡日期後請重新套用；關閉兩項再套用即可取消通知。</p>
+         </div>}
+
+         {(enabled || (isNativeIos && ccEnabled && creditCardEvents.length > 0)) && (
            <div className="animate-fade-in-up">
               <button 
                 onClick={addToCalendar}
                 className="w-full sf-panel border border-primary/50 text-primary py-4 rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-primary/10 active:scale-[0.98] transition-all"
               >
                 <CalendarCheck size={20} />
-                加入 iPhone 行事曆
+                {isNativeIos ? '分享行事曆檔案' : '加入 iPhone 行事曆'}
               </button>
               <p className="text-gray-500 text-xs mt-3 ml-4 leading-relaxed">
-                點擊上方按鈕將下載日曆檔案 (.ics)。<br/>
-                在 iPhone 上開啟後，請選擇「加入行事曆」即可在每天指定時間收到系統通知。
+                {isNativeIos ? '可將 .ics 儲存到「檔案」，再開啟檔案匯入行事曆。' : <>點擊上方按鈕將下載日曆檔案 (.ics)。<br/>在 iPhone 上開啟後，請選擇「加入行事曆」即可在每天指定時間收到系統通知。</>}
               </p>
             </div>
          )}

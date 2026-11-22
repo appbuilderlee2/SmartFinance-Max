@@ -21,6 +21,9 @@ import { Currency } from '../types';
 import { createPinSecurity, disablePinSecurity, loadSecuritySettings, saveSecuritySettings, verifyPin, type SecuritySettings } from '../utils/security';
 import { showAppAlert, showAppChoice, showAppConfirm, showAppPrompt } from '../utils/appDialog';
 import { pinSnapshotCurrencies } from '../utils/ledgerCurrency';
+import { exportTextFile } from '../utils/exportFile';
+import { isNativeIos } from '../utils/ios';
+import { clearIosReminders } from '../utils/iosReminders';
 
 type Notice = { tone: 'success' | 'warning' | 'info'; text: string } | null;
 
@@ -28,15 +31,6 @@ const ARRAY_KEYS = [
   'smartfinance_transactions', 'smartfinance_categories', 'smartfinance_budgets',
   'smartfinance_subscriptions', 'smartfinance_creditcards', 'smartfinance_creditcard_cycles',
 ] as const;
-
-const downloadText = (contents: string, filename: string, type: string) => {
-  const url = URL.createObjectURL(new Blob([contents], { type }));
-  const link = document.createElement('a');
-  link.href = url;
-  link.download = filename;
-  link.click();
-  window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
-};
 
 const countArray = (snapshot: Record<string, string>, key: string): number => {
   try {
@@ -169,21 +163,29 @@ const Settings: React.FC = () => {
     return !normalized || terms.some(term => term.toLocaleLowerCase('zh-Hant').includes(normalized));
   };
 
-  const exportBackup = async (format: 'json' | 'csv', prefix = 'smartfinance_backup') => {
+  const exportBackup = async (format: 'json' | 'csv', recovery = false) => {
     try { await flushStorage(); }
     catch { setNotice({ tone: 'warning', text: '資料尚未寫入完成，請先重試儲存再匯出備份。' }); return false; }
     const backup = createBackupFromSnapshot(getStorageSnapshot(), __APP_VERSION__);
     const date = toLocalYMD(new Date());
-    if (format === 'json') {
-      downloadText(JSON.stringify(backup, null, 2), `${prefix}_${date}.json`, 'application/json');
-    } else {
-      downloadText(`\uFEFF${backupToCsv(backup)}`, `${prefix}_${date}.csv`, 'text/csv;charset=utf-8');
+    const prefix = recovery ? 'smartfinance_還原前自動備份' : 'smartfinance_backup';
+    try {
+      const exported = format === 'json'
+        ? await exportTextFile(JSON.stringify(backup, null, 2), `${prefix}_${date}.json`, 'application/json', recovery)
+        : await exportTextFile(`\uFEFF${backupToCsv(backup)}`, `${prefix}_${date}.csv`, 'text/csv;charset=utf-8');
+      if (!exported) {
+        setNotice({ tone: 'info', text: '已取消匯出，現有資料沒有改動。' });
+        return false;
+      }
+    } catch {
+      setNotice({ tone: 'warning', text: '未能匯出備份，請稍後再試。' });
+      return false;
     }
     if (format === 'json') {
       const timestamp = Date.now();
       try { localStorage.setItem(BACKUP_EXPORT_MARKER, new Date(timestamp).toISOString()); setLastExport(timestamp); } catch { /* UI marker is best-effort */ }
     }
-    setNotice({ tone: 'success', text: '已啟動備份下載；請確認檔案已存到裝置或「檔案」App。' });
+    setNotice({ tone: 'success', text: isNativeIos ? '已匯出備份；請確認檔案已保存。' : '已啟動備份下載；請確認檔案已存到裝置或「檔案」App。' });
     return true;
   };
 
@@ -195,6 +197,7 @@ const Settings: React.FC = () => {
       `訂閱：${countArray(backup.storage, 'smartfinance_subscriptions')} 項`,
       `卡券：${countArray(backup.storage, 'smartfinance_wallet')} 項`,
       `信用卡：${countArray(backup.storage, 'smartfinance_creditcards')} 張`,
+      ...(isNativeIos ? ['還原前，請先將現有資料嘅復原備份儲存到「檔案」。'] : []),
     ].join('\n');
     const mode = await showAppChoice(`${summary}\n\n合併會保留現有資料；取代會以備份內容完整還原。`, [
       { label: '合併資料', value: 'merge' },
@@ -226,12 +229,13 @@ const Settings: React.FC = () => {
       }
     }
     // Always give the user a recovery file before any destructive replacement.
-    if (!await exportBackup('json', 'smartfinance_還原前自動備份')) return;
+    if (!await exportBackup('json', true)) return;
     const next = mode === 'merge'
       ? mergeBackupSnapshots(current, backup.storage, { conflict, restoreDeleted })
       : pinSnapshotCurrencies(backup.storage);
     validateBackupSnapshot(next);
     await replaceStorageSnapshot(next);
+    if (mode === 'replace') await clearIosReminders().catch(() => showAppAlert('未能取消 iPhone 提醒，請到通知設定重新套用。'));
     await showAppAlert(`${mode === 'merge' ? '合併' : '取代'}完成，App 將重新載入。`);
     window.location.reload();
   };
@@ -327,7 +331,7 @@ const Settings: React.FC = () => {
             <ChevronRight size={17} className="sf-settings-chevron" />
           </button>; })}
         </div>)}
-        <button disabled={checkingUpdate} onClick={checkUpdate} className="sf-settings-update text-primary"><RefreshCw size={17} />{checkingUpdate ? '檢查中…' : '檢查更新'}</button>
+        {!isNativeIos && <button disabled={checkingUpdate} onClick={checkUpdate} className="sf-settings-update text-primary"><RefreshCw size={17} />{checkingUpdate ? '檢查中…' : '檢查更新'}</button>}
       </nav>}
       {(section || query) && !Object.values(sections).some(Boolean) ? (
         <div className="sf-panel p-8 text-center text-gray-400">搵唔到「{query}」相關設定</div>
@@ -467,9 +471,11 @@ const Settings: React.FC = () => {
               }}
             ><span>目前版本</span><span className="text-gray-400">v{__APP_VERSION__}</span></button>
             <div className="p-4 flex justify-between"><span>網絡狀態</span><span className={navigator.onLine ? 'text-green-400' : 'text-amber-300'}>{navigator.onLine ? '已連線' : '離線模式'}</span></div>
-            <button disabled={checkingUpdate} onClick={checkUpdate} className="w-full p-4 flex items-center justify-center gap-2 disabled:opacity-60"><RefreshCw size={17} className={checkingUpdate ? 'animate-spin' : ''} />{checkingUpdate ? '檢查中…' : '檢查更新'}</button>
+            {isNativeIos
+              ? <p className="p-4 text-sm text-gray-400">iOS 版本內置離線功能。更新時請安裝新版 IPA；建議先匯出備份。</p>
+              : <button disabled={checkingUpdate} onClick={checkUpdate} className="w-full p-4 flex items-center justify-center gap-2 disabled:opacity-60"><RefreshCw size={17} className={checkingUpdate ? 'animate-spin' : ''} />{checkingUpdate ? '檢查中…' : '檢查更新'}</button>}
             <button onClick={async () => { try { await flushStorage(); window.location.reload(); } catch { setNotice({ tone: 'warning', text: '資料尚未儲存，請先重試或匯出備份。' }); } }} className="w-full p-4 flex items-center justify-center gap-2"><RefreshCw size={17} />重新載入 App</button>
-            <button onClick={async () => { if (await showAppConfirm('只會清除 App 快取，不會刪除 IndexedDB 財務資料。', { title: '清除快取？', confirmLabel: '清除並重新載入' })) await forceReloadPwa(); }} className="w-full p-4 flex items-center justify-center gap-2"><RefreshCw size={17} />清除快取並重新載入</button>
+            {!isNativeIos && <button onClick={async () => { if (await showAppConfirm('只會清除 App 快取，不會刪除 IndexedDB 財務資料。', { title: '清除快取？', confirmLabel: '清除並重新載入' })) await forceReloadPwa(); }} className="w-full p-4 flex items-center justify-center gap-2"><RefreshCw size={17} />清除快取並重新載入</button>}
           </div>
         </section>
       ) : null}
@@ -492,7 +498,7 @@ const Settings: React.FC = () => {
             <div className="p-4 flex items-center justify-between"><div><div>Face ID／Touch ID 狀態</div><div className="text-xs text-gray-500 mt-1">PWA 只顯示裝置支援狀態；目前以 PIN 解鎖</div></div><span className="text-xs text-gray-400">{biometricStatus}</span></div>
             <label className="p-4 flex items-center justify-between gap-3"><div><div>金額私隱模式</div><div className="text-xs text-gray-500 mt-1">將 App 金額顯示為 ••••</div></div><input aria-label="金額私隱模式" type="checkbox" checked={security.privacyMode} onChange={event => updateSecurity({ privacyMode: event.target.checked })} className="w-5 h-5" /></label>
             <label className="p-4 flex items-center justify-between gap-3"><div><div>離開 App 時隱藏畫面</div><div className="text-xs text-gray-500 mt-1">切換 App 或鎖機時顯示私隱遮罩</div></div><input aria-label="App 切換器私隱遮罩" type="checkbox" checked={security.hideInAppSwitcher} onChange={event => updateSecurity({ hideInAppSwitcher: event.target.checked })} className="w-5 h-5" /></label>
-            <div className="p-4 text-xs text-amber-200 bg-amber-500/5">資料只儲存在此裝置。清除 Safari／瀏覽器網站資料會同時刪除 IndexedDB 財務資料；操作前請先匯出 JSON 備份。</div>
+            <div className="p-4 text-xs text-amber-200 bg-amber-500/5">{isNativeIos ? '資料只儲存在此裝置。刪除 App 會同時刪除財務資料；操作前請先匯出 JSON 備份。' : '資料只儲存在此裝置。清除 Safari／瀏覽器網站資料會同時刪除 IndexedDB 財務資料；操作前請先匯出 JSON 備份。'}</div>
           </div>
         </section>
       ) : null}

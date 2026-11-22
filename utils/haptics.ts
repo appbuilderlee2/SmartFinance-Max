@@ -1,14 +1,14 @@
-/**
- * Simple Haptic Feedback Utility
- * Wraps navigator.vibrate for compatible devices (Android/Some Browsers)
- * Note: iOS Safari does not support navigator.vibrate for haptics yet, 
- * but this setups the structure for when it does or for WebApp wrappers.
- * 
- * For true iOS Haptics in a PWA, we mostly rely on the "feel" of instant touch response
- * via CSS active states (-webkit-tap-highlight-color: transparent) which we added.
- */
+import { Haptics, ImpactStyle, NotificationType } from '@capacitor/haptics';
+import { isNativeIos } from './ios';
 
 export const triggerHaptic = (pattern: number | number[] = 10) => {
+    if (isNativeIos) {
+        const feedback = Array.isArray(pattern)
+            ? Haptics.notification({ type: pattern[0] >= 50 ? NotificationType.Error : NotificationType.Success })
+            : Haptics.impact({ style: pattern >= 20 ? ImpactStyle.Heavy : pattern >= 10 ? ImpactStyle.Medium : ImpactStyle.Light });
+        void feedback.catch(() => undefined);
+        return;
+    }
     if (typeof navigator !== 'undefined' && navigator.vibrate) {
         try {
             navigator.vibrate(pattern);

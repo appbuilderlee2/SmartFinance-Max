@@ -12,6 +12,14 @@
     "test:e2e": "playwright test"
   },
   "dependencies": {
+    "@capacitor/browser": "7.0.5",
+    "@capacitor/cli": "7.6.10",
+    "@capacitor/core": "7.6.10",
+    "@capacitor/filesystem": "7.1.9",
+    "@capacitor/haptics": "7.0.5",
+    "@capacitor/ios": "7.6.10",
+    "@capacitor/local-notifications": "7.0.7",
+    "@capacitor/share": "7.0.4",
     "lucide-react": "^0.447.0",
     "react": "^19.2.1",
     "react-dom": "^19.2.1",

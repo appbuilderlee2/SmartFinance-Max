@@ -9,6 +9,7 @@ import { monthRange, reportTotals, selectReportRows, ReportFilter } from '../uti
 import { userTags } from '../utils/tags';
 import { expenseBudgets } from '../utils/expenseBudgets';
 import BottomSheet from '../components/BottomSheet';
+import { shareOrDownloadText } from '../utils/exportFile';
 
 interface ReportViewState {
   month: number; preset: string; filter: ReportFilter;
@@ -66,8 +67,7 @@ export default function Reports() {
   function exportCSV() {
     const cell = (value: unknown) => `"${String(value ?? '').replace(/"/g, '""')}"`;
     const lines = [['日期','分類','類型','金額','幣別','備註','標籤'], ...rows.map(t => [toLocalYMD(parseDate(t.date)!), names.get(t.categoryId), t.type === TransactionType.EXPENSE ? '支出' : '收入', t.amount, filter.currency, t.note, userTags(t).join(' / ')])];
-    const blob = new Blob(['\ufeff' + lines.map(line => line.map(cell).join(',')).join('\r\n')], { type: 'text/csv;charset=utf-8' });
-    const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = `報告-${title}.csv`; a.click(); setTimeout(() => URL.revokeObjectURL(url), 1000);
+    void shareOrDownloadText('\ufeff' + lines.map(line => line.map(cell).join(',')).join('\r\n'), `報告-${title}.csv`, 'text/csv;charset=utf-8');
   }
   const trendMax = Math.max(1, ...trend.map(p => Math.max(p.income, p.expense)));
   const chart = <div className="space-y-3" aria-label="收支走勢">
