@@ -84,24 +84,53 @@ final class SmartFinanceUITests: XCTestCase {
 
     func testSubscriptionWebsiteOpensAndCanBeReopened() {
         tap("錢包")
-        tap("訂閱／定期")
-        tap("管理全部", prefix: true)
-        tap("新增訂閱")
+        tap("新增錢包項目")
+        tap("訂閱／定期項目")
         tap("自訂服務", prefix: true)
         tap("詳細資訊")
         let url = web.textFields["管理訂閱連結"].firstMatch
         XCTAssertTrue(url.waitForExistence(timeout: 10))
         url.tap()
         url.typeText("https://example.com")
-        let link = web.links.containing(NSPredicate(format: "label BEGINSWITH %@", "前往服務網站")).firstMatch
-        let done = app.buttons.matching(NSPredicate(format: "label IN %@", ["Done", "Dismiss"])).firstMatch
         for _ in 0..<2 {
-            XCTAssertTrue(link.waitForExistence(timeout: 10))
+            let link = web.links["前往服務網站 ↗"].firstMatch
+            XCTAssertTrue(link.waitForExistence(timeout: 10), app.debugDescription)
             link.tap()
+            let address = app.buttons["URL"].firstMatch
+            XCTAssertTrue(address.waitForExistence(timeout: 15), app.debugDescription)
+            let done = app.buttons.matching(NSPredicate(format: "label IN %@", ["Done", "Dismiss", "Close"])).firstMatch
             XCTAssertTrue(done.waitForExistence(timeout: 10), app.debugDescription)
-            done.tap()
+            done.coordinate(withNormalizedOffset: CGVector(dx: 0.25, dy: 0.5)).tap()
+            XCTAssertTrue(done.waitForNonExistence(timeout: 10), app.debugDescription)
         }
-        XCTAssertTrue(link.waitForExistence(timeout: 10))
+        XCTAssertTrue(web.links["前往服務網站 ↗"].firstMatch.waitForExistence(timeout: 10))
+    }
+
+    func testAppSwitcherPrivacySnapshots() {
+        tap("設定")
+        tap("安全與私隱", prefix: true)
+        let setting = web.switches["App 切換器私隱遮罩"].firstMatch
+        XCTAssertTrue(setting.waitForExistence(timeout: 10))
+        for enabled in [false, true] {
+            let expected = enabled ? "1" : "0"
+            if setting.value as? String != expected { setting.tap() }
+            XCTAssertEqual(setting.value as? String, expected)
+
+            app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.995)).press(
+                forDuration: 0.02,
+                thenDragTo: app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.55)),
+                withVelocity: .slow,
+                thenHoldForDuration: 0.7
+            )
+            let screenshot = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
+            screenshot.name = enabled ? "Privacy on – App Switcher" : "Privacy off – App Switcher"
+            screenshot.lifetime = .keepAlways
+            add(screenshot)
+
+            app.activate()
+            XCTAssertTrue(setting.waitForExistence(timeout: 10))
+            XCTAssertTrue(setting.isHittable)
+        }
     }
 
     func testPinLocksOnRelaunchAndUnlocks() {

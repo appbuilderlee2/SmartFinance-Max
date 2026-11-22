@@ -6,6 +6,23 @@ final class FinanceBridgeViewController: CAPBridgeViewController {
     override func capacitorDidLoad() {
         bridge?.registerPluginInstance(RecoveryExportPlugin())
         bridge?.registerPluginInstance(ServiceWebsitePlugin())
+        bridge?.registerPluginInstance(AppSwitcherPrivacyPlugin())
+    }
+}
+
+final class AppSwitcherPrivacyPlugin: CAPPlugin, CAPBridgedPlugin {
+    static let preferenceKey = "hideInAppSwitcher"
+    let identifier = "AppSwitcherPrivacyPlugin"
+    let jsName = "AppSwitcherPrivacy"
+    let pluginMethods: [CAPPluginMethod] = [CAPPluginMethod(name: "setEnabled", returnType: CAPPluginReturnPromise)]
+
+    @objc func setEnabled(_ call: CAPPluginCall) {
+        guard let enabled = call.getBool("enabled") else {
+            call.reject("Missing app switcher privacy preference")
+            return
+        }
+        UserDefaults.standard.set(enabled, forKey: Self.preferenceKey)
+        call.resolve()
     }
 }
 
