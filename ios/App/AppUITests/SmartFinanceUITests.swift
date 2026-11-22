@@ -54,10 +54,15 @@ final class SmartFinanceUITests: XCTestCase {
             close.tap()
         } else if dismissRegion.exists {
             dismissRegion.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.2)).tap()
-        } else {
-            app.swipeDown()
         }
-        XCTAssertTrue(web.staticTexts["已取消匯出，現有資料沒有改動。"].waitForExistence(timeout: 10))
+        let sheet = app.otherElements["ActivityListView"].firstMatch
+        if !sheet.waitForNonExistence(timeout: 3) {
+            let grabber = sheet.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.02))
+            let bottom = app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.95))
+            grabber.press(forDuration: 0.05, thenDragTo: bottom)
+        }
+        XCTAssertTrue(sharedFile.waitForNonExistence(timeout: 10), app.debugDescription)
+        XCTAssertTrue(web.staticTexts["已取消匯出，現有資料沒有改動。"].waitForExistence(timeout: 10), app.debugDescription)
     }
 
     func testNotificationPermissionAndScheduling() {
