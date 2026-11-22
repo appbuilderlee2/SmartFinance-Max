@@ -96,19 +96,28 @@ final class SmartFinanceUITests: XCTestCase {
         let url = web.textFields["管理訂閱連結"].firstMatch
         XCTAssertTrue(url.waitForExistence(timeout: 10))
         url.tap()
-        url.typeText("https://example.com")
+        url.typeText("https://example.com\n")
         for _ in 0..<2 {
             let link = web.links["前往服務網站 ↗"].firstMatch
             XCTAssertTrue(link.waitForExistence(timeout: 10), app.debugDescription)
             link.tap()
-            let address = app.buttons["URL"].firstMatch
+            let address = app.buttons.matching(NSPredicate(format: "identifier == %@ AND value CONTAINS %@", "URL", "example.com")).firstMatch
             XCTAssertTrue(address.waitForExistence(timeout: 15), app.debugDescription)
-            let done = app.buttons.matching(NSPredicate(format: "label IN %@", ["Done", "Dismiss", "Close"])).firstMatch
+            let close = app.buttons["Close"].firstMatch
+            let done = close.exists ? close : app.buttons["Done"].firstMatch
             XCTAssertTrue(done.waitForExistence(timeout: 10), app.debugDescription)
-            done.coordinate(withNormalizedOffset: CGVector(dx: 0.25, dy: 0.5)).tap()
-            XCTAssertTrue(done.waitForNonExistence(timeout: 10), app.debugDescription)
+            done.tap()
+            if !address.waitForNonExistence(timeout: 3) {
+                let frame = done.frame
+                let origin = app.frame.origin
+                app.coordinate(withNormalizedOffset: .zero).withOffset(CGVector(
+                    dx: frame.midX - origin.x, dy: frame.midY - origin.y
+                )).tap()
+            }
+            XCTAssertTrue(address.waitForNonExistence(timeout: 10), app.debugDescription)
+            XCTAssertTrue(web.textFields["管理訂閱連結"].firstMatch.waitForExistence(timeout: 10), app.debugDescription)
+            XCTAssertTrue(web.links["前往服務網站 ↗"].firstMatch.isHittable, app.debugDescription)
         }
-        XCTAssertTrue(web.links["前往服務網站 ↗"].firstMatch.waitForExistence(timeout: 10))
     }
 
     func testAppSwitcherPrivacySnapshots() {
