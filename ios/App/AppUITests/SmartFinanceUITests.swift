@@ -82,6 +82,28 @@ final class SmartFinanceUITests: XCTestCase {
         tap("好")
     }
 
+    func testSubscriptionWebsiteOpensAndCanBeReopened() {
+        tap("錢包")
+        tap("訂閱／定期")
+        tap("管理全部", prefix: true)
+        tap("新增訂閱")
+        tap("自訂服務", prefix: true)
+        tap("詳細資訊")
+        let url = web.textFields["管理訂閱連結"].firstMatch
+        XCTAssertTrue(url.waitForExistence(timeout: 10))
+        url.tap()
+        url.typeText("https://example.com")
+        let link = web.links.containing(NSPredicate(format: "label BEGINSWITH %@", "前往服務網站")).firstMatch
+        let done = app.buttons.matching(NSPredicate(format: "label IN %@", ["Done", "Dismiss"])).firstMatch
+        for _ in 0..<2 {
+            XCTAssertTrue(link.waitForExistence(timeout: 10))
+            link.tap()
+            XCTAssertTrue(done.waitForExistence(timeout: 10), app.debugDescription)
+            done.tap()
+        }
+        XCTAssertTrue(link.waitForExistence(timeout: 10))
+    }
+
     func testPinLocksOnRelaunchAndUnlocks() {
         tap("設定")
         tap("安全與私隱", prefix: true)

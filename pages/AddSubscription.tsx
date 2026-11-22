@@ -13,8 +13,10 @@ import SubscriptionServicePicker from '../components/SubscriptionServicePicker';
 import SubscriptionServiceIcon from '../components/SubscriptionServiceIcon';
 import { findSubscriptionService, SubscriptionService } from '../data/subscriptionServices';
 import { getCurrencySymbol } from '../utils/currency';
-import { Browser } from '@capacitor/browser';
+import { registerPlugin } from '@capacitor/core';
 import { isNativeIos } from '../utils/ios';
+
+const ServiceWebsite = registerPlugin<{ open(options: { url: string }): Promise<void> }>('ServiceWebsite');
 
 const AddSubscription: React.FC = () => {
   const { id } = useParams();
@@ -109,7 +111,7 @@ const AddSubscription: React.FC = () => {
         {form.managementUrl && /^https?:\/\//i.test(form.managementUrl) && <a className="text-primary block" href={form.managementUrl} target="_blank" rel="noopener noreferrer" onClick={event => {
           if (!isNativeIos) return;
           event.preventDefault();
-          void Browser.open({ url: event.currentTarget.href }).catch(() => showAppAlert('未能開啟服務網站，請檢查連結。'));
+          void ServiceWebsite.open({ url: event.currentTarget.href }).catch(() => showAppAlert('未能開啟服務網站，請檢查連結。'));
         }}>前往服務網站 ↗</a>}
         <label className="block text-sm">備註<textarea className="sf-field w-full mt-2" value={form.notes || ''} onChange={e => update({ notes: e.target.value })} /></label>
         <label className="flex justify-between text-sm">自動續訂<input type="checkbox" checked={form.autoRenewal !== false} onChange={e => update({ autoRenewal: e.target.checked })} /></label>

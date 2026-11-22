@@ -1,9 +1,44 @@
 import Capacitor
+import SafariServices
 import UIKit
 
 final class FinanceBridgeViewController: CAPBridgeViewController {
     override func capacitorDidLoad() {
         bridge?.registerPluginInstance(RecoveryExportPlugin())
+        bridge?.registerPluginInstance(ServiceWebsitePlugin())
+    }
+}
+
+final class ServiceWebsitePlugin: CAPPlugin, CAPBridgedPlugin {
+    let identifier = "ServiceWebsitePlugin"
+    let jsName = "ServiceWebsite"
+    let pluginMethods: [CAPPluginMethod] = [CAPPluginMethod(name: "open", returnType: CAPPluginReturnPromise)]
+
+    @objc func open(_ call: CAPPluginCall) {
+        guard let value = call.getString("url"), let url = URL(string: value),
+              let scheme = url.scheme?.lowercased(), ["http", "https"].contains(scheme),
+              let host = url.host, !host.isEmpty else {
+            call.reject("Invalid website URL")
+            return
+        }
+        DispatchQueue.main.async {
+            if let presenter = self.bridge?.viewController,
+               presenter.viewIfLoaded?.window?.windowScene?.activationState == .foregroundActive {
+                if presenter.presentedViewController is SFSafariViewController {
+                    call.resolve()
+                    return
+                }
+                if presenter.presentedViewController == nil {
+                    let browser = SFSafariViewController(url: url)
+                    browser.modalPresentationStyle = .fullScreen
+                    presenter.present(browser, animated: true) { call.resolve() }
+                    return
+                }
+            }
+            UIApplication.shared.open(url) { opened in
+                if opened { call.resolve() } else { call.reject("Unable to open website URL") }
+            }
+        }
     }
 }
 
