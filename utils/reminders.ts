@@ -192,10 +192,9 @@ export function regenerateReminders(params: {
   if (settings.ccEnabled) {
     const cycles = loadCycles();
 
-    // current + next month (if near month end)
-    const months: Array<{ y: number; m0: number }> = [{ y: now.getFullYear(), m0: now.getMonth() }];
+    const months: Array<{ y: number; m0: number }> = [];
     const monthsAhead = scheduleAhead ? 12 : now.getDate() >= 25 ? 1 : 0;
-    for (let offset = 1; offset <= monthsAhead; offset++) {
+    for (let offset = scheduleAhead ? -1 : 0; offset <= monthsAhead; offset++) {
       const month = new Date(now.getFullYear(), now.getMonth() + offset, 1);
       months.push({ y: month.getFullYear(), m0: month.getMonth() });
     }

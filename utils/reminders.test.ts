@@ -20,3 +20,16 @@ describe('budget reminders', () => {
     expect(reminders.find(item => item.type === 'budget_over_limit')).toMatchObject({ severity: 'urgent', action: { kind: 'navigate', to: '/budget' } });
   });
 });
+
+it('keeps the prior statement month’s payment reminder when it falls in the current month', () => {
+  const card = {
+    id: 'card', name: 'Card', annualFee: 0, cashbackType: '', expiryDate: '',
+    statementDay: 19, dueDay: 14, dueInNextMonth: true,
+  };
+  const reminders = regenerateReminders({
+    creditCards: [card], subscriptions: [], scheduleAhead: true, now: new Date(2026, 1, 1),
+  });
+  expect(reminders).toContainEqual(expect.objectContaining({
+    dedupeKey: 'cc_payment_due|card|2026-01', dueYmd: '2026-02-14', status: 'open',
+  }));
+});
