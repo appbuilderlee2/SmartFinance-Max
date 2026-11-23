@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
-  AlertTriangle, ChevronRight, CloudOff, Database, FileDown,
+  AlertTriangle, Bell, ChevronRight, CloudOff, Database, FileDown,
   Wallet, Globe, Info, Palette, RefreshCw, Search, ShieldCheck, Upload, X,
 } from 'lucide-react';
 import { useData } from '../contexts/DataContext';
@@ -57,7 +57,7 @@ const Settings: React.FC = () => {
   const query = params.get('q') || '';
   const setQuery = (value: string) => setParams(value ? { q: value } : {}, { replace: true });
   const groups = [
-    ['finance', '帳務管理', '分類、預算、報告、標籤與提醒'],
+    ['finance', '帳務管理', '分類、預算、報告與標籤'],
     ['appearance', '外觀與顯示', '主題與顯示模式'],
     ['preferences', '貨幣與格式', '主貨幣、日期與數字'],
     ['data', '資料與備份', '匯出、還原與資料檢查'],
@@ -283,7 +283,8 @@ const Settings: React.FC = () => {
   };
 
   const sections = {
-    finance: show('finance', '帳務', '分類', '預算', '報告', '報表', '標籤', '通知', '提醒'),
+    finance: show('finance', '帳務', '分類', '預算', '報告', '報表', '標籤'),
+    notifications: Boolean(query.trim()) && matches('通知', '提醒', '記帳提醒', '訂閱提醒', '信用卡提醒'),
     preferences: show('preferences', '個人化', '貨幣', '格式', '日期', '每週', '負數', '符號'),
     appearance: show('appearance', '外觀', '顯示', '主題', 'Fluid', '深色', '淺色', '系統'),
     data: show('data', '資料', 'IndexedDB', '儲存', '備份', '匯出', '匯入', '還原', '完整性', 'CSV', 'JSON', '進階', '刪除'),
@@ -311,6 +312,16 @@ const Settings: React.FC = () => {
         />
         {query ? <button aria-label="清除搜尋" onClick={() => setQuery('')}><X size={17} /></button> : null}
       </label>
+
+      {(!section && !query || sections.notifications) && (
+        <div className="sf-panel sf-settings-group">
+          <button aria-label="通知" className="sf-settings-row" onClick={() => navigate('/settings/notifications')}>
+            <span className="sf-settings-icon sf-settings-icon-notifications"><Bell size={19} /></span>
+            <span className="sf-settings-copy"><span className="sf-settings-title">通知</span><span className="sf-settings-subtitle">記帳、信用卡、訂閱與預算提醒</span></span>
+            <ChevronRight size={17} className="sf-settings-chevron" />
+          </button>
+        </div>
+      )}
 
       {notice ? (
         <div role="status" className={`rounded-xl border p-3 text-sm ${notice.tone === 'success' ? 'border-green-500/40 bg-green-500/10 text-green-300' : notice.tone === 'warning' ? 'border-amber-500/40 bg-amber-500/10 text-amber-200' : 'border-blue-500/40 bg-blue-500/10 text-blue-200'}`}>
@@ -344,7 +355,7 @@ const Settings: React.FC = () => {
           <h2 className="text-gray-500 text-xs ml-3 mb-2 uppercase tracking-wider">帳務管理</h2>
           <div className="sf-panel divide-y sf-divider overflow-hidden">
             {[
-              ['分類管理', '/categories'], ['月預算設定', '/budget'], ['標籤管理', '/settings/tags'], ['通知與提醒', '/settings/notifications'],
+              ['分類管理', '/categories'], ['月預算設定', '/budget'], ['標籤管理', '/settings/tags'],
               ...(rewardsUnlocked ? [['回贈助手', '/settings/creditcards2']] : []),
             ].map(([label, path]) => (
               <button key={path} onClick={() => navigate(path, path === '/subscriptions' ? { state: { from: '/settings' } } : undefined)} className="w-full p-4 flex items-center justify-between text-white hover:bg-surface/80">

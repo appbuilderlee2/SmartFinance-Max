@@ -1,3 +1,4 @@
+import { registerPlugin, type PermissionState } from '@capacitor/core';
 import { LocalNotifications, type LocalNotificationSchema } from '@capacitor/local-notifications';
 import { parseLocalYMD, toLocalYMD } from './date';
 import { isNativeIos } from './ios';
@@ -7,6 +8,7 @@ const FIRST_ID = 4200;
 const MAX_COUNT = 64;
 const MAX_REMINDERS = MAX_COUNT - 1;
 const TEST_ID = 4199;
+const NotificationSettings = registerPlugin<{ open(): Promise<void> }>('NotificationSettings');
 const HISTORY_KEY = 'ios-notification-history-v1';
 const routes: Record<ReminderType, string> = {
   cc_statement: '/settings/creditcard-cycles',
@@ -97,6 +99,39 @@ function managed(id: number): boolean {
   return id >= FIRST_ID && id < FIRST_ID + MAX_COUNT;
 }
 
+export type UpcomingIosReminder = { id: number; title: string; at: Date; daily: boolean };
+
+export function getUpcomingIosReminders(now = new Date()): Promise<UpcomingIosReminder[]> {
+  if (!isNativeIos) return Promise.resolve([]);
+  return serialize(async () => {
+    const { notifications } = await LocalNotifications.getPending();
+    const upcoming: UpcomingIosReminder[] = [];
+    for (const { id, title, schedule } of notifications) {
+      if (!managed(id)) continue;
+      const daily = id === FIRST_ID && typeof schedule?.on?.hour === 'number' && typeof schedule.on.minute === 'number';
+      let at: Date;
+      if (daily) {
+        at = new Date(now);
+        at.setHours(schedule!.on!.hour!, schedule!.on!.minute!, 0, 0);
+        if (at <= now) at.setDate(at.getDate() + 1);
+      } else {
+        if (!schedule?.at) continue;
+        at = new Date(schedule.at);
+      }
+      if (at > now) upcoming.push({ id, title, at, daily });
+    }
+    return upcoming.sort((a, b) => a.at.getTime() - b.at.getTime());
+  });
+}
+
+export async function getIosNotificationPermission(): Promise<PermissionState | null> {
+  return isNativeIos ? (await LocalNotifications.checkPermissions()).display : null;
+}
+
+export function openIosNotificationSettings(): Promise<void> {
+  return NotificationSettings.open();
+}
+
 async function updatePending(desired: LocalNotificationSchema[]): Promise<void> {
   const { notifications } = await LocalNotifications.getPending();
   const pending = new Map(notifications.filter(({ id }) => managed(id)).map(item => [item.id, item]));
@@ -117,8 +152,8 @@ export function clearIosReminders(): Promise<void> {
 }
 
 export async function requestIosNotificationPermission(): Promise<boolean> {
-  const { display } = await LocalNotifications.checkPermissions();
-  return display === 'granted' || (display === 'prompt' && (await LocalNotifications.requestPermissions()).display === 'granted');
+  const display = await getIosNotificationPermission();
+  return display === 'granted' || ((display === 'prompt' || display === 'prompt-with-rationale') && (await LocalNotifications.requestPermissions()).display === 'granted');
 }
 
 export function syncIosReminders(inputs: Inputs, settings?: ReminderSettings): Promise<number> {

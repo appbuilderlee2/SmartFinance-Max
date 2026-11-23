@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { Currency, TransactionType } from '../types';
-import { regenerateReminders } from './reminders';
+import { DEFAULT_REMINDER_SETTINGS, regenerateReminders } from './reminders';
 
 describe('budget reminders', () => {
   it('creates near-limit and over-budget reminders with stable actions', () => {
@@ -32,4 +32,14 @@ it('keeps the prior statement month’s payment reminder when it falls in the cu
   expect(reminders).toContainEqual(expect.objectContaining({
     dedupeKey: 'cc_payment_due|card|2026-01', dueYmd: '2026-02-14', status: 'open',
   }));
+});
+
+it('can turn off statement and payment alerts without disabling amount-entry reminders', () => {
+  const reminders = regenerateReminders({
+    creditCards: [{ id: 'card', name: 'Card', annualFee: 0, cashbackType: '', expiryDate: '', statementDay: 5, dueDay: 20 }],
+    subscriptions: [], scheduleAhead: true, now: new Date(2026, 1, 1),
+    settings: { ...DEFAULT_REMINDER_SETTINGS, ccStatementEnabled: false, ccPaymentEnabled: false },
+  });
+  expect(reminders.some(item => item.type === 'cc_amount_due')).toBe(true);
+  expect(reminders.some(item => item.type === 'cc_statement' || item.type === 'cc_payment_due')).toBe(false);
 });

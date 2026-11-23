@@ -885,6 +885,7 @@ html.theme-applefluid-light .sf-sheet { background: #f6f7fa; color: #172033; }
 .sf-settings-row + .sf-settings-row { border-top:1px solid rgb(var(--sf-text-primary)/.1); }
 .sf-settings-icon { display:flex; align-items:center; justify-content:center; flex-shrink:0; width:34px; height:34px; border-radius:9px; color:#fff; background:#2474df; }
 .sf-settings-icon-finance { background:#318464; }
+.sf-settings-icon-notifications { background:#ae6036; }
 .sf-settings-icon-appearance { background:#7857c5; }
 .sf-settings-icon-security { background:#527396; }
 .sf-settings-icon-update { background:#697381; }

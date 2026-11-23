@@ -46,6 +46,8 @@ export type ReminderSettings = {
 
   // credit cards
   ccEnabled: boolean;
+  ccStatementEnabled: boolean;
+  ccPaymentEnabled: boolean;
   ccAdvanceDays: number; // due reminder lead time, 0..7
   ccAmountEnabled: boolean; // statement+1 amount due entry
   ccFeeEnabled: boolean;
@@ -69,6 +71,8 @@ export const DEFAULT_REMINDER_SETTINGS: ReminderSettings = {
   reminderTime: '20:00',
   iosEnabled: true,
   ccEnabled: true,
+  ccStatementEnabled: true,
+  ccPaymentEnabled: true,
   ccAdvanceDays: 0,
   ccAmountEnabled: true,
   ccFeeEnabled: true,
@@ -206,7 +210,7 @@ export function regenerateReminders(params: {
       for (const c of params.creditCards || []) {
         const { statementDate, dueDate } = getStatementAndDueForMonth(y, m0, c as any);
 
-        if (scheduleAhead && c.remindStatement !== false && statementDate) {
+        if (scheduleAhead && settings.ccStatementEnabled && c.remindStatement !== false && statementDate) {
           const date = parseLocalYMD(statementDate)!;
           date.setDate(date.getDate() - Math.max(0, settings.ccAdvanceDays));
           const dedupeKey = `cc_statement|${c.id}|${yearMonth}`;
@@ -244,7 +248,7 @@ export function regenerateReminders(params: {
         }
 
         // due reminder (due - advanceDays), skip if cycle is closed/paid
-        if (c.remindDue !== false && dueDate) {
+        if (settings.ccPaymentEnabled && c.remindDue !== false && dueDate) {
           const d = new Date(dueDate + 'T00:00:00');
           if (settings.ccAdvanceDays > 0) d.setDate(d.getDate() - settings.ccAdvanceDays);
           const ymd = toLocalYMD(d);

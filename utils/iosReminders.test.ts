@@ -2,7 +2,7 @@ import { LocalNotifications } from '@capacitor/local-notifications';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { createOpenCycle } from './creditCardCycles';
 import { loadCycles } from './creditCardCycleStorage';
-import { iosNotificationRoute, iosReminderSchedule, requestIosNotificationPermission, sendIosTestNotification, syncIosReminders } from './iosReminders';
+import { getIosNotificationPermission, getUpcomingIosReminders, iosNotificationRoute, iosReminderSchedule, requestIosNotificationPermission, sendIosTestNotification, syncIosReminders } from './iosReminders';
 import { DEFAULT_REMINDER_SETTINGS, regenerateReminders, type Reminder, type ReminderType } from './reminders';
 
 vi.mock('./ios', () => ({ isNativeIos: true }));
@@ -95,6 +95,26 @@ describe('iOS reminder schedule', () => {
 });
 
 describe('iOS notification bridge', () => {
+  it('reports denied permission without requesting it again', async () => {
+    vi.mocked(LocalNotifications.checkPermissions).mockResolvedValue({ display: 'denied' });
+    expect(await getIosNotificationPermission()).toBe('denied');
+    expect(await requestIosNotificationPermission()).toBe(false);
+    expect(LocalNotifications.requestPermissions).not.toHaveBeenCalled();
+  });
+
+  it('lists actual upcoming managed notifications in order, excluding test and past requests', async () => {
+    const [daily] = iosReminderSchedule({ ...DEFAULT_REMINDER_SETTINGS, reminderTime: '09:00' }, [], now);
+    const request = (id: number, at: string) => ({ id, title: 'Reminder', body: '', schedule: { at: at as unknown as Date } });
+    vi.mocked(LocalNotifications.getPending).mockResolvedValue({ notifications: [
+      daily, request(4202, '2026-01-01T17:00:00'), request(4201, '2026-01-01T08:00:00'),
+      request(4199, '2026-01-01T12:00:05'), request(100, '2026-01-01T13:00:00'),
+    ] });
+    expect(await getUpcomingIosReminders(now)).toEqual([
+      { id: 4202, title: 'Reminder', at: new Date(2026, 0, 1, 17), daily: false },
+      { id: 4200, title: 'SmartFinance 記帳提醒', at: new Date(2026, 0, 2, 9), daily: true },
+    ]);
+  });
+
   it('requests permission only when prompted and schedules a native test notification', async () => {
     vi.mocked(LocalNotifications.checkPermissions).mockResolvedValueOnce({ display: 'prompt' });
     vi.mocked(LocalNotifications.requestPermissions).mockResolvedValueOnce({ display: 'granted' });

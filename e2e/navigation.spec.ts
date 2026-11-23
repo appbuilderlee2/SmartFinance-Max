@@ -17,3 +17,21 @@ test('add transaction uses the same six-item navigation as calendar', async ({ p
   await expect(page).toHaveURL(/#\/cards$/);
   await expect(nav.getByRole('button', { name: '信用卡', exact: true })).toHaveAttribute('aria-current', 'page');
 });
+
+test('Settings opens a dedicated Notifications page with browser-appropriate controls', async ({ page }) => {
+  await page.goto('/#/settings');
+  await page.getByRole('button', { name: '通知', exact: true }).click();
+  await expect(page).toHaveURL(/#\/settings\/notifications$/);
+  await expect(page.getByRole('heading', { name: '通知', exact: true })).toBeVisible();
+  for (const name of ['每日記帳提醒', '信用卡截數提醒', '輸入信用卡應繳金額提醒', '信用卡繳費提醒', '訂閱續期提醒', '預算提醒']) {
+    await expect(page.getByRole('checkbox', { name, exact: true })).toBeVisible();
+  }
+  await expect(page.getByLabel('提醒時間', { exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: '啟用 iPhone 通知' })).toHaveCount(0);
+  await page.getByRole('checkbox', { name: '訂閱續期提醒' }).uncheck();
+  await expect(page.getByRole('status').filter({ hasText: '已儲存' })).toBeVisible();
+  await page.reload();
+  await expect(page.getByRole('checkbox', { name: '訂閱續期提醒' })).not.toBeChecked();
+  await page.getByRole('button', { name: '設定', exact: true }).click();
+  await expect(page).toHaveURL(/#\/settings$/);
+});

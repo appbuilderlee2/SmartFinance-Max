@@ -67,24 +67,40 @@ final class SmartFinanceUITests: XCTestCase {
 
     func testNotificationPermissionAndScheduling() {
         tap("設定")
-        tap("帳務管理", prefix: true)
-        tap("通知與提醒", prefix: true)
-        tap("啟用 iPhone 通知")
+        tap("通知")
+        XCTAssertTrue(web.staticTexts["通知"].waitForExistence(timeout: 10))
+        XCTAssertTrue(web.staticTexts["系統通知權限"].waitForExistence(timeout: 10))
+        XCTAssertTrue(web.staticTexts["即將發送的通知"].waitForExistence(timeout: 10))
 
-        let springboard = XCUIApplication(bundleIdentifier: "com.apple.springboard")
-        let allow = springboard.alerts.buttons["Allow"].firstMatch
-        if allow.waitForExistence(timeout: 5) { allow.tap() }
+        let enable = web.buttons["啟用 iPhone 通知"].firstMatch
+        let test = web.buttons["發送測試通知"].firstMatch
+        let loaded = NSPredicate { _, _ in (enable.exists && enable.isEnabled) || test.exists }
+        expectation(for: loaded, evaluatedWith: nil)
+        waitForExpectations(timeout: 15)
+        if enable.exists {
+            enable.tap()
+            let springboard = XCUIApplication(bundleIdentifier: "com.apple.springboard")
+            let allow = springboard.alerts.buttons["Allow"].firstMatch
+            if allow.waitForExistence(timeout: 5) { allow.tap() }
 
-        let scheduled = web.staticTexts.matching(NSPredicate(format: "label BEGINSWITH %@", "已更新 iPhone 提醒（")).firstMatch
-        XCTAssertTrue(scheduled.waitForExistence(timeout: 15), web.debugDescription)
-        XCTAssertNotEqual(scheduled.label, "已更新 iPhone 提醒（0 項）。")
-        tap("好")
+            let scheduled = web.staticTexts.matching(NSPredicate(format: "label BEGINSWITH %@", "已更新 iPhone 提醒（")).firstMatch
+            XCTAssertTrue(scheduled.waitForExistence(timeout: 15), web.debugDescription)
+            XCTAssertNotEqual(scheduled.label, "已更新 iPhone 提醒（0 項）。")
+            tap("好")
+        }
+        XCTAssertTrue(web.staticTexts["已允許"].waitForExistence(timeout: 10))
+        XCTAssertTrue(web.staticTexts["SmartFinance 記帳提醒"].waitForExistence(timeout: 10), web.debugDescription)
+        let screenshot = XCTAttachment(screenshot: app.screenshot())
+        screenshot.name = "SmartFinance 通知"
+        screenshot.lifetime = .keepAlways
+        add(screenshot)
         tap("發送測試通知")
         XCTAssertTrue(web.staticTexts["測試通知已排程，約 5 秒後送達。"].waitForExistence(timeout: 10))
         tap("好")
         tap("關閉 iPhone 通知")
         XCTAssertTrue(web.staticTexts["已取消 iPhone 提醒。"].waitForExistence(timeout: 10))
         tap("好")
+        XCTAssertTrue(web.staticTexts["暫無已排程通知"].waitForExistence(timeout: 10))
     }
 
     func testSubscriptionWebsiteOpensAndCanBeReopened() {

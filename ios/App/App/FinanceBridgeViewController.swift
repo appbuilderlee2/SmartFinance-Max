@@ -7,6 +7,33 @@ final class FinanceBridgeViewController: CAPBridgeViewController {
         bridge?.registerPluginInstance(RecoveryExportPlugin())
         bridge?.registerPluginInstance(ServiceWebsitePlugin())
         bridge?.registerPluginInstance(AppSwitcherPrivacyPlugin())
+        bridge?.registerPluginInstance(NotificationSettingsPlugin())
+    }
+}
+
+final class NotificationSettingsPlugin: CAPPlugin, CAPBridgedPlugin {
+    let identifier = "NotificationSettingsPlugin"
+    let jsName = "NotificationSettings"
+    let pluginMethods: [CAPPluginMethod] = [
+        CAPPluginMethod(name: "open", returnType: CAPPluginReturnPromise)
+    ]
+
+    @objc func open(_ call: CAPPluginCall) {
+        DispatchQueue.main.async {
+            let path: String
+            if #available(iOS 16.0, *) {
+                path = UIApplication.openNotificationSettingsURLString
+            } else {
+                path = UIApplication.openSettingsURLString
+            }
+            guard let url = URL(string: path) else {
+                call.reject("Unable to open iOS Settings")
+                return
+            }
+            UIApplication.shared.open(url) { opened in
+                if opened { call.resolve() } else { call.reject("Unable to open iOS Settings") }
+            }
+        }
     }
 }
 
