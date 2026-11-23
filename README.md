@@ -63,6 +63,8 @@ SmartFinance-Max 係一個為手機及桌面瀏覽器設計嘅 **local-first 個
 
 需要 iOS 15 或 iPadOS 15 以上版本。
 
+計劃上架可參考 [App Store 發佈資料包](appstore/SUBMISSION_CHECKLIST.md)，內有繁中／英文商店資料、私隱政策草稿、審核備註、圖示同實機尺寸嘅模擬器截圖。
+
 - 到 [iOS IPA 建置](https://github.com/appbuilderlee2/SmartFinance-Max/actions/workflows/ios-ipa.yml) 下載成功建置的 `SmartFinance-Max-unsigned-IPA`，解壓後取得 `SmartFinance-Max-unsigned.ipa`。
 - IPA 未簽署；請用自己的 Apple ID 經 Sideloadly 或 AltStore 簽署同安裝。免費 Apple ID 的簽署一般要每七日更新一次。此版本未發佈到 TestFlight 或 App Store。
 - iOS 版內置介面同離線資源，唔需要先用 Safari 開啟。更新前建議先匯出備份；Safari PWA 同 iOS 版的資料獨立，要搬資料請匯出 JSON，再喺另一版本匯入。
