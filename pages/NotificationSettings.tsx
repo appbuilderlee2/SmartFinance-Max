@@ -303,15 +303,17 @@ const NotificationSettings: React.FC = () => {
     void shareOrDownloadText(icsContent, 'smartfinance-reminders.ics', 'text/calendar;charset=utf-8');
   };
 
-  const updateIosNotifications = async (action: 'enable' | 'disable' | 'test') => {
+  const updateIosNotifications = async (action: 'enable' | 'enable-when-denied' | 'disable' | 'test') => {
     setApplyingIosReminders(true);
     try {
-      if (action !== 'disable' && !await requestIosNotificationPermission()) {
-        setPermission(await getIosNotificationPermission());
-        await showAppAlert('未允許通知。請前往 iOS「設定」開啟 SmartFinance Max 通知。');
-        return;
+      if (action === 'enable' || action === 'test') {
+        if (!await requestIosNotificationPermission()) {
+          setPermission(await getIosNotificationPermission());
+          await showAppAlert('未允許通知。請前往 iOS「設定」開啟 SmartFinance Max 通知。');
+          return;
+        }
+        setPermission('granted');
       }
-      if (action !== 'disable') setPermission('granted');
       if (action === 'test') {
         if (await sendIosTestNotification()) await showAppAlert('測試通知已排程，約 5 秒後送達。');
       } else {
@@ -319,7 +321,8 @@ const NotificationSettings: React.FC = () => {
         saveReminderSettings(next);
         setRemSettings(next);
         const count = await syncIosReminders({ creditCards, subscriptions, budgets, categories, currency }, next);
-        await showAppAlert(action === 'disable' ? '已取消 iPhone 提醒。' : `已更新 iPhone 提醒（${count} 項）。`);
+        await showAppAlert(action === 'disable' ? '已取消 iPhone 提醒。' : action === 'enable-when-denied'
+          ? '已開啟 iPhone 提醒。請到 iOS 設定允許通知。' : `已更新 iPhone 提醒（${count} 項）。`);
       }
     } catch {
       await showAppAlert('未能更新 iPhone 提醒，請稍後再試。');
@@ -356,7 +359,9 @@ const NotificationSettings: React.FC = () => {
                  onClick={() => void updateIosNotifications('enable')} className="w-full sf-control text-primary py-3 rounded-xl font-bold disabled:opacity-50">啟用 iPhone 通知</button>}
              {permission === 'granted' && <button disabled={applyingIosReminders} onClick={() => void updateIosNotifications('test')}
                className="w-full sf-control text-primary py-3 rounded-xl disabled:opacity-50">發送測試通知</button>}
-             {permission === 'granted' && remSettings.iosEnabled && <button disabled={applyingIosReminders} onClick={() => void updateIosNotifications('disable')}
+             {permission === 'denied' && !remSettings.iosEnabled && <button disabled={applyingIosReminders}
+               onClick={() => void updateIosNotifications('enable-when-denied')} className="w-full sf-control text-primary py-3 rounded-xl disabled:opacity-50">開啟 iPhone 提醒</button>}
+             {(permission === 'granted' || permission === 'denied') && remSettings.iosEnabled && <button disabled={applyingIosReminders} onClick={() => void updateIosNotifications('disable')}
                className="w-full sf-control text-primary py-3 rounded-xl disabled:opacity-50">關閉 iPhone 通知</button>}
              <p className="text-gray-400 text-xs">通知儲存在這部 iPhone，並會按提醒設定自動更新。</p>
            </div>

@@ -35,3 +35,38 @@ test('Settings opens a dedicated Notifications page with browser-appropriate con
   await page.getByRole('button', { name: '設定', exact: true }).click();
   await expect(page).toHaveURL(/#\/settings$/);
 });
+
+test('iPhone reminders can be disabled while permission is denied and stay off after regrant', async ({ page }) => {
+  await page.addInitScript(() => {
+    Object.assign(window, {
+      CapacitorCustomPlatform: { name: 'ios' },
+      Capacitor: {
+        PluginHeaders: [
+          { name: 'LocalNotifications', methods: ['checkPermissions', 'getPending', 'schedule'].map(name => ({ name, rtype: 'promise' })) },
+          { name: 'NotificationSettings', methods: [{ name: 'open', rtype: 'promise' }] },
+        ],
+        nativePromise: async (plugin: string, method: string) => {
+          if (plugin === 'NotificationSettings') sessionStorage.setItem('openedNotificationSettings', 'true');
+          if (method === 'checkPermissions') return { display: sessionStorage.getItem('notificationPermission') ?? 'denied' };
+          if (method === 'getPending') return { notifications: [] };
+          if (method === 'schedule') sessionStorage.setItem('scheduledNotification', 'true');
+        },
+      },
+    });
+  });
+  await page.goto('/#/settings/notifications');
+  await expect(page.getByText('未允許', { exact: true })).toBeVisible();
+  await page.getByRole('button', { name: '開啟 iOS 設定' }).click();
+  await expect.poll(() => page.evaluate(() => sessionStorage.getItem('openedNotificationSettings'))).toBe('true');
+  await page.getByRole('button', { name: '關閉 iPhone 通知' }).click();
+  await page.getByRole('button', { name: '好', exact: true }).click();
+  await expect(page.getByRole('button', { name: '開啟 iPhone 提醒' })).toBeEnabled();
+  await expect(page.getByRole('status').filter({ hasText: '已儲存' })).toBeVisible();
+
+  await page.evaluate(() => sessionStorage.setItem('notificationPermission', 'granted'));
+  await page.reload();
+  await expect(page.getByText('已允許', { exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: '啟用 iPhone 通知' })).toBeEnabled();
+  await expect(page.getByText('暫無已排程通知', { exact: true })).toBeVisible();
+  expect(await page.evaluate(() => sessionStorage.getItem('scheduledNotification'))).toBeNull();
+});
