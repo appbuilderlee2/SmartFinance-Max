@@ -168,6 +168,19 @@ export function getTodayYmd(): string {
   return toLocalYMD(new Date());
 }
 
+function isReminderTypeEnabled(type: ReminderType, settings: ReminderSettings): boolean {
+  switch (type) {
+    case 'cc_statement': return settings.ccEnabled && settings.ccStatementEnabled;
+    case 'cc_amount_due': return settings.ccEnabled && settings.ccAmountEnabled;
+    case 'cc_payment_due': return settings.ccEnabled && settings.ccPaymentEnabled;
+    case 'cc_annual_fee': return settings.ccEnabled && settings.ccFeeEnabled;
+    case 'subscription_upcoming': return settings.subEnabled;
+    case 'budget_near_limit':
+    case 'budget_over_limit': return settings.budgetEnabled;
+    case 'backup_export_json': return settings.backupEnabled;
+  }
+}
+
 export function regenerateReminders(params: {
   creditCards: CreditCard[];
   subscriptions: Subscription[];
@@ -180,10 +193,7 @@ export function regenerateReminders(params: {
 }): Reminder[] {
   const settings = params.settings ?? loadReminderSettings();
   const { scheduleAhead } = params;
-  if (!settings.enabled) {
-    if (!scheduleAhead) saveReminders([]);
-    return [];
-  }
+  if (!settings.enabled) return [];
 
   const now = params.now ?? new Date();
   const todayYmd = toLocalYMD(now);
@@ -433,7 +443,11 @@ export function regenerateReminders(params: {
     return ta - tb;
   });
 
-  if (!scheduleAhead) saveReminders(normalized);
+  if (!scheduleAhead) {
+    const paused = existing.filter(r => !isReminderTypeEnabled(r.type, settings)
+      && (r.status !== 'open' || (r.snoozeUntilYmd && r.snoozeUntilYmd >= todayYmd)));
+    saveReminders([...normalized, ...paused]);
+  }
   return normalized;
 }
 
