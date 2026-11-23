@@ -1,11 +1,12 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import type { PermissionState } from '@capacitor/core';
 import { useNavigate } from 'react-router-dom';
 import { ChevronLeft, ChevronRight, CalendarCheck } from 'lucide-react';
 import { useData } from '../contexts/DataContext';
 import { getStatementAndDueForMonth } from '../utils/creditCardSchedule';
 import { loadCycles } from '../utils/creditCardCycleStorage';
+import { toLocalYMD } from '../utils/date';
 import {
-  DEFAULT_REMINDER_SETTINGS,
   loadReminderSettings,
   markReminderDone,
   regenerateReminders,
@@ -16,46 +17,36 @@ import {
   type ReminderSettings,
 } from '../utils/reminders';
 import { formatDisplayYmd } from '../utils/preferences';
-import { showAppConfirm } from '../utils/appDialog';
+import { showAppAlert, showAppConfirm } from '../utils/appDialog';
+import { shareOrDownloadText } from '../utils/exportFile';
+import { isNativeIos } from '../utils/ios';
+import {
+  getIosNotificationPermission, getUpcomingIosReminders, openIosNotificationSettings,
+  requestIosNotificationPermission, sendIosTestNotification, syncIosReminders, type UpcomingIosReminder,
+} from '../utils/iosReminders';
+
+function ReminderToggle({ label, checked, onChange }: { label: string; checked: boolean; onChange: () => void }) {
+  return <label className="flex min-h-11 cursor-pointer items-center justify-between gap-3 text-white">
+    <span>{label}</span>
+    <input type="checkbox" aria-label={label} checked={checked} onChange={onChange} className="h-5 w-5 shrink-0 accent-primary" />
+  </label>;
+}
 
 const NotificationSettings: React.FC = () => {
   const navigate = useNavigate();
   const { creditCards, subscriptions, budgets, categories, currency } = useData();
 
-  const [enabled, setEnabled] = useState(true);
-  const [time, setTime] = useState("20:00");
-
-  const [ccEnabled, setCcEnabled] = useState(true);
-  const [ccAdvanceDays, setCcAdvanceDays] = useState(0); // 0 = on the day
-
-  const [ccAmountRemindEnabled, setCcAmountRemindEnabled] = useState(true); // 截數後 +1 日：提醒輸入應繳金額
-  const [ccFeeRemindEnabled, setCcFeeRemindEnabled] = useState(true); // 年費提醒
-
-  // keep setters "used" (these toggles will be rendered later)
-  void setCcAmountRemindEnabled;
-  void setCcFeeRemindEnabled;
-
-  // Reminder Center settings
-  const [remSettings, setRemSettings] = useState<ReminderSettings>(DEFAULT_REMINDER_SETTINGS);
+  const [applyingIosReminders, setApplyingIosReminders] = useState(false);
+  const [permission, setPermission] = useState<PermissionState | null>(null);
+  const [upcoming, setUpcoming] = useState<UpcomingIosReminder[] | null>(null);
+  const [iosStatusError, setIosStatusError] = useState(false);
+  const [scheduleRevision, setScheduleRevision] = useState(0);
+  const [remSettings, setRemSettings] = useState<ReminderSettings>(loadReminderSettings);
+  const {
+    dailyEnabled: enabled, reminderTime: time, ccEnabled, ccAdvanceDays,
+    ccStatementEnabled, ccPaymentEnabled, ccAmountEnabled: ccAmountRemindEnabled, ccFeeEnabled: ccFeeRemindEnabled,
+  } = remSettings;
   const [reminders, setReminders] = useState<Reminder[]>([]);
-
-  useEffect(() => {
-    const s = loadReminderSettings();
-    // keep in sync with existing credit card toggles
-    setRemSettings(s);
-  }, []);
-
-  // Sync Reminder Center settings with existing ICS toggles
-  useEffect(() => {
-    setRemSettings(prev => ({
-      ...prev,
-      enabled,
-      ccEnabled,
-      ccAdvanceDays,
-      ccAmountEnabled: ccAmountRemindEnabled,
-      ccFeeEnabled: ccFeeRemindEnabled,
-    }));
-  }, [enabled, ccEnabled, ccAdvanceDays, ccAmountRemindEnabled, ccFeeRemindEnabled]);
 
   useEffect(() => {
     // persist settings whenever changed
@@ -63,7 +54,7 @@ const NotificationSettings: React.FC = () => {
   }, [remSettings]);
 
   const refreshReminders = () => {
-    const list = regenerateReminders({ creditCards: creditCards || [], subscriptions: subscriptions || [], budgets, categories, currency });
+    const list = regenerateReminders({ creditCards, subscriptions, budgets, categories, currency, settings: remSettings });
     setReminders(list);
   };
 
@@ -73,8 +64,13 @@ const NotificationSettings: React.FC = () => {
   }, [
     creditCards,
     subscriptions,
+    budgets,
+    categories,
+    currency,
     remSettings.enabled,
     remSettings.ccEnabled,
+    ccStatementEnabled,
+    ccPaymentEnabled,
     remSettings.ccAdvanceDays,
     remSettings.ccAmountEnabled,
     remSettings.ccFeeEnabled,
@@ -85,6 +81,40 @@ const NotificationSettings: React.FC = () => {
     remSettings.backupEnabled,
     remSettings.backupEveryDays,
   ]);
+
+  useEffect(() => {
+    if (!isNativeIos) return;
+    let active = true;
+    let revision = 0;
+    const refresh = async () => {
+      const latest = ++revision;
+      try {
+        const status = await getIosNotificationPermission();
+        if (!active || latest !== revision) return;
+        setPermission(status);
+        await syncIosReminders({ creditCards, subscriptions, budgets, categories, currency }, remSettings);
+        const scheduled = status === 'granted' && remSettings.iosEnabled ? await getUpcomingIosReminders() : [];
+        if (active && latest === revision) {
+          setUpcoming(scheduled);
+          setIosStatusError(false);
+        }
+      } catch {
+        if (active && latest === revision) {
+          setUpcoming(null);
+          setIosStatusError(true);
+        }
+      }
+    };
+    void refresh();
+    const onVisible = () => { if (!document.hidden) void refresh(); };
+    document.addEventListener('visibilitychange', onVisible);
+    const timer = window.setInterval(() => { if (!document.hidden) void refresh(); }, 60_000);
+    return () => {
+      active = false;
+      document.removeEventListener('visibilitychange', onVisible);
+      window.clearInterval(timer);
+    };
+  }, [creditCards, subscriptions, budgets, categories, currency, remSettings, scheduleRevision]);
 
   // Format date for ICS (YYYYMMDDTHHMMSS)
   const formatICSDate = (date: Date) => {
@@ -119,7 +149,7 @@ const NotificationSettings: React.FC = () => {
     for (const c of creditCards || []) {
       const { statementDate, dueDate } = getStatementAndDueForMonth(y, m0, c);
       if (c.remindStatement !== false && statementDate) {
-        events.push(makeEvent(`信用卡截數提醒：${c.name}`, statementDate));
+        if (ccStatementEnabled) events.push(makeEvent(`信用卡截數提醒：${c.name}`, statementDate));
 
         // 1B: statement + 1 day => remind user to enter amount due
         if (ccAmountRemindEnabled) {
@@ -135,7 +165,7 @@ const NotificationSettings: React.FC = () => {
         }
       }
 
-      if (c.remindDue !== false && dueDate) {
+      if (ccPaymentEnabled && c.remindDue !== false && dueDate) {
         // If amount due exists in cycle, show it in summary
         const cycleId = `ccyc_${c.id}_${String(y).padStart(4, '0')}-${String(m0 + 1).padStart(2, '0')}`;
         const cy = cycles.find(x => x.id === cycleId);
@@ -164,7 +194,7 @@ const NotificationSettings: React.FC = () => {
         const { statementDate, dueDate } = getStatementAndDueForMonth(y2, m2, c);
 
         if (c.remindStatement !== false && statementDate) {
-          events.push(makeEvent(`信用卡截數提醒：${c.name}`, statementDate));
+          if (ccStatementEnabled) events.push(makeEvent(`信用卡截數提醒：${c.name}`, statementDate));
 
           // 1B: statement + 1 day => remind user to enter amount due
           if (ccAmountRemindEnabled) {
@@ -179,7 +209,7 @@ const NotificationSettings: React.FC = () => {
           }
         }
 
-        if (c.remindDue !== false && dueDate) {
+        if (ccPaymentEnabled && c.remindDue !== false && dueDate) {
           const cycleId = `ccyc_${c.id}_${String(y2).padStart(4, '0')}-${String(m2 + 1).padStart(2, '0')}`;
           const cy = cycles.find(x => x.id === cycleId);
           const amt = typeof cy?.amountDue === 'number' ? cy.amountDue : null;
@@ -209,7 +239,7 @@ const NotificationSettings: React.FC = () => {
         return true;
       })
       .sort((a, b) => a.dt.getTime() - b.dt.getTime());
-  }, [creditCards, time, ccAdvanceDays]);
+  }, [creditCards, time, ccAdvanceDays, ccStatementEnabled, ccPaymentEnabled, ccAmountRemindEnabled, ccFeeRemindEnabled]);
 
   // Function to generate and download ICS file for iOS Calendar
   const addToCalendar = () => {
@@ -270,28 +300,85 @@ const NotificationSettings: React.FC = () => {
       'END:VCALENDAR'
     ].join('\r\n');
 
-    const blob = new Blob([icsContent], { type: 'text/calendar;charset=utf-8' });
-    const url = window.URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.setAttribute('download', 'smartfinance-reminders.ics');
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    void shareOrDownloadText(icsContent, 'smartfinance-reminders.ics', 'text/calendar;charset=utf-8');
+  };
+
+  const updateIosNotifications = async (action: 'enable' | 'enable-when-denied' | 'disable' | 'test') => {
+    setApplyingIosReminders(true);
+    try {
+      if (action === 'enable' || action === 'test') {
+        if (!await requestIosNotificationPermission()) {
+          setPermission(await getIosNotificationPermission());
+          await showAppAlert('未允許通知。請前往 iOS「設定」開啟 SmartFinance Max 通知。');
+          return;
+        }
+        setPermission('granted');
+      }
+      if (action === 'test') {
+        if (await sendIosTestNotification()) await showAppAlert('測試通知已排程，約 5 秒後送達。');
+      } else {
+        const next = { ...remSettings, iosEnabled: action !== 'disable' };
+        saveReminderSettings(next);
+        setRemSettings(next);
+        const count = await syncIosReminders({ creditCards, subscriptions, budgets, categories, currency }, next);
+        await showAppAlert(action === 'disable' ? '已取消 iPhone 提醒。' : action === 'enable-when-denied'
+          ? '已開啟 iPhone 提醒。請到 iOS 設定允許通知。' : `已更新 iPhone 提醒（${count} 項）。`);
+      }
+    } catch {
+      await showAppAlert('未能更新 iPhone 提醒，請稍後再試。');
+    } finally {
+      setScheduleRevision(prev => prev + 1);
+      setApplyingIosReminders(false);
+    }
   };
 
   return (
-    <div className="min-h-screen bg-background pt-safe-top">
+    <div className="min-h-screen bg-background pt-safe-top pb-8">
       <div className="px-4 py-3 flex justify-between items-center sf-topbar sticky top-0 z-50">
-        <button onClick={() => navigate(-1)} className="flex items-center text-primary">
+        <button onClick={() => navigate('/settings')} className="flex items-center text-primary">
           <ChevronLeft size={24} />
           <span>設定</span>
         </button>
-        <h2 className="text-lg font-semibold">通知設定</h2>
+        <h1 className="text-lg font-semibold">通知</h1>
         <div className="w-16"></div>
       </div>
 
       <div className="p-4 mt-2 space-y-6">
+         {isNativeIos && <section aria-labelledby="ios-notifications-heading" className="space-y-2">
+           <h2 id="ios-notifications-heading" className="text-gray-400 text-xs ml-4">iPhone 通知</h2>
+           <div className="sf-panel p-4 space-y-3">
+             <div className="flex items-center justify-between gap-3">
+               <span>系統通知權限</span>
+               <span role="status" className={permission === 'granted' ? 'text-primary' : 'text-gray-400'}>
+                 {permission === 'granted' ? '已允許' : permission === 'denied' ? '未允許' : permission ? '尚未詢問' : iosStatusError ? '未能讀取' : '檢查中…'}
+               </span>
+             </div>
+             {permission === 'denied' ? <button className="w-full sf-control text-primary py-3 rounded-xl"
+               onClick={() => void openIosNotificationSettings().catch(() => showAppAlert('未能開啟 iOS 設定。請在「設定」內找到 SmartFinance Max。'))}>開啟 iOS 設定</button> :
+               (permission !== 'granted' || !remSettings.iosEnabled) && <button disabled={applyingIosReminders || !permission}
+                 onClick={() => void updateIosNotifications('enable')} className="w-full sf-control text-primary py-3 rounded-xl font-bold disabled:opacity-50">啟用 iPhone 通知</button>}
+             {permission === 'granted' && <button disabled={applyingIosReminders} onClick={() => void updateIosNotifications('test')}
+               className="w-full sf-control text-primary py-3 rounded-xl disabled:opacity-50">發送測試通知</button>}
+             {permission === 'denied' && !remSettings.iosEnabled && <button disabled={applyingIosReminders}
+               onClick={() => void updateIosNotifications('enable-when-denied')} className="w-full sf-control text-primary py-3 rounded-xl disabled:opacity-50">開啟 iPhone 提醒</button>}
+             {(permission === 'granted' || permission === 'denied') && remSettings.iosEnabled && <button disabled={applyingIosReminders} onClick={() => void updateIosNotifications('disable')}
+               className="w-full sf-control text-primary py-3 rounded-xl disabled:opacity-50">關閉 iPhone 通知</button>}
+             <p className="text-gray-400 text-xs">通知儲存在這部 iPhone，並會按提醒設定自動更新。</p>
+           </div>
+         </section>}
+         {isNativeIos && <section aria-labelledby="upcoming-notifications-heading" className="space-y-2">
+           <h2 id="upcoming-notifications-heading" className="text-gray-400 text-xs ml-4">即將發送的通知</h2>
+           <div className="sf-panel p-4">
+             {upcoming?.length ? <ul className="max-h-56 overflow-y-auto divide-y sf-divider">
+               {upcoming.map(({ id, title, at, daily }) => <li key={id} className="flex flex-wrap justify-between gap-x-3 gap-y-1 py-2 text-sm">
+                 <span>{title}</span>
+                 <span className="text-gray-400">{daily ? '每日 · ' : `${formatDisplayYmd(toLocalYMD(at))} · `}
+                   {at.toLocaleTimeString('zh-HK', { hour: '2-digit', minute: '2-digit', hour12: false })}</span>
+               </li>)}
+             </ul> : <p className="text-sm text-gray-400">{iosStatusError ? '未能讀取已排程通知，請稍後再試。' :
+               upcoming ? '暫無已排程通知' : '讀取排程中…'}</p>}
+           </div>
+         </section>}
          {/* Reminder Center */}
          <div>
             <p className="text-gray-500 text-xs mb-2 ml-4">提醒中心</p>
@@ -337,25 +424,19 @@ const NotificationSettings: React.FC = () => {
                   })()}
                </div>
 
-               <div className="p-4 space-y-2">
-                  {/* Toggles */}
-                  <div className="flex items-center justify-between">
-                     <span className="text-white">開啟提醒中心</span>
-                     <div
-                        onClick={() => setRemSettings(prev => ({ ...prev, enabled: !prev.enabled }))}
-                        className={`w-12 h-7 rounded-full relative cursor-pointer transition-colors ${remSettings.enabled ? 'bg-green-500' : 'bg-gray-600'}`}
-                     >
-                        <div className={`w-6 h-6 bg-white rounded-full absolute top-0.5 shadow-md transition-all ${remSettings.enabled ? 'translate-x-5' : 'translate-x-0.5'}`}></div>
-                     </div>
-                  </div>
+               <div className="px-4 py-2">
+                  <ReminderToggle label="開啟提醒中心" checked={remSettings.enabled}
+                     onChange={() => setRemSettings(prev => ({ ...prev, enabled: !prev.enabled }))} />
 
                   {remSettings.enabled && (
                      <>
-                        <div className="flex items-center justify-between">
-                           <span className="text-gray-200">訂閱提醒（提前）</span>
+                        <ReminderToggle label="訂閱續期提醒" checked={remSettings.subEnabled}
+                           onChange={() => setRemSettings(prev => ({ ...prev, subEnabled: !prev.subEnabled }))} />
+                        {remSettings.subEnabled && <label className="flex min-h-11 items-center justify-between">
+                           <span className="text-gray-200">訂閱提醒提前日數</span>
                            <select
                               value={remSettings.subAheadDays}
-                              onChange={(e) => setRemSettings(prev => ({ ...prev, subAheadDays: Number(e.target.value), subEnabled: true }))}
+                              onChange={(e) => setRemSettings(prev => ({ ...prev, subAheadDays: Number(e.target.value) }))}
                               className="bg-transparent text-right text-gray-400 focus:outline-none cursor-pointer"
                            >
                               <option value={3}>3 日</option>
@@ -363,13 +444,9 @@ const NotificationSettings: React.FC = () => {
                               <option value={7}>7 日</option>
                               <option value={14}>14 日</option>
                            </select>
-                        </div>
-                        <div className="flex items-center justify-between">
-                           <span className="text-gray-200">預算提醒</span>
-                           <button type="button" role="switch" aria-checked={remSettings.budgetEnabled} onClick={() => setRemSettings(prev => ({ ...prev, budgetEnabled: !prev.budgetEnabled }))} className={`w-12 h-7 rounded-full relative ${remSettings.budgetEnabled ? 'bg-green-500' : 'bg-gray-600'}`}>
-                              <span className={`w-6 h-6 bg-white rounded-full absolute top-0.5 transition-all ${remSettings.budgetEnabled ? 'left-5' : 'left-0.5'}`} />
-                           </button>
-                        </div>
+                        </label>}
+                        <ReminderToggle label="預算提醒" checked={remSettings.budgetEnabled}
+                           onChange={() => setRemSettings(prev => ({ ...prev, budgetEnabled: !prev.budgetEnabled }))} />
                         {remSettings.budgetEnabled && (
                            <div className="flex items-center justify-between">
                               <span className="text-gray-200">接近上限門檻</span>
@@ -378,18 +455,20 @@ const NotificationSettings: React.FC = () => {
                               </select>
                            </div>
                         )}
-                        <div className="flex items-center justify-between">
-                           <span className="text-gray-200">備份提醒（每）</span>
+                        <ReminderToggle label="備份提醒" checked={remSettings.backupEnabled}
+                           onChange={() => setRemSettings(prev => ({ ...prev, backupEnabled: !prev.backupEnabled }))} />
+                        {remSettings.backupEnabled && <label className="flex min-h-11 items-center justify-between">
+                           <span className="text-gray-200">備份提醒間隔</span>
                            <select
                               value={remSettings.backupEveryDays}
-                              onChange={(e) => setRemSettings(prev => ({ ...prev, backupEveryDays: Number(e.target.value), backupEnabled: true }))}
+                              onChange={(e) => setRemSettings(prev => ({ ...prev, backupEveryDays: Number(e.target.value) }))}
                               className="bg-transparent text-right text-gray-400 focus:outline-none cursor-pointer"
                            >
                               <option value={7}>7 日</option>
                               <option value={14}>14 日</option>
                               <option value={30}>30 日</option>
                            </select>
-                        </div>
+                        </label>}
                      </>
                   )}
                </div>
@@ -501,40 +580,28 @@ const NotificationSettings: React.FC = () => {
          <div>
             <p className="text-gray-500 text-xs mb-2 ml-4">記帳提醒</p>
             <div className="sf-panel overflow-hidden divide-y sf-divider">
-                {/* Toggle Row */}
-                <div className="flex justify-between items-center p-4">
-                  <span className="text-white text-base">開啟記帳提醒</span>
-                  <div 
-                    onClick={() => setEnabled(!enabled)}
-                    className={`w-12 h-7 rounded-full relative cursor-pointer transition-colors ${enabled ? 'bg-green-500' : 'bg-gray-600'}`}
-                  >
-                      <div className={`w-6 h-6 bg-white rounded-full absolute top-0.5 shadow-md transition-all ${enabled ? 'translate-x-5' : 'translate-x-0.5'}`}></div>
-                  </div>
+                <div className="px-4 py-2">
+                  <ReminderToggle label="每日記帳提醒" checked={enabled}
+                    onChange={() => setRemSettings(prev => ({ ...prev, dailyEnabled: !prev.dailyEnabled }))} />
                 </div>
 
-                {/* Detail Rows */}
-                {enabled && (
-                  <>
-                    <div className="flex justify-between items-center p-4 active:bg-gray-700/50 transition-colors cursor-pointer">
-                      <span className="text-white">提醒頻率</span>
-                      <div className="flex items-center gap-2">
-                          <span className="text-gray-400">每日</span>
-                          <ChevronRight size={16} className="text-gray-500" />
-                      </div>
-                    </div>
-                    <div className="flex justify-between items-center p-4 active:bg-gray-700/50 transition-colors cursor-pointer">
+                {(enabled || (isNativeIos && remSettings.enabled)) && (
+                    <label className="flex justify-between items-center p-4">
                       <span className="text-white">提醒時間</span>
                       <div className="flex items-center gap-2">
                           <input 
-                            type="time" 
+                            type="time"
+                            aria-label="提醒時間"
                             value={time}
-                            onChange={(e) => setTime(e.target.value)}
+                            onChange={(e) => {
+                              const value = e.target.value;
+                              if (value) setRemSettings(prev => ({ ...prev, reminderTime: value }));
+                            }}
                             className="bg-transparent text-gray-400 focus:outline-none text-right"
                           />
                           <ChevronRight size={16} className="text-gray-500" />
                       </div>
-                    </div>
-                  </>
+                    </label>
                 )}
             </div>
          </div>
@@ -542,23 +609,28 @@ const NotificationSettings: React.FC = () => {
          <div>
             <p className="text-gray-500 text-xs mb-2 ml-4">信用卡提醒</p>
             <div className="sf-panel overflow-hidden divide-y sf-divider">
-                <div className="flex justify-between items-center p-4">
-                  <span className="text-white text-base">開啟信用卡提醒</span>
-                  <div 
-                    onClick={() => setCcEnabled(!ccEnabled)}
-                    className={`w-12 h-7 rounded-full relative cursor-pointer transition-colors ${ccEnabled ? 'bg-green-500' : 'bg-gray-600'}`}
-                  >
-                      <div className={`w-6 h-6 bg-white rounded-full absolute top-0.5 shadow-md transition-all ${ccEnabled ? 'translate-x-5' : 'translate-x-0.5'}`}></div>
-                  </div>
+                <div className="px-4 py-2">
+                  <ReminderToggle label="開啟信用卡提醒" checked={ccEnabled}
+                    onChange={() => setRemSettings(prev => ({ ...prev, ccEnabled: !prev.ccEnabled }))} />
                 </div>
 
                 {ccEnabled && (
                   <>
-                    <div className="flex justify-between items-center p-4 active:bg-gray-700/50 transition-colors">
+                    <div className="px-4 py-2">
+                      <ReminderToggle label="信用卡截數提醒" checked={ccStatementEnabled}
+                        onChange={() => setRemSettings(prev => ({ ...prev, ccStatementEnabled: !prev.ccStatementEnabled }))} />
+                      <ReminderToggle label="輸入信用卡應繳金額提醒" checked={ccAmountRemindEnabled}
+                        onChange={() => setRemSettings(prev => ({ ...prev, ccAmountEnabled: !prev.ccAmountEnabled }))} />
+                      <ReminderToggle label="信用卡繳費提醒" checked={ccPaymentEnabled}
+                        onChange={() => setRemSettings(prev => ({ ...prev, ccPaymentEnabled: !prev.ccPaymentEnabled }))} />
+                      <ReminderToggle label="信用卡年費提醒" checked={ccFeeRemindEnabled}
+                        onChange={() => setRemSettings(prev => ({ ...prev, ccFeeEnabled: !prev.ccFeeEnabled }))} />
+                    </div>
+                    <label className="flex justify-between items-center p-4">
                       <span className="text-white">提醒提前</span>
                       <select
                         value={ccAdvanceDays}
-                        onChange={(e) => setCcAdvanceDays(Number(e.target.value))}
+                        onChange={(e) => setRemSettings(prev => ({ ...prev, ccAdvanceDays: Number(e.target.value) }))}
                         className="bg-transparent text-right text-gray-400 focus:outline-none cursor-pointer"
                       >
                         <option value={0}>當日</option>
@@ -568,7 +640,7 @@ const NotificationSettings: React.FC = () => {
                         <option value={5}>提前 5 日</option>
                         <option value={7}>提前 7 日</option>
                       </select>
-                    </div>
+                    </label>
                     <div className="bg-background px-4 py-3 space-y-2">
                       <p className="text-xs text-gray-500">本月 / 下月（如接近月底）將加入行事曆嘅提醒</p>
                       {creditCardEvents.length ? (
@@ -589,18 +661,17 @@ const NotificationSettings: React.FC = () => {
             </div>
          </div>
 
-         {enabled && (
+         {(enabled || (isNativeIos && ccEnabled && creditCardEvents.length > 0)) && (
            <div className="animate-fade-in-up">
               <button 
                 onClick={addToCalendar}
                 className="w-full sf-panel border border-primary/50 text-primary py-4 rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-primary/10 active:scale-[0.98] transition-all"
               >
                 <CalendarCheck size={20} />
-                加入 iPhone 行事曆
+                {isNativeIos ? '分享行事曆檔案' : '加入 iPhone 行事曆'}
               </button>
               <p className="text-gray-500 text-xs mt-3 ml-4 leading-relaxed">
-                點擊上方按鈕將下載日曆檔案 (.ics)。<br/>
-                在 iPhone 上開啟後，請選擇「加入行事曆」即可在每天指定時間收到系統通知。
+                {isNativeIos ? '可將 .ics 儲存到「檔案」，再開啟檔案匯入行事曆。' : <>點擊上方按鈕將下載日曆檔案 (.ics)。<br/>在 iPhone 上開啟後，請選擇「加入行事曆」即可在每天指定時間收到系統通知。</>}
               </p>
             </div>
          )}

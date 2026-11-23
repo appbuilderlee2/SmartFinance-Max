@@ -6,6 +6,7 @@ import { writeJson } from '../utils/storage';
 import { renameTransactionTags, removeTransactionTag, tagKey, normalizeTag, uniqueTags } from '../utils/tags';
 import { loadTagHistory, deleteTagFromHistory } from '../utils/tagHistory';
 import { observeLocalDay } from '../utils/dayBoundary';
+import { clearIosReminders } from '../utils/iosReminders';
 
 import React, { createContext, useContext, useState, useEffect, useMemo, useRef } from 'react';
 import { Transaction, Category, Budget, Subscription, TransactionType, Currency, WalletItem, AnnualReserve } from '../types';
@@ -520,6 +521,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } catch {
       await showAppAlert('資料未能重置，請先處理儲存錯誤。'); return;
     }
+    await clearIosReminders().catch(() => showAppAlert('未能取消 iPhone 提醒，請到通知設定重新套用。'));
 
     // Also clear any app caches / stale service worker state (best-effort).
     // IMPORTANT: Do NOT unregister other apps' service workers on the same origin.

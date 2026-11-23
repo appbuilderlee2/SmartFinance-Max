@@ -1,6 +1,14 @@
 import React, { useEffect, useState } from 'react';
+import { registerPlugin } from '@capacitor/core';
 import { LockKeyhole } from 'lucide-react';
+import { isNativeIos } from '../utils/ios';
 import { loadSecuritySettings, verifyPin, type SecuritySettings } from '../utils/security';
+
+const AppSwitcherPrivacy = registerPlugin<{ setEnabled(options: { enabled: boolean }): Promise<void> }>('AppSwitcherPrivacy');
+
+function syncAppSwitcherPrivacy(enabled: boolean) {
+  if (isNativeIos) void AppSwitcherPrivacy.setEnabled({ enabled }).catch(() => undefined);
+}
 
 const SecurityGate: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [settings, setSettings] = useState<SecuritySettings>(() => loadSecuritySettings());
@@ -11,8 +19,10 @@ const SecurityGate: React.FC<{ children: React.ReactNode }> = ({ children }) => 
   const [checking, setChecking] = useState(false);
 
   useEffect(() => {
+    syncAppSwitcherPrivacy(loadSecuritySettings().hideInAppSwitcher);
     const onSettings = (event: Event) => {
       const next = (event as CustomEvent<SecuritySettings>).detail;
+      syncAppSwitcherPrivacy(next.hideInAppSwitcher);
       setSettings(next);
       if (!next.lockEnabled) setLocked(false);
     };
@@ -25,7 +35,7 @@ const SecurityGate: React.FC<{ children: React.ReactNode }> = ({ children }) => 
     const onVisibility = () => {
       if (document.hidden) {
         hiddenAt = Date.now();
-        if (settings.hideInAppSwitcher) setCovered(true);
+        if (!isNativeIos && settings.hideInAppSwitcher) setCovered(true);
         return;
       }
       setCovered(false);

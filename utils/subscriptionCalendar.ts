@@ -1,6 +1,7 @@
 import { Subscription } from '../types';
 import { subscriptionForecast } from './subscriptionSchedule';
 import { toLocalYMD } from './date';
+import { shareOrDownloadText } from './exportFile';
 
 export function subscriptionCalendar(s: Subscription, now = new Date()): string {
   const end = new Date(now); end.setFullYear(end.getFullYear() + 1);
@@ -9,6 +10,5 @@ export function subscriptionCalendar(s: Subscription, now = new Date()): string 
   return ['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//SmartFinance//Subscriptions//ZH','CALSCALE:GREGORIAN', ...events,'END:VCALENDAR',''].join('\r\n');
 }
 export function downloadSubscriptionCalendar(s: Subscription): void {
-  const url = URL.createObjectURL(new Blob([subscriptionCalendar(s)], { type: 'text/calendar;charset=utf-8' }));
-  const a = document.createElement('a'); a.href = url; a.download = 'subscription-reminders.ics'; a.click(); setTimeout(() => URL.revokeObjectURL(url), 1000);
+  void shareOrDownloadText(subscriptionCalendar(s), 'subscription-reminders.ics', 'text/calendar;charset=utf-8');
 }

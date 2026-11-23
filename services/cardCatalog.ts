@@ -1,3 +1,6 @@
+import { CapacitorHttp } from '@capacitor/core';
+import { isNativeIos } from '../utils/ios';
+
 export interface CardCatalogItem {
   id: string;
   name: string;
@@ -147,10 +150,18 @@ const extractRewardCategories = (rulesValue: string | undefined): string[] | und
 export const fetchCardCatalog = async (
   url: string = DEFAULT_CARD_CATALOG_CSV_URL
 ): Promise<CardCatalogItem[]> => {
-  const res = await fetch(url, { method: 'GET', mode: 'cors', cache: 'no-store' });
-  if (!res.ok) throw new Error(`Card catalog fetch failed: ${res.status} ${res.statusText}`);
-
-  const text = await res.text();
+  let text: string;
+  if (isNativeIos && url === DEFAULT_CARD_CATALOG_CSV_URL) {
+    const response = await CapacitorHttp.get({ url, responseType: 'text', connectTimeout: 10_000, readTimeout: 10_000 });
+    if (response.status < 200 || response.status >= 300 || typeof response.data !== 'string') {
+      throw new Error(`Card catalog fetch failed: ${response.status}`);
+    }
+    text = response.data;
+  } else {
+    const res = await fetch(url, { method: 'GET', mode: 'cors', cache: 'no-store' });
+    if (!res.ok) throw new Error(`Card catalog fetch failed: ${res.status} ${res.statusText}`);
+    text = await res.text();
+  }
   const rows = parseCsv(text);
   if (rows.length < 2) return [];
 

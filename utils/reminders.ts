@@ -8,6 +8,7 @@ import { parseLocalYMD, toLocalYMD } from './date';
 import { readJson, readText, writeJson, writeText } from './storage';
 
 export type ReminderType =
+  | 'cc_statement'
   | 'cc_amount_due'
   | 'cc_payment_due'
   | 'cc_annual_fee'
@@ -39,9 +40,14 @@ export type Reminder = {
 export type ReminderSettings = {
   // master
   enabled: boolean;
+  dailyEnabled: boolean;
+  reminderTime: string;
+  iosEnabled: boolean;
 
   // credit cards
   ccEnabled: boolean;
+  ccStatementEnabled: boolean;
+  ccPaymentEnabled: boolean;
   ccAdvanceDays: number; // due reminder lead time, 0..7
   ccAmountEnabled: boolean; // statement+1 amount due entry
   ccFeeEnabled: boolean;
@@ -61,7 +67,12 @@ export type ReminderSettings = {
 
 export const DEFAULT_REMINDER_SETTINGS: ReminderSettings = {
   enabled: true,
+  dailyEnabled: true,
+  reminderTime: '20:00',
+  iosEnabled: true,
   ccEnabled: true,
+  ccStatementEnabled: true,
+  ccPaymentEnabled: true,
   ccAdvanceDays: 0,
   ccAmountEnabled: true,
   ccFeeEnabled: true,
@@ -157,6 +168,19 @@ export function getTodayYmd(): string {
   return toLocalYMD(new Date());
 }
 
+function isReminderTypeEnabled(type: ReminderType, settings: ReminderSettings): boolean {
+  switch (type) {
+    case 'cc_statement': return settings.ccEnabled && settings.ccStatementEnabled;
+    case 'cc_amount_due': return settings.ccEnabled && settings.ccAmountEnabled;
+    case 'cc_payment_due': return settings.ccEnabled && settings.ccPaymentEnabled;
+    case 'cc_annual_fee': return settings.ccEnabled && settings.ccFeeEnabled;
+    case 'subscription_upcoming': return settings.subEnabled;
+    case 'budget_near_limit':
+    case 'budget_over_limit': return settings.budgetEnabled;
+    case 'backup_export_json': return settings.backupEnabled;
+  }
+}
+
 export function regenerateReminders(params: {
   creditCards: CreditCard[];
   subscriptions: Subscription[];
@@ -164,12 +188,12 @@ export function regenerateReminders(params: {
   categories?: Category[];
   currency?: Currency;
   now?: Date;
+  scheduleAhead?: boolean;
+  settings?: ReminderSettings;
 }): Reminder[] {
-  const settings = loadReminderSettings();
-  if (!settings.enabled) {
-    saveReminders([]);
-    return [];
-  }
+  const settings = params.settings ?? loadReminderSettings();
+  const { scheduleAhead } = params;
+  if (!settings.enabled) return [];
 
   const now = params.now ?? new Date();
   const todayYmd = toLocalYMD(now);
@@ -183,11 +207,11 @@ export function regenerateReminders(params: {
   if (settings.ccEnabled) {
     const cycles = loadCycles();
 
-    // current + next month (if near month end)
-    const months: Array<{ y: number; m0: number }> = [{ y: now.getFullYear(), m0: now.getMonth() }];
-    if (now.getDate() >= 25) {
-      const n2 = new Date(now.getFullYear(), now.getMonth() + 1, 1);
-      months.push({ y: n2.getFullYear(), m0: n2.getMonth() });
+    const months: Array<{ y: number; m0: number }> = [];
+    const monthsAhead = scheduleAhead ? 12 : now.getDate() >= 25 ? 1 : 0;
+    for (let offset = scheduleAhead ? -1 : 0; offset <= monthsAhead; offset++) {
+      const month = new Date(now.getFullYear(), now.getMonth() + offset, 1);
+      months.push({ y: month.getFullYear(), m0: month.getMonth() });
     }
 
     for (const { y, m0 } of months) {
@@ -195,6 +219,16 @@ export function regenerateReminders(params: {
 
       for (const c of params.creditCards || []) {
         const { statementDate, dueDate } = getStatementAndDueForMonth(y, m0, c as any);
+
+        if (scheduleAhead && settings.ccStatementEnabled && c.remindStatement !== false && statementDate) {
+          const date = parseLocalYMD(statementDate)!;
+          date.setDate(date.getDate() - Math.max(0, settings.ccAdvanceDays));
+          const dedupeKey = `cc_statement|${c.id}|${yearMonth}`;
+          out.push({
+            id: uid(), dedupeKey, type: 'cc_statement', title: `信用卡截數提醒：${c.name}`,
+            dueYmd: toLocalYMD(date), severity: 'info', status: 'open', createdAt: now.toISOString(),
+          });
+        }
 
         // statement + 1 day: amount due entry reminder
         if (settings.ccAmountEnabled && c.remindStatement !== false && statementDate) {
@@ -224,7 +258,7 @@ export function regenerateReminders(params: {
         }
 
         // due reminder (due - advanceDays), skip if cycle is closed/paid
-        if (c.remindDue !== false && dueDate) {
+        if (settings.ccPaymentEnabled && c.remindDue !== false && dueDate) {
           const d = new Date(dueDate + 'T00:00:00');
           if (settings.ccAdvanceDays > 0) d.setDate(d.getDate() - settings.ccAdvanceDays);
           const ymd = toLocalYMD(d);
@@ -302,7 +336,9 @@ export function regenerateReminders(params: {
       const due = s.nextBillingDate;
       const days = daysBetweenYmd(todayYmd, due);
       if (days == null) continue;
-      if (days < 0 || days > ahead) continue;
+      if (days < 0 || (!scheduleAhead && days > ahead)) continue;
+      const alertDate = parseLocalYMD(due)!;
+      alertDate.setDate(alertDate.getDate() - ahead);
 
       const dedupeKey = `sub_upcoming|${s.id}|${due}`;
       const prev = existingByKey.get(dedupeKey);
@@ -313,7 +349,7 @@ export function regenerateReminders(params: {
         type: 'subscription_upcoming',
         title: `訂閱即將扣款：${s.name}`,
         detail: `扣款日：${due}（尚餘 ${days} 日）`,
-        dueYmd: due,
+        dueYmd: scheduleAhead ? toLocalYMD(alertDate) : due,
         severity: sev as any,
         status: prev?.status ?? 'open',
         createdAt: prev?.createdAt ?? new Date().toISOString(),
@@ -366,22 +402,24 @@ export function regenerateReminders(params: {
       should = diff != null && diff >= every;
     }
 
-    if (should) {
+    if (should || scheduleAhead) {
       const dedupeKey = `backup_export_json|${todayYmd}`;
       const prev = existingByKey.get(dedupeKey);
+      const nextBackup = lastDt ? new Date(lastDt) : now;
+      if (lastDt) nextBackup.setDate(nextBackup.getDate() + every);
       out.push({
         id: prev?.id ?? uid(),
         type: 'backup_export_json',
         title: '備份提醒：匯出 JSON',
         detail: `建議每 ${every} 日匯出一次備份`,
-        dueYmd: todayYmd,
+        dueYmd: scheduleAhead && !should ? toLocalYMD(nextBackup) : todayYmd,
         severity: 'warn',
         status: prev?.status ?? 'open',
         createdAt: prev?.createdAt ?? new Date().toISOString(),
         doneAt: prev?.doneAt,
         snoozeUntilYmd: prev?.snoozeUntilYmd,
         action: { kind: 'navigate', to: '/settings' },
-        dedupeKey,
+        dedupeKey: scheduleAhead ? `backup_export_json|${last ?? 'none'}` : dedupeKey,
       });
     }
   }
@@ -391,7 +429,7 @@ export function regenerateReminders(params: {
   const normalized = out.map(r => {
     if (r.snoozeUntilYmd) {
       const diff = daysBetweenYmd(todayYmd, r.snoozeUntilYmd);
-      if (diff != null && diff > 0) {
+      if (diff != null && (diff > 0 || (scheduleAhead && diff === 0))) {
         return { ...r, dueYmd: r.snoozeUntilYmd };
       }
     }
@@ -405,7 +443,11 @@ export function regenerateReminders(params: {
     return ta - tb;
   });
 
-  saveReminders(normalized);
+  if (!scheduleAhead) {
+    const paused = existing.filter(r => !isReminderTypeEnabled(r.type, settings)
+      && (r.status !== 'open' || (r.snoozeUntilYmd && r.snoozeUntilYmd >= todayYmd)));
+    saveReminders([...normalized, ...paused]);
+  }
   return normalized;
 }
 

@@ -6,13 +6,17 @@ import { Currency, Subscription, TransactionType } from '../types';
 import { parseLocalYMD, parseDate, toLocalYMD } from '../utils/date';
 import { parseMoneyInput } from '../utils/money';
 import { makeId } from '../utils/id';
-import { showAppConfirm } from '../utils/appDialog';
+import { showAppAlert, showAppConfirm } from '../utils/appDialog';
 import { advanceSubscriptionDate, subscriptionAmount, subscriptionForecast } from '../utils/subscriptionSchedule';
 import { useVisibleViewport } from '../components/useVisibleViewport';
 import SubscriptionServicePicker from '../components/SubscriptionServicePicker';
 import SubscriptionServiceIcon from '../components/SubscriptionServiceIcon';
 import { findSubscriptionService, SubscriptionService } from '../data/subscriptionServices';
 import { getCurrencySymbol } from '../utils/currency';
+import { registerPlugin } from '@capacitor/core';
+import { isNativeIos } from '../utils/ios';
+
+const ServiceWebsite = registerPlugin<{ open(options: { url: string }): Promise<void> }>('ServiceWebsite');
 
 const AddSubscription: React.FC = () => {
   const { id } = useParams();
@@ -104,7 +108,11 @@ const AddSubscription: React.FC = () => {
         <label className="block text-sm">分類<select aria-label="訂閱分類" className="sf-field w-full mt-2" value={form.categoryId} onChange={e => update({ categoryId: e.target.value })}>{expenseCategories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}</select></label>
         <label className="block text-sm">付款信用卡<select aria-label="付款信用卡" className="sf-field w-full mt-2" value={form.cardId || ''} onChange={e => update({ cardId: e.target.value || undefined })}><option value="">未指定</option>{creditCards.map(c => <option value={c.id} key={c.id}>{c.name}</option>)}</select></label>
         <label className="block text-sm">管理訂閱連結<input type="url" aria-label="管理訂閱連結" className="sf-field w-full mt-2" value={form.managementUrl || ''} onChange={e => update({ managementUrl: e.target.value })} placeholder="https://" /></label>
-        {form.managementUrl && /^https?:\/\//i.test(form.managementUrl) && <a className="text-primary block" href={form.managementUrl} target="_blank" rel="noopener noreferrer">前往服務網站 ↗</a>}
+        {form.managementUrl && /^https?:\/\//i.test(form.managementUrl) && <a className="text-primary block" href={form.managementUrl} target="_blank" rel="noopener noreferrer" onClick={event => {
+          if (!isNativeIos) return;
+          event.preventDefault();
+          void ServiceWebsite.open({ url: event.currentTarget.href }).catch(() => showAppAlert('未能開啟服務網站，請檢查連結。'));
+        }}>前往服務網站 ↗</a>}
         <label className="block text-sm">備註<textarea className="sf-field w-full mt-2" value={form.notes || ''} onChange={e => update({ notes: e.target.value })} /></label>
         <label className="flex justify-between text-sm">自動續訂<input type="checkbox" checked={form.autoRenewal !== false} onChange={e => update({ autoRenewal: e.target.checked })} /></label>
         <label className="block text-sm">狀態<select aria-label="訂閱狀態" className="sf-field w-full mt-2" value={form.status || 'active'} onChange={e => update({ status: e.target.value as Subscription['status'] })}><option value="active">使用中</option><option value="paused">已暫停</option><option value="cancelled">已取消續訂</option></select></label>

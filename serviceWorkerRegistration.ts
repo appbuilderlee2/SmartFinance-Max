@@ -1,3 +1,5 @@
+import { isNativeIos } from './utils/ios';
+
 // This optional code is used to register a service worker.
 // register() is not called by default.
 
@@ -15,6 +17,7 @@ type Config = {
 };
 
 export function register(config?: Config) {
+  if (isNativeIos) return;
   // Vite uses import.meta.env.PROD to check for production build
   if (import.meta.env.PROD && 'serviceWorker' in navigator) {
     // Avoid Go Live / localhost white-screen issues caused by stale SW caches.
