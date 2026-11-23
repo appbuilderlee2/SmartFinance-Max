@@ -122,7 +122,7 @@ react-router-dom.js?v=d0be22b6:4413 ⚠️ React Router Future Flag Warning: Rel
 :3000/#/signup:1 Uncaught (in promise) Error: Access to storage is not allowed from this context.
 :3000/#/signup:1 <meta name="apple-mobile-web-app-capable" content="yes"> is deprecated. Please include <meta name="mobile-web-app-capable" content="yes">
 authService.tsx:55 
- POST https://identitytoolkit.googleapis.com/v1/accounts:signUp?key=AIzaSyB6aUA1QVzNUwGCLp3mgPO89o94QOt1A_w 400 (Bad Request)
+ POST https://identitytoolkit.googleapis.com/v1/accounts:signUp?key=<REDACTED_GOOGLE_API_KEY> 400 (Bad Request)
 Signup.tsx:26 FirebaseError: Firebase: Error (auth/email-already-in-use).
     at async register (authService.tsx:55:5)
     at async handleSignup (Signup.tsx:22:10)
